@@ -231,7 +231,7 @@ handler_arguments = json.loads(handler_arguments)
 
 log_artifacts_code_template = """\n
 def mlrun_log_artifact(name='', path=''):
-
+    global mlrun_artifact_index
     mlrun_artifact_index+=1  #  by how many artifacts we tried to log, not how many succeed.
     if name is None or name == '':
         if mlrun_returns:
