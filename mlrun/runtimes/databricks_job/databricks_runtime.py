@@ -237,7 +237,7 @@ def mlrun_log_artifact(name='', path=''):
         if mlrun_returns:
             name = mlrun_returns.pop(0)
         else:
-            name = f'{{mlrun_default_artifact_template}}{{mlrun_artifact_index+1}}'
+            name = f'{{mlrun_default_artifact_template}}{{mlrun_artifact_index}}'
     if not path:
         mlrun_logger.error(f'path required for logging an mlrun artifact - {{name}} : {{path}}')
         return
