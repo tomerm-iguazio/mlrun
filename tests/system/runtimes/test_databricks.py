@@ -99,23 +99,26 @@ class TestDatabricksRuntime(tests.system.base.TestMLRunSystem):
         artifacts = self.project.list_artifacts().to_objects()
         assert len(artifacts) == len(paths_dict)
         #  TODO change to get_artifact by key in the future if it will be user-defined.
-        for local_path, expected_dbfs_path in paths_dict.items():
-            artifacts_by_path = [
-                artifact
-                for artifact in artifacts
-                if artifact.spec.src_path == f"dbfs://{expected_dbfs_path}"
-            ]
-            assert len(artifacts_by_path) == 1
-            artifact = artifacts_by_path[0]
+        for expected_name, expected_dbfs_path in paths_dict.items():
+            db_key = f"databricks-test-main_{expected_name}"
+            try:
+                artifact = self.project.get_artifact(key=db_key)
+            except Exception as e:
+                print(e)
+                raise e
+            assert artifact.spec.src_path == f"dbfs://{expected_dbfs_path}"
             artifact_df = artifact.to_dataitem().as_df()
-            if local_path.endswith(".parquet"):
+            if expected_dbfs_path.endswith(".parquet"):
+                local_path = str(self.assets_path / f"test_data.parquet")
                 expected_df = pd.read_parquet(local_path)
-            elif local_path.endswith(".csv"):
+            elif expected_dbfs_path.endswith(".csv"):
+                local_path = str(self.assets_path / f"test_data.csv")
                 expected_df = pd.read_csv(local_path)
             else:
                 raise ValueError(
                     "The test does not support files that are not in the Parquet or CSV format."
                 )
+
             pd.testing.assert_frame_equal(expected_df, artifact_df)
 
     def setup_method(self, method):
@@ -339,35 +342,44 @@ def handler(**kwargs):
         )
         assert run.state.result_state == RunResultState.CANCELED
 
+    def _upload_df(self, filename_extension: str):
+        file_name = f"my_artifact_test_{uuid.uuid4()}.{filename_extension}"
+        artifact_dbfs_path = f"{self.dbfs_folder_path}/test_log_artifact/{file_name}"
+        src_path = str(self.assets_path / f"test_data.{filename_extension}")
+        try:
+            with open(src_path, "rb") as parquet_file:
+                self.workspace.dbfs.upload(src=parquet_file, path=artifact_dbfs_path)
+        except Exception as e:
+            raise e
+
+        return artifact_dbfs_path
+
     def test_log_artifact(self):
         self._run_db.del_artifacts(project=self.project_name)
-        artifact_key_parquet = f"my_artifact_test_{uuid.uuid4()}.parquet"
-        artifact_key_csv = f"my_artifact_test_{uuid.uuid4()}.csv"
-        parquet_artifact_dbfs_path = (
-            f"{self.dbfs_folder_path}/test_log_artifact/{artifact_key_parquet}"
+        parquet_artifact_dbfs_path = self._upload_df(filename_extension="parquet")
+        parquet_artifact_name = "my_test_artifact_parquet"
+        csv_artifact_dbfs_path = self._upload_df(filename_extension="csv")
+        csv_artifact_name = "my_test_artifact_csv"
+        returned_artifact_dbfs_path = self._upload_df(filename_extension="parquet")
+        returned_artifact_name = "my_returned_test_artifact"
+        generated_path_artifact_dbfs_path = self._upload_df(
+            filename_extension="parquet"
         )
-        csv_artifact_dbfs_path = (
-            f"{self.dbfs_folder_path}/test_log_artifact/{artifact_key_csv}"
-        )
-        src_parquet_path = str(self.assets_path / "test_data.parquet")
-        src_csv_path = str(self.assets_path / "test_data.csv")
         paths_dict = {
-            src_parquet_path: parquet_artifact_dbfs_path,
-            src_csv_path: csv_artifact_dbfs_path,
+            parquet_artifact_name: parquet_artifact_dbfs_path,
+            csv_artifact_name: csv_artifact_dbfs_path,
+            returned_artifact_name: returned_artifact_dbfs_path,
+            "mlrun_return_value_4": generated_path_artifact_dbfs_path,
         }
-        with open(str(self.assets_path / "test_data.parquet"), "rb") as parquet_file:
-            self.workspace.dbfs.upload(
-                src=parquet_file, path=parquet_artifact_dbfs_path
-            )
-        with open(str(self.assets_path / "test_data.csv"), "rb") as csv_file:
-            self.workspace.dbfs.upload(src=csv_file, path=csv_artifact_dbfs_path)
         #  CSV has been tested as a Spark path, and an illegal path was
         #  used for testing to avoid triggering an error in log_artifact.
         code = f"""\n
 def main():
-    mlrun_log_artifact('my_test_artifact_parquet','/dbfs{parquet_artifact_dbfs_path}')
+    mlrun_log_artifact('{parquet_artifact_name}','/dbfs{parquet_artifact_dbfs_path}')
     mlrun_log_artifact('illegal artifact',10)
-    return {{'my_test_artifact_csv': 'dbfs:{csv_artifact_dbfs_path}'}}
+    mlrun_log_artifact(path='/dbfs{returned_artifact_dbfs_path}')
+    mlrun_log_artifact(path='/dbfs{generated_path_artifact_dbfs_path}')
+    return {{'{csv_artifact_name}': 'dbfs:{csv_artifact_dbfs_path}'}}
 """
         function_ref = FunctionReference(
             kind="databricks",
@@ -380,15 +392,15 @@ def main():
 
         self._add_databricks_env(function=function, is_cluster_id_required=True)
         run = function.run(
-            handler="main",
-            project=self.project_name,
+            handler="main", project=self.project_name, returns=[returned_artifact_name]
         )
         time.sleep(2)
         self._check_artifacts_by_path(paths_dict=paths_dict)
         self._run_db.del_artifacts(project=self.project_name)
-        assert (
-            len(self.project.list_artifacts()) == 0
-        )  # Make sure all artifacts have been deleted.
-        function.run(runspec=run, project=self.project_name)  # test rerun.
-        time.sleep(3)
+        # Make sure all artifacts have been deleted.
+        assert len(self.project.list_artifacts()) == 0
+        function.run(
+            runspec=run, project=self.project_name, returns=[returned_artifact_name]
+        )  # test rerun.
+        time.sleep(4)
         self._check_artifacts_by_path(paths_dict=paths_dict)
