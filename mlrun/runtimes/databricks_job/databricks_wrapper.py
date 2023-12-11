@@ -49,6 +49,7 @@ def log_artifacts_by_dbfs_json(
     artifact_json_path: str,
     databricks_run_name: str,
 ):
+    logged_artifacts = {}
     if not workspace.dbfs.exists(artifact_json_path):
         return
     context.logger.info(f"Artifacts found. Run name: {databricks_run_name}")
@@ -68,9 +69,13 @@ def log_artifacts_by_dbfs_json(
                 f"can not log artifact: {artifact_name}: {artifact_path}"
             )
             continue
+        logged_artifacts[artifact_name] = fixed_artifact_path
         context.log_artifact(
-            artifact_name, local_path=fixed_artifact_path, upload=False
+            artifact_name,
+            local_path=fixed_artifact_path,
+            upload=False,
         )
+        return logged_artifacts
 
 
 def save_credentials(
@@ -174,7 +179,7 @@ def run_mlrun_databricks_job(
                 timeout=datetime.timedelta(minutes=timeout_minutes),
                 callback=print_status,
             )
-            log_artifacts_by_dbfs_json(
+            logged_artifacts = log_artifacts_by_dbfs_json(
                 context=context,
                 workspace=workspace,
                 artifact_json_path=artifact_json_path,
@@ -206,3 +211,4 @@ def run_mlrun_databricks_job(
 
     logger.info(f"job finished: {run.run_page_url}")
     logger.info(f"logs:\n{run_output.logs}")
+    return logged_artifacts
