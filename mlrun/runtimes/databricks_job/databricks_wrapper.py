@@ -75,7 +75,7 @@ def log_artifacts_by_dbfs_json(
             local_path=fixed_artifact_path,
             upload=False,
         )
-        return logged_artifacts
+    return logged_artifacts
 
 
 def save_credentials(
