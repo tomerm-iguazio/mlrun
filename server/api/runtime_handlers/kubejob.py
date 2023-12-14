@@ -196,16 +196,16 @@ class DatabricksRuntimeHandler(KubeRuntimeHandler):
     class_modes = {RuntimeClassMode.run: "databricks"}
     pod_grace_period_seconds = 60
 
-    @staticmethod
-    def _get_lifecycle():
-        script_path = "/mlrun/mlrun/runtimes/databricks_job/databricks_cancel_task.py"
-        handler_class = (
-            DatabricksRuntimeHandler._get_kubernetes_lifecycle_handler_class()
-        )
-        pre_stop_handler = handler_class(
-            _exec=client.V1ExecAction(command=["python", script_path])
-        )
-        return client.V1Lifecycle(pre_stop=pre_stop_handler)
+    # @staticmethod
+    # def _get_lifecycle():
+    #     script_path = "/mlrun/mlrun/runtimes/databricks_job/databricks_cancel_task.py"
+    #     handler_class = (
+    #         DatabricksRuntimeHandler._get_kubernetes_lifecycle_handler_class()
+    #     )
+    #     pre_stop_handler = handler_class(
+    #         _exec=client.V1ExecAction(command=["python", script_path])
+    #     )
+    #     return client.V1Lifecycle(pre_stop=pre_stop_handler)
 
 
 def func_to_pod(image, runtime, extra_env, command, args, workdir, lifecycle):
