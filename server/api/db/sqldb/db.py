@@ -37,7 +37,7 @@ import server.api.utils.helpers
 from mlrun.artifacts.base import fill_artifact_object_hash
 from mlrun.config import config
 from mlrun.errors import err_to_str
-from mlrun.lists import ArtifactList, FunctionList, RunList
+from mlrun.lists import ArtifactList, RunList
 from mlrun.model import RunObject
 from mlrun.utils import (
     fill_function_hash,
@@ -188,7 +188,7 @@ class SQLDB(DBInterface):
             iter=iter,
             run_name=run_data["metadata"]["name"],
         )
-        run = self._get_run(session, uid, project, iter)
+        run = self._get_run(session, uid, project, iter, with_for_update=True)
         now = datetime.now(timezone.utc)
         if not run:
             run = Run(
@@ -217,7 +217,7 @@ class SQLDB(DBInterface):
 
     def update_run(self, session, updates: dict, uid, project="", iter=0):
         project = project or config.default_project
-        run = self._get_run(session, uid, project, iter)
+        run = self._get_run(session, uid, project, iter, with_for_update=True)
         if not run:
             run_uri = RunObject.create_uri(project, uid, iter)
             raise mlrun.errors.MLRunNotFoundError(f"Run {run_uri} not found")
@@ -1140,14 +1140,10 @@ class SQLDB(DBInterface):
         tags: typing.List[str] = None,
         commit: bool = True,
     ):
-        artifacts_keys = [str(artifact.key) for artifact in artifacts]
-        query = (
-            session.query(ArtifactV2.Tag)
-            .join(ArtifactV2)
-            .filter(
-                ArtifactV2.project == project,
-                ArtifactV2.key.in_(artifacts_keys),
-            )
+        artifacts_ids = [artifact.id for artifact in artifacts]
+        query = session.query(ArtifactV2.Tag).filter(
+            ArtifactV2.Tag.project == project,
+            ArtifactV2.Tag.obj_id.in_(artifacts_ids),
         )
         if tags:
             query = query.filter(ArtifactV2.Tag.name.in_(tags))
@@ -1527,7 +1523,7 @@ class SQLDB(DBInterface):
         tag: str = None,
         labels: List[str] = None,
         hash_key: str = None,
-    ) -> typing.Union[FunctionList, List[dict]]:
+    ) -> List[dict]:
         project = project or config.default_project
         uids = None
         if tag:
@@ -1536,7 +1532,7 @@ class SQLDB(DBInterface):
                 uids = [uid for uid in uids if uid == hash_key] or None
         if not tag and hash_key:
             uids = [hash_key]
-        functions = FunctionList()
+        functions = []
         for function in self._find_functions(session, name, project, uids, labels):
             function_dict = function.struct
             if not tag:
@@ -2041,7 +2037,10 @@ class SQLDB(DBInterface):
         )
 
     def get_project(
-        self, session: Session, name: str = None, project_id: int = None
+        self,
+        session: Session,
+        name: str = None,
+        project_id: int = None,
     ) -> mlrun.common.schemas.Project:
         project_record = self._get_project_record(session, name, project_id)
 
@@ -3558,7 +3557,7 @@ class SQLDB(DBInterface):
             except SQLAlchemyError as err:
                 session.rollback()
                 raise mlrun.errors.MLRunConflictError(
-                    f"add user: {err_to_str(err)}"
+                    f"Failed to add user: {err_to_str(err)}"
                 ) from err
         return users
 
@@ -3566,11 +3565,12 @@ class SQLDB(DBInterface):
         query = self._query(session, cls, name=name, project=project, uid=uid)
         return query.one_or_none()
 
-    def _get_run(self, session, uid, project, iteration):
-        resp = self._query(
-            session, Run, uid=uid, project=project, iteration=iteration
-        ).one_or_none()
-        return resp
+    def _get_run(self, session, uid, project, iteration, with_for_update=False):
+        query = self._query(session, Run, uid=uid, project=project, iteration=iteration)
+        if with_for_update:
+            query = query.populate_existing().with_for_update()
+
+        return query.one_or_none()
 
     def _delete_empty_labels(self, session, cls):
         session.query(cls).filter(cls.parent == NULL).delete()
@@ -3705,14 +3705,17 @@ class SQLDB(DBInterface):
         for lbl in labels:
             if "=" in lbl:
                 name, value = [v.strip() for v in lbl.split("=", 1)]
-                cond = and_(cls.Label.name == name, cls.Label.value == value)
+                cond = and_(
+                    generate_query_predicate_for_name(cls.Label.name, name),
+                    generate_query_predicate_for_name(cls.Label.value, value),
+                )
                 preds.append(cond)
                 label_names_with_values.add(name)
             else:
                 label_names_no_values.add(lbl.strip())
 
         for name in label_names_no_values.difference(label_names_with_values):
-            preds.append(cls.Label.name == name)
+            preds.append(generate_query_predicate_for_name(cls.Label.name, name))
 
         if len(preds) == 1:
             # A single label predicate is a common case, and there's no need to burden the DB with
@@ -4108,7 +4111,7 @@ class SQLDB(DBInterface):
             name=name,
             project=project,
         ).one_or_none()
-        now = datetime.now(timezone.utc)
+        now = mlrun.utils.now_date()
         if background_task_record:
             # we don't want to be able to change state after it reached terminal state
             if (
@@ -4141,11 +4144,74 @@ class SQLDB(DBInterface):
         self._upsert(session, [background_task_record])
 
     def get_background_task(
-        self, session, name: str, project: str, background_task_exceeded_timeout_func
+        self,
+        session: Session,
+        name: str,
+        project: str,
+        background_task_exceeded_timeout_func,
     ) -> mlrun.common.schemas.BackgroundTask:
         background_task_record = self._get_background_task_record(
             session, name, project
         )
+        background_task_record = self._apply_background_task_timeout(
+            session,
+            background_task_exceeded_timeout_func,
+            background_task_record,
+        )
+
+        return self._transform_background_task_record_to_schema(background_task_record)
+
+    def list_background_tasks(
+        self,
+        session,
+        project: str,
+        background_task_exceeded_timeout_func,
+        states: typing.Optional[typing.List[str]] = None,
+        created_from: datetime = None,
+        created_to: datetime = None,
+        last_update_time_from: datetime = None,
+        last_update_time_to: datetime = None,
+    ) -> list[mlrun.common.schemas.BackgroundTask]:
+        background_tasks = []
+        query = self._list_project_background_tasks(session, project)
+        if states is not None:
+            query = query.filter(BackgroundTask.state.in_(states))
+        if created_from is not None:
+            query = query.filter(BackgroundTask.created >= created_from)
+        if created_to is not None:
+            query = query.filter(BackgroundTask.created <= created_to)
+        if last_update_time_from is not None:
+            query = query.filter(BackgroundTask.updated >= last_update_time_from)
+        if last_update_time_to is not None:
+            query = query.filter(BackgroundTask.updated <= last_update_time_to)
+
+        background_task_records = query.all()
+        for background_task_record in background_task_records:
+            background_task_record = self._apply_background_task_timeout(
+                session,
+                background_task_exceeded_timeout_func,
+                background_task_record,
+            )
+
+            # retest state after applying timeout
+            if states and background_task_record.state not in states:
+                continue
+
+            background_tasks.append(
+                self._transform_background_task_record_to_schema(background_task_record)
+            )
+
+        return background_tasks
+
+    def delete_background_task(self, session: Session, name: str, project: str):
+        self._delete(session, BackgroundTask, name=name, project=project)
+
+    def _apply_background_task_timeout(
+        self,
+        session: Session,
+        background_task_exceeded_timeout_func: typing.Callable,
+        background_task_record: BackgroundTask,
+    ):
         if (
             background_task_exceeded_timeout_func
             and background_task_exceeded_timeout_func(
@@ -4158,15 +4224,14 @@ class SQLDB(DBInterface):
             # and the task still in progress then we change to failed
             self.store_background_task(
                 session,
-                name,
-                project,
+                background_task_record.name,
+                background_task_record.project,
                 mlrun.common.schemas.background_task.BackgroundTaskState.failed,
             )
             background_task_record = self._get_background_task_record(
-                session, name, project
+                session, background_task_record.name, background_task_record.project
             )
-
-        return self._transform_background_task_record_to_schema(background_task_record)
+        return background_task_record
 
     @staticmethod
     def _transform_background_task_record_to_schema(
@@ -4187,7 +4252,7 @@ class SQLDB(DBInterface):
             ),
         )
 
-    def _list_project_background_tasks(
+    def _list_project_background_task_names(
         self, session: Session, project: str
     ) -> typing.List[str]:
         return [
@@ -4197,15 +4262,15 @@ class SQLDB(DBInterface):
             ).all()
         ]
 
+    def _list_project_background_tasks(self, session: Session, project: str):
+        return self._query(session, BackgroundTask, project=project)
+
     def _delete_background_tasks(self, session: Session, project: str):
         logger.debug("Removing background tasks from db", project=project)
-        for background_task_name in self._list_project_background_tasks(
+        for background_task_name in self._list_project_background_task_names(
             session, project
         ):
             self.delete_background_task(session, background_task_name, project)
-
-    def delete_background_task(self, session: Session, name: str, project: str):
-        self._delete(session, BackgroundTask, name=name, project=project)
 
     def _get_background_task_record(
         self,
@@ -4213,7 +4278,7 @@ class SQLDB(DBInterface):
         name: str,
         project: str,
         raise_on_not_found: bool = True,
-    ) -> BackgroundTask:
+    ) -> typing.Optional[BackgroundTask]:
         background_task_record = self._query(
             session, BackgroundTask, name=name, project=project
         ).one_or_none()
