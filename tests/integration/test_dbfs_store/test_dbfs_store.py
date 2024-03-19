@@ -213,11 +213,15 @@ class TestDBFSStore:
         assert source.equals(response)
 
     @pytest.mark.parametrize(
-        "file_extension, local_file_path, reader, reader_args",
+        "file_extension, local_file_path, reader",
         [
-            ("parquet", parquet_path, dd.read_parquet, {}),
-            ("csv", csv_path, dd.read_csv, {}),
-            ("json", json_path, dd.read_json, {"orient": "values"}),
+            (
+                "parquet",
+                parquet_path,
+                dd.read_parquet,
+            ),
+            ("csv", csv_path, dd.read_csv),
+            ("json", json_path, dd.read_json),
         ],
     )
     def test_as_df_dd(
@@ -226,13 +230,12 @@ class TestDBFSStore:
         file_extension: str,
         local_file_path: str,
         reader: callable,
-        reader_args: dict,
     ):
         if use_datastore_profile:
             pytest.skip(
                 "dask dataframe is not supported by datastore profile."
             )  # TODO add support
-        source = reader(local_file_path, **reader_args)
+        source = reader(local_file_path)
         upload_file_path = (
             f"{self.dbfs_store_path}/file_{uuid.uuid4()}.{file_extension}"
         )
@@ -243,7 +246,7 @@ class TestDBFSStore:
         )
         upload_data_item = mlrun.run.get_dataitem(dataitem_url)
         upload_data_item.upload(local_file_path)
-        response = upload_data_item.as_df(df_module=dd, **reader_args)
+        response = upload_data_item.as_df(df_module=dd)
         assert dd.assert_eq(source, response)
 
     def _setup_df_dir(
