@@ -23,6 +23,7 @@ from v3io.dataplane.response import HttpResponseError
 
 import mlrun
 from mlrun.datastore.helpers import ONE_GB, ONE_MB
+from mlrun.utils import logger
 
 from ..platforms.iguazio import parse_path, split_path
 from .base import (
@@ -32,6 +33,21 @@ from .base import (
 )
 
 V3IO_LOCAL_ROOT = "v3io"
+
+
+def do_hash(data):
+    import hashlib
+
+    # Compute the hash (SHA-256 in this example)
+    if isinstance(data, str):
+        data = data.encode()
+    hash_object = hashlib.sha256()
+    hash_object.update(data)
+    hash_value = hash_object.hexdigest()
+
+    # Convert the hash value to a string
+    hash_string = str(hash_value)
+    return hash_string
 
 
 class V3ioStore(DataStore):
@@ -95,6 +111,12 @@ class V3ioStore(DataStore):
         return self._sanitize_storage_options(res)
 
     def _upload(self, key: str, src_path: str, max_chunk_size: int = ONE_GB):
+        with open(src_path, "rb") as src_file:
+            data = src_file.read()
+        logger.info(
+            f"upload method on destination: {key} src: {src_path}  len: {len(data)} "
+            f"type:{type(data)} hash: {do_hash(data)}"
+        )
         """helper function for upload method, allows for controlling max_chunk_size in testing"""
         container, path = split_path(self._join(key))
         file_size = os.path.getsize(src_path)  # in bytes
@@ -149,6 +171,9 @@ class V3ioStore(DataStore):
         ).body
 
     def _put(self, key, data, append=False, max_chunk_size: int = ONE_GB):
+        logger.info(
+            f"put method on destination: {key} len data:{len(data)} type:{type(data)} hash: {do_hash(data)}"
+        )
         """helper function for put method, allows for controlling max_chunk_size in testing"""
         container, path = split_path(self._join(key))
         buffer_size = len(data)  # in bytes
