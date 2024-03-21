@@ -113,7 +113,7 @@ class V3ioStore(DataStore):
     def _upload(self, key: str, src_path: str, max_chunk_size: int = ONE_GB):
         with open(src_path, "rb") as src_file:
             data = src_file.read()
-        logger.info(
+        print(
             f"upload method on destination: {key} src: {src_path}  len: {len(data)} "
             f"type:{type(data)} hash: {do_hash(data)}"
         )
@@ -171,7 +171,7 @@ class V3ioStore(DataStore):
         ).body
 
     def _put(self, key, data, append=False, max_chunk_size: int = ONE_GB):
-        logger.info(
+        print(
             f"put method on destination: {key} len data:{len(data)} type:{type(data)} hash: {do_hash(data)}"
         )
         """helper function for put method, allows for controlling max_chunk_size in testing"""
