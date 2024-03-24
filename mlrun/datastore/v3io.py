@@ -117,7 +117,8 @@ class V3ioStore(DataStore):
             f"upload method on destination: {key} src: {src_path}  len: {len(data)} "
             f"type:{type(data)} hash: {do_hash(data)}"
         )
-        test_dbfs = mlrun.get_dataitem("dbfs:///tests/test_for_v3io/test1.txt")
+        file = os.path.basename(src_path)
+        test_dbfs = mlrun.get_dataitem(f"dbfs:///tests/test_for_v3io/{file}")
         test_dbfs.upload(src_path=src_path)
         """helper function for upload method, allows for controlling max_chunk_size in testing"""
         container, path = split_path(self._join(key))
