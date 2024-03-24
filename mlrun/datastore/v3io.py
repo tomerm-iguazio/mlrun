@@ -123,7 +123,10 @@ class V3ioStore(DataStore):
         """helper function for upload method, allows for controlling max_chunk_size in testing"""
         container, path = split_path(self._join(key))
         file_size = os.path.getsize(src_path)  # in bytes
-        if file_size <= ONE_MB:
+        print(f"file_size: {file_size}, len: {len(data)}")
+
+        #TODO return chunks options
+        if file_size <= ONE_MB or 1==1:
             with open(src_path, "rb") as source_file:
                 data = source_file.read()
             self._do_object_request(
@@ -133,32 +136,34 @@ class V3ioStore(DataStore):
                 body=data,
                 append=False,
             )
-            return
+        data_from_v3io = self.get(key=key)
+        print(f"len data_from_v3io {len(data_from_v3io)}")
+        print(f"is equal data_from_v3io {data_from_v3io==data}")
         # chunk must be a multiple of the ALLOCATIONGRANULARITY
         # https://docs.python.org/3/library/mmap.html
-        if residue := max_chunk_size % mmap.ALLOCATIONGRANULARITY:
-            # round down to the nearest multiple of ALLOCATIONGRANULARITY
-            max_chunk_size -= residue
-        print(f"max_chunk size after condition: {max_chunk_size}")
-        with open(src_path, "rb") as file_obj:
-            file_offset = 0
-            while file_offset < file_size:
-                chunk_size = min(file_size - file_offset, max_chunk_size)
-                with mmap.mmap(
-                    file_obj.fileno(),
-                    length=chunk_size,
-                    access=mmap.ACCESS_READ,
-                    offset=file_offset,
-                ) as mmap_obj:
-                    append = file_offset != 0
-                    self._do_object_request(
-                        self.object.put,
-                        container=container,
-                        path=path,
-                        body=mmap_obj,
-                        append=append,
-                    )
-                    file_offset += chunk_size
+        # if residue := max_chunk_size % mmap.ALLOCATIONGRANULARITY:
+        #     # round down to the nearest multiple of ALLOCATIONGRANULARITY
+        #     max_chunk_size -= residue
+        # print(f"max_chunk size after condition: {max_chunk_size}")
+        # with open(src_path, "rb") as file_obj:
+        #     file_offset = 0
+        #     while file_offset < file_size:
+        #         chunk_size = min(file_size - file_offset, max_chunk_size)
+        #         with mmap.mmap(
+        #             file_obj.fileno(),
+        #             length=chunk_size,
+        #             access=mmap.ACCESS_READ,
+        #             offset=file_offset,
+        #         ) as mmap_obj:
+        #             append = file_offset != 0
+        #             self._do_object_request(
+        #                 self.object.put,
+        #                 container=container,
+        #                 path=path,
+        #                 body=mmap_obj,
+        #                 append=append,
+        #             )
+        #             file_offset += chunk_size
 
     def upload(self, key, src_path):
         return self._upload(key, src_path)
