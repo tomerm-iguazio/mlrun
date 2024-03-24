@@ -115,7 +115,7 @@ class V3ioStore(DataStore):
             data = src_file.read()
         print(
             f"upload method on destination: {key} src: {src_path}  len: {len(data)} "
-            f"type:{type(data)} hash: {do_hash(data)}"
+            f"type:{type(data)} hash: {do_hash(data)}, chunk_size: {max_chunk_size}"
         )
         file = os.path.basename(src_path)
         test_dbfs = mlrun.get_dataitem(f"dbfs:///tests/test_for_v3io/{file}")
