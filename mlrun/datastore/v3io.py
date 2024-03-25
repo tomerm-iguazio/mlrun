@@ -138,7 +138,7 @@ class V3ioStore(DataStore):
         print(f"headers: {self.headers}")
         # chunk must be a multiple of the ALLOCATIONGRANULARITY
         # https://docs.python.org/3/library/mmap.html
-        print(f"mmap.ALLOCATIONGRANULARITY: {mmap.ALLOCATIONGRANULARITY}")
+        print(f"mmap.ALLOCATIONGRANULARITY: {mmap.ALLOCATIONGRANULARITY}, mmap.PAGESIZE: {mmap.PAGESIZE}")
         if residue := max_chunk_size % mmap.ALLOCATIONGRANULARITY:
             # round down to the nearest multiple of ALLOCATIONGRANULARITY
             print(f"residue: {residue}, calculate expectation: {max_chunk_size % mmap.ALLOCATIONGRANULARITY}")
