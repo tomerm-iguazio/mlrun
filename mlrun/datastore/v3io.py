@@ -23,7 +23,7 @@ from v3io.dataplane.response import HttpResponseError
 
 import mlrun
 from mlrun.datastore.helpers import ONE_GB, ONE_MB
-
+from mlrun.datastore.dbfs_store import DBFSStore
 from ..platforms.iguazio import parse_path, split_path
 from .base import (
     DataStore,
@@ -32,6 +32,21 @@ from .base import (
 )
 
 V3IO_LOCAL_ROOT = "v3io"
+
+
+def do_hash(data):
+    import hashlib
+
+    # Compute the hash (SHA-256 in this example)
+    if isinstance(data, str):
+        data = data.encode()
+    hash_object = hashlib.sha256()
+    hash_object.update(data)
+    hash_value = hash_object.hexdigest()
+
+    # Convert the hash value to a string
+    hash_string = str(hash_value)
+    return hash_string
 
 
 class V3ioStore(DataStore):
@@ -95,9 +110,21 @@ class V3ioStore(DataStore):
         return self._sanitize_storage_options(res)
 
     def _upload(self, key: str, src_path: str, max_chunk_size: int = ONE_GB):
+        with open(src_path, "rb") as src_file:
+            data = src_file.read()
+        print(
+            f"upload method on destination: {key} src: {src_path}  len: {len(data)} "
+            f"type:{type(data)} hash: {do_hash(data)}, chunk_size: {max_chunk_size}"
+        )
+        file = os.path.basename(src_path)
+        dbfs_path = f"dbfs:///tests/test_for_v3io/{file}"
+        test_dbfs = mlrun.get_dataitem(dbfs_path)
+        test_dbfs.upload(src_path=src_path)
+        print(f"uploaded to dbfs {dbfs_path}")
         """helper function for upload method, allows for controlling max_chunk_size in testing"""
         container, path = split_path(self._join(key))
         file_size = os.path.getsize(src_path)  # in bytes
+        print(f"file_size: {file_size}, len: {len(data)}")
         if file_size <= ONE_MB:
             with open(src_path, "rb") as source_file:
                 data = source_file.read()
@@ -109,12 +136,15 @@ class V3ioStore(DataStore):
                 append=False,
             )
             return
+        print(f"headers: {self.headers}")
         # chunk must be a multiple of the ALLOCATIONGRANULARITY
         # https://docs.python.org/3/library/mmap.html
+        print(f"mmap.ALLOCATIONGRANULARITY: {mmap.ALLOCATIONGRANULARITY}, mmap.PAGESIZE: {mmap.PAGESIZE}")
         if residue := max_chunk_size % mmap.ALLOCATIONGRANULARITY:
             # round down to the nearest multiple of ALLOCATIONGRANULARITY
+            print(f"residue: {residue}, calculate expectation: {max_chunk_size % mmap.ALLOCATIONGRANULARITY}")
             max_chunk_size -= residue
-
+        print(f"max_chunk size after condition: {max_chunk_size}")
         with open(src_path, "rb") as file_obj:
             file_offset = 0
             while file_offset < file_size:
@@ -126,6 +156,9 @@ class V3ioStore(DataStore):
                     offset=file_offset,
                 ) as mmap_obj:
                     append = file_offset != 0
+                    sliced_body = mmap_obj[:10] if len(mmap_obj) > 10 else mmap_obj
+                    print(f"chunks loop: offset: {file_offset} container:{container} path:{path} body:{sliced_body}"
+                          f" len:{len(mmap_obj)} append: {append}")
                     self._do_object_request(
                         self.object.put,
                         container=container,
@@ -134,6 +167,9 @@ class V3ioStore(DataStore):
                         append=append,
                     )
                     file_offset += chunk_size
+        data_from_v3io = self.get(key=key)
+        print(f"len data_from_v3io {len(data_from_v3io)}")
+        print(f"is equal data_from_v3io {data_from_v3io==data}")
 
     def upload(self, key, src_path):
         return self._upload(key, src_path)
@@ -149,6 +185,9 @@ class V3ioStore(DataStore):
         ).body
 
     def _put(self, key, data, append=False, max_chunk_size: int = ONE_GB):
+        print(
+            f"put method on destination: {key} len data:{len(data)} type:{type(data)} hash: {do_hash(data)}"
+        )
         """helper function for put method, allows for controlling max_chunk_size in testing"""
         container, path = split_path(self._join(key))
         buffer_size = len(data)  # in bytes
