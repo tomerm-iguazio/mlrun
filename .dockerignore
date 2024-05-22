@@ -8,3 +8,46 @@ venv
 venv*
 __pycache__
 .idea
+tests/
+docs/
+.coverage
+project.yaml
+
+
+*.pyc
+.aws-secrets
+.ipynb_checkpoints
+.hypothesis/
+.vscode/
+.bin
+.DS_Store
+build
+chart
+chart.html
+dask-worker-space
+dask-worker-space/
+dataset.csv
+dist
+Dockerfile.mlrun-test-nb
+iteration_results.csv
+mlrun.egg-info/
+model.txt
+result*.html
+mlrun/utils/version/version.json
+# pyenv file for working with several python versions
+.python-version
+*.bak
+server/api/proto/*pb2*.py
+automation/patch_igz/patch_env.yml
+kubeconfig
+
+# used for local development.
+# e.g., when developing for mlrun api, you may use this env to preset envvars.
+# then, when running the api, just feed it with "MLRUN_DEFAULT_ENV_FILE=<absolute-path-to-this-file>"
+hack/*.env
+
+# files generated for openapi spec checks
+mlrun_bc_*.json
+
+# used for local development.
+playground
