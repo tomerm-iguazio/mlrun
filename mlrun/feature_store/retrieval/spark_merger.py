@@ -266,6 +266,7 @@ class SparkFeatureMerger(BaseMerger):
         columns=None,
     ):
         from pyspark.sql.functions import col
+        print(f"df_schema: {df.schema}")
         print(f"rename_col_dict: {rename_col_dict}")
         print(f"columns: {columns}")
         print("show_df:")
