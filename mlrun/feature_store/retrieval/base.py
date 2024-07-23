@@ -53,6 +53,20 @@ class BaseMerger(abc.ABC):
         self._origin_alias = dict()
         self._entity_rows_node_name = "__mlrun__$entity_rows$"
 
+    @staticmethod
+    def _get_fixed_case(keys, column_names):
+        if not keys:
+            return
+        return list(keys)
+
+    @classmethod
+    def _get_fixed_entities(cls, feature_set, column_names):
+        return list(feature_set.spec.entities.keys())
+
+    @classmethod
+    def _get_fixed_timestamp(cls, feature_set, column_names):
+        return feature_set.spec.timestamp_key
+
     def _append_drop_column(self, key):
         if key and key not in self._drop_columns:
             self._drop_columns.append(key)
@@ -264,14 +278,14 @@ class BaseMerger(abc.ABC):
                 time_column,
                 additional_filters,
             )
-
-            fs_entities_and_timestamp = list(feature_set.spec.entities.keys())
+            fs_entities_and_timestamp = self._get_fixed_entities(feature_set,column_names)
             column_names += fs_entities_and_timestamp
             saved_columns_for_relation += fs_entities_and_timestamp
-            if feature_set.spec.timestamp_key:
-                column_names.append(feature_set.spec.timestamp_key)
-                saved_columns_for_relation.append(feature_set.spec.timestamp_key)
-                fs_entities_and_timestamp.append(feature_set.spec.timestamp_key)
+            timestamp_key = self._get_fixed_timestamp(feature_set,column_names)
+            if timestamp_key:
+                column_names.append(timestamp_key)
+                saved_columns_for_relation.append(timestamp_key)
+                fs_entities_and_timestamp.append(timestamp_key)
 
             # rename columns to be unique for each feature set and select if needed
             rename_col_dict = {

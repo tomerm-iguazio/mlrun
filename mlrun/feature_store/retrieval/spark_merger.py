@@ -35,6 +35,33 @@ class SparkFeatureMerger(BaseMerger):
         self.named_view = engine_args.get("named_view", False)
         self._pandas_df = None
 
+    @classmethod
+    def _get_fixed_entities(cls, feature_set, column_names):
+        keys = super()._get_fixed_entities(feature_set, column_names)
+        fixed_keys = []
+
+        for key in keys:
+            key_added = False
+            for column_name in column_names:
+                if key.upper() == column_name.upper():
+                    fixed_keys.append(column_name)
+                    key_added = True
+                    break
+            if not key_added:
+                fixed_keys.append(key)
+        return fixed_keys
+
+    @classmethod
+    def _get_fixed_timestamp(cls, feature_set, column_names):
+        timestamp_key = super()._get_fixed_timestamp(feature_set, column_names)
+        if not timestamp_key:
+            return
+
+        for column_name in column_names:
+            if timestamp_key.upper() == column_name.upper():
+                return column_name
+        return timestamp_key
+
     def to_spark_df(self, session, path):
         return session.read.load(path)
 
