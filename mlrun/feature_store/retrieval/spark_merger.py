@@ -245,10 +245,13 @@ class SparkFeatureMerger(BaseMerger):
             **source_kwargs,
         )
 
-        columns = column_names + [ent.name for ent in feature_set.spec.entities]
+        columns = column_names + [ent.name for ent in feature_set.spec.entities
+                                  if ent.name.upper() not in [column.upper() for column in column_names]]
+        upper_columns = [column.upper() for column in columns]
+
         if (
             feature_set.spec.timestamp_key
-            and feature_set.spec.timestamp_key not in columns
+            and feature_set.spec.timestamp_key.upper() not in upper_columns
         ):
             columns.append(feature_set.spec.timestamp_key)
 
