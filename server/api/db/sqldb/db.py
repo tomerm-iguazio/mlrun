@@ -3752,6 +3752,8 @@ class SQLDB(DBInterface):
             )
 
         feature_sets = []
+        import time
+        start_time = time.monotonic()
         for feature_set_record in query:
             feature_sets.extend(
                 self._generate_records_with_tags_assigned(
@@ -3762,6 +3764,7 @@ class SQLDB(DBInterface):
                     format_=format_,
                 )
             )
+        print(f"for feature_set_record in query run time: {time.monotonic() - start_time}")
         return mlrun.common.schemas.FeatureSetsOutput(feature_sets=feature_sets)
 
     def list_feature_sets_tags(
