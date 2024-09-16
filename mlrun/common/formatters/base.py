@@ -14,7 +14,7 @@
 #
 
 import typing
-
+import time
 import mlrun.errors
 
 
@@ -69,8 +69,10 @@ class ObjectFormat:
 
         if not format_method:
             return obj
-
-        return format_method(obj)
+        start_time = time.monotonic()
+        result = format_method(obj)
+        print(f"format_obj run time: {time.monotonic() - start_time}")
+        return result
 
     @staticmethod
     def filter_obj_method(_filter: list[str]) -> typing.Callable:
