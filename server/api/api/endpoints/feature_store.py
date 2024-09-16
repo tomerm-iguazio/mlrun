@@ -252,6 +252,7 @@ async def list_feature_sets(
         auth_info,
     )
     print(f"query_project_permissions run time: {time.monotonic() - start_time}")
+    start_time = time.monotonic()
     feature_sets = await run_in_threadpool(
         server.api.crud.FeatureStore().list_feature_sets,
         db_session,
@@ -268,7 +269,9 @@ async def list_feature_sets(
         partition_order,
         format_,
     )
+    print(f"endpoint list_feature_sets run time: {time.monotonic() - start_time}")
     start_time = time.monotonic()
+
     feature_sets = await server.api.utils.auth.verifier.AuthVerifier().filter_project_resources_by_permissions(
         mlrun.common.schemas.AuthorizationResourceTypes.feature_set,
         feature_sets.feature_sets,
