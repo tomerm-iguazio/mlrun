@@ -3718,10 +3718,11 @@ class SQLDB(DBInterface):
         obj_id_tags = self._get_records_to_tags_map(
             session, FeatureSet, project, tag, name
         )
-
+        import time
         # Query the actual objects to be returned
+        start_time = time.monotonic()
         query = self._query(session, FeatureSet, project=project, state=state)
-
+        print(f"query run time: {time.monotonic() - start_time}")
         if name is not None:
             query = query.filter(
                 generate_query_predicate_for_name(FeatureSet.name, name)
@@ -3734,7 +3735,7 @@ class SQLDB(DBInterface):
             query = query.join(FeatureSet.features).filter(Feature.name.in_(features))
         if labels:
             query = self._add_labels_filter(session, query, FeatureSet, labels)
-
+        start_time = time.monotonic()
         if partition_by:
             self._assert_partition_by_parameters(
                 mlrun.common.schemas.FeatureStorePartitionByField,
@@ -3750,9 +3751,9 @@ class SQLDB(DBInterface):
                 partition_sort_by,
                 partition_order,
             )
-
+        print(f"partition_by run time: {time.monotonic() - start_time}")
         feature_sets = []
-        import time
+
         start_time = time.monotonic()
         for feature_set_record in query:
             feature_sets.extend(
