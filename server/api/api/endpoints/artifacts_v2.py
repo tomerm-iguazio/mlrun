@@ -260,6 +260,7 @@ async def delete_artifact(
         deletion_strategy=deletion_strategy,
         iteration=iteration,
         object_uid=object_uid or uid,
+        secrets=secrets
     )
 
     await server.api.utils.auth.verifier.AuthVerifier().query_project_resource_permissions(
