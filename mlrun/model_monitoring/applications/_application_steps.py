@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import traceback
 from typing import Any, Optional, Union
 
 import mlrun.common.schemas.alert as alert_objects
@@ -89,9 +90,6 @@ class _PushToMonitoringWriter(StepToDict):
                 writer_event[mm_constant.WriterEvent.EVENT_KIND] = (
                     mm_constant.WriterEventKind.RESULT
                 )
-                data[mm_constant.ResultData.CURRENT_STATS] = json.dumps(
-                    application_context.sample_df_stats
-                )
                 writer_event[mm_constant.WriterEvent.DATA] = json.dumps(data)
             else:
                 writer_event[mm_constant.WriterEvent.EVENT_KIND] = (
@@ -112,9 +110,7 @@ class _PushToMonitoringWriter(StepToDict):
 
     def _lazy_init(self):
         if self.output_stream is None:
-            self.output_stream = mlrun.datastore.get_stream_pusher(
-                self.stream_uri,
-            )
+            self.output_stream = mlrun.datastore.get_stream_pusher(self.stream_uri)
 
 
 class _PrepareMonitoringEvent(StepToDict):
@@ -164,10 +160,14 @@ class _ApplicationErrorHandler(StepToDict):
         error_data = {
             "Endpoint ID": event.body.endpoint_id,
             "Application Class": event.body.application_name,
-            "Error": event.error,
+            "Error": "".join(
+                traceback.format_exception(None, event.error, event.error.__traceback__)
+            ),
             "Timestamp": event.timestamp,
         }
         logger.error("Error in application step", **error_data)
+
+        error_data["Error"] = event.error
 
         event_data = alert_objects.Event(
             kind=alert_objects.EventKind.MM_APP_FAILED,

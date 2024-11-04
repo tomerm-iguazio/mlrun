@@ -55,6 +55,8 @@ class EventFieldType:
     NAMED_PREDICTIONS = "named_predictions"
     ERROR_COUNT = "error_count"
     MODEL_ERROR = "model_error"
+    ERROR_TYPE = "error_type"
+    INFER_ERROR = "infer_error"
     ENTITIES = "entities"
     FIRST_REQUEST = "first_request"
     LAST_REQUEST = "last_request"
@@ -134,7 +136,6 @@ class ResultData(MonitoringStrEnum):
     RESULT_KIND = "result_kind"
     RESULT_STATUS = "result_status"
     RESULT_EXTRA_DATA = "result_extra_data"
-    CURRENT_STATS = "current_stats"
 
 
 class EventLiveStats:
@@ -194,13 +195,6 @@ class ModelMonitoringStoreKinds:
     EVENTS = "events"
 
 
-class SchedulingKeys:
-    LAST_ANALYZED = "last_analyzed"
-    ENDPOINT_ID = "endpoint_id"
-    APPLICATION_NAME = "application_name"
-    UID = "uid"
-
-
 class FileTargetKind:
     ENDPOINTS = "endpoints"
     EVENTS = "events"
@@ -216,7 +210,7 @@ class FileTargetKind:
     ERRORS = "errors"
 
 
-class ModelMonitoringMode(str, Enum):
+class ModelMonitoringMode(StrEnum):
     enabled = "enabled"
     disabled = "disabled"
 
@@ -244,6 +238,7 @@ class TDEngineSuperTables(MonitoringStrEnum):
     APP_RESULTS = "app_results"
     METRICS = "metrics"
     PREDICTIONS = "predictions"
+    ERRORS = "errors"
 
 
 @dataclass
