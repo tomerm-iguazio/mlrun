@@ -33,7 +33,7 @@ class FeatureSetFormat(ObjectFormat, mlrun.common.types.StrEnum):
                     "metadata.project",
                     "metadata.tag",
                     "metadata.uid",
-                    "metadata.label",
+                    "metadata.labels",
                     "spec.entities",
                     "spec.description",
                     "spec.targets",
