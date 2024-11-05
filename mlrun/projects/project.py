@@ -3383,6 +3383,28 @@ class MlrunProject(ModelObj):
                 "and set `rebuild_images=True`"
             )
 
+    def list_model_endpoints(
+        self,
+        model: Optional[str] = None,
+        function: Optional[str] = None,
+        labels: list[str] = None,
+        start: str = "now-1h",
+        end: str = "now",
+        top_level: bool = False,
+        uids: Optional[list[str]] = None,
+    ) -> list[mlrun.model_monitoring.model_endpoint.ModelEndpoint]:
+        db = mlrun.db.get_run_db(secrets=self._secrets)
+        return db.list_model_endpoints(
+            project=self.name,
+            model=model,
+            function=function,
+            labels=labels,
+            start=start,
+            end=end,
+            top_level=top_level,
+            uids=uids,
+        )
+
     def run_function(
         self,
         function: typing.Union[str, mlrun.runtimes.BaseRuntime],

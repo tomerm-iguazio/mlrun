@@ -966,6 +966,8 @@ class SQLRunDB(RunDBInterface):
         start: str = "now-1h",
         end: str = "now",
         metrics: Optional[list[str]] = None,
+        top_level: bool = False,
+        uids: Optional[list[str]] = None,
     ):
         raise NotImplementedError()
 
