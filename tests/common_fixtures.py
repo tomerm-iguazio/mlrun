@@ -199,7 +199,6 @@ def patch_file_not_found(monkeypatch):
             return MockV3ioObject()
 
     mock_get = mock_failed_get_func(HTTPStatus.NOT_FOUND.value)
-
     monkeypatch.setattr(requests, "get", mock_get)
     monkeypatch.setattr(requests, "head", mock_get)
     monkeypatch.setattr(v3io.dataplane, "Client", MockV3ioClient)
@@ -267,11 +266,11 @@ class RunDBMock:
     def store_artifact(
         self, key, artifact, uid=None, iter=None, tag="", project="", tree=None
     ):
-        self._artifacts[key] = artifact
+        self._artifacts[(key, iter or 0)] = artifact
         return artifact
 
     def read_artifact(self, key, tag=None, iter=None, project="", tree=None, uid=None):
-        return self._artifacts.get(key, None)
+        return self._artifacts.get((key, iter or 0), None)
 
     def list_artifacts(
         self,
@@ -417,6 +416,7 @@ class RunDBMock:
         logs: bool = True,
         last_log_timestamp: float = 0,
         verbose: bool = False,
+        events_offset: int = 0,
     ):
         func.status.state = mlrun.common.schemas.FunctionState.ready
         if func.kind in mlrun.runtimes.RuntimeKinds.pure_nuclio_deployed_runtimes():
@@ -716,6 +716,7 @@ class RemoteBuilderMock(RunDBMock):
         logs: bool = True,
         last_log_timestamp: float = 0,
         verbose: bool = False,
+        events_offset: int = 0,
     ):
         func.status.state = mlrun.common.schemas.FunctionState.ready
         return "ready", last_log_timestamp

@@ -38,7 +38,7 @@ USER $NB_UID
 
 ENV PIP_NO_CACHE_DIR=1
 
-ARG MLRUN_PIP_VERSION=24.0
+ARG MLRUN_PIP_VERSION=24.2
 RUN python -m pip install --upgrade pip~=${MLRUN_PIP_VERSION}
 
 WORKDIR $HOME
@@ -86,10 +86,11 @@ COPY --chown=$NB_UID:$NB_GID ./dockerfiles/jupyter/mlce-start.sh /usr/local/bin/
 ENTRYPOINT ["tini", "--"]
 
 # run the mlrun api and the notebook in parallel
-CMD cd $HOME/mlrun && MLRUN_ARTIFACT_PATH=$HOME/data uvicorn server.api.main:app \
+CMD cd $HOME/mlrun && \
+    PYTHONPATH=$HOME/mlrun/server/py MLRUN_ARTIFACT_PATH=$HOME/data uvicorn services.api.main:app \
     --proxy-headers \
     --host="0.0.0.0" \
-    --log-config=server/api/uvicorn_log_config.yaml & \
+    --log-config=server/py/services/uvicorn_log_config.yaml & \
     MLRUN_DBPATH=http://localhost:8080 start-notebook.sh \
     --ip="0.0.0.0" \
     --port=8888 \

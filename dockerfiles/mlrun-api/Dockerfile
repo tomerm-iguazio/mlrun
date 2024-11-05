@@ -46,7 +46,7 @@ RUN apt-get update && apt-get install --no-install-recommends -y \
   mariadb-client \
  && rm -rf /var/lib/apt/lists/*
 
-ARG MLRUN_PIP_VERSION=24.0
+ARG MLRUN_PIP_VERSION=24.2
 RUN python -m pip install --upgrade pip~=${MLRUN_PIP_VERSION}
 
 WORKDIR /mlrun
@@ -73,6 +73,7 @@ ENV UVICORN_PORT=${MLRUN_HTTPDB__PORT}
 ENV UVICORN_TIMEOUT_KEEP_ALIVE=${MLRUN_HTTPDB__HTTP_CONNECTION_TIMEOUT_KEEP_ALIVE}
 
 COPY . .
+ENV PYTHONPATH=/mlrun/server/py
 
 RUN python -m pip install .[complete-api] &&\
     pip install ./pipeline-adapters/mlrun-pipelines-kfp-common &&\

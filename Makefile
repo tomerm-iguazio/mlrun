@@ -33,7 +33,7 @@ MLRUN_ML_DOCKER_IMAGE_NAME_PREFIX ?= ml-
 MLRUN_PYTHON_VERSION ?= 3.9
 MLRUN_SKIP_COMPILE_SCHEMAS ?=
 INCLUDE_PYTHON_VERSION_SUFFIX ?=
-MLRUN_PIP_VERSION ?= 24.0
+MLRUN_PIP_VERSION ?= 24.2
 MLRUN_CACHE_DATE ?= $(shell date +%s)
 # empty by default, can be set to something like "tag-name" which will cause to:
 # 1. docker pull the same image with the given tag (cache image) before the build
@@ -48,8 +48,9 @@ MLRUN_RAISE_ON_ERROR ?= true
 MLRUN_SKIP_CLONE ?= false
 MLRUN_RELEASE_NOTES_OUTPUT_FILE ?=
 MLRUN_SYSTEM_TESTS_CLEAN_RESOURCES ?= true
+MLRUN_SYSTEM_TEST_MARKERS ?=
 MLRUN_SYSTEM_TESTS_GITHUB_RUN_URL ?=
-MLRUN_GPU_CUDA_VERSION ?= 11.7.1-cudnn8-devel-ubuntu20.04
+MLRUN_GPU_CUDA_VERSION ?= 11.8.0-cudnn8-devel-ubuntu22.04
 
 # THIS BLOCK IS FOR COMPUTED VARIABLES
 MLRUN_DOCKER_IMAGE_PREFIX := $(if $(MLRUN_DOCKER_REGISTRY),$(strip $(MLRUN_DOCKER_REGISTRY))$(MLRUN_DOCKER_REPO),$(MLRUN_DOCKER_REPO))
@@ -330,7 +331,7 @@ log-collector: update-version-file
 		MLRUN_DOCKER_REPO=$(MLRUN_DOCKER_REPO) \
 		MLRUN_DOCKER_TAG=$(MLRUN_DOCKER_TAG) \
 		MLRUN_DOCKER_IMAGE_PREFIX=$(MLRUN_DOCKER_IMAGE_PREFIX) \
-		make --no-print-directory -C $(shell pwd)/server/log-collector log-collector
+		make --no-print-directory -C $(shell pwd)/server/go log-collector
 
 .PHONY: push-log-collector
 push-log-collector: log-collector
@@ -339,7 +340,7 @@ push-log-collector: log-collector
 		MLRUN_DOCKER_REPO=$(MLRUN_DOCKER_REPO) \
 		MLRUN_DOCKER_TAG=$(MLRUN_DOCKER_TAG) \
 		MLRUN_DOCKER_IMAGE_PREFIX=$(MLRUN_DOCKER_IMAGE_PREFIX) \
-		make --no-print-directory -C $(shell pwd)/server/log-collector push-log-collector
+		make --no-print-directory -C $(shell pwd)/server/go push-log-collector
 
 .PHONY: pull-log-collector
 pull-log-collector:
@@ -348,7 +349,7 @@ pull-log-collector:
 		MLRUN_DOCKER_REPO=$(MLRUN_DOCKER_REPO) \
 		MLRUN_DOCKER_TAG=$(MLRUN_DOCKER_TAG) \
 		MLRUN_DOCKER_IMAGE_PREFIX=$(MLRUN_DOCKER_IMAGE_PREFIX) \
-		make --no-print-directory -C $(shell pwd)/server/log-collector pull-log-collector
+		make --no-print-directory -C $(shell pwd)/server/go pull-log-collector
 
 
 .PHONY: compile-schemas
@@ -356,8 +357,7 @@ compile-schemas: ## Compile schemas over docker
 ifdef MLRUN_SKIP_COMPILE_SCHEMAS
 	@echo "Skipping compile schemas"
 else
-	cd server/log-collector && \
-	  make compile-schemas
+	$(MAKE) -C server/go compile-schemas
 endif
 
 MLRUN_API_IMAGE_NAME := $(MLRUN_DOCKER_IMAGE_PREFIX)/mlrun-api
@@ -462,10 +462,9 @@ test: clean ## Run mlrun tests
 		--ignore=tests/integration \
 		--ignore=tests/system \
 		--ignore=tests/rundb/test_httpdb.py \
+		--ignore=server/py/services/api/migrations \
 		--forked \
-		-rf \
-		tests
-
+		-rf
 
 .PHONY: test-integration-dockerized
 test-integration-dockerized: build-test ## Run mlrun integration tests in docker container
@@ -530,7 +529,7 @@ test-system-open-source: update-version-file ## Run mlrun system tests with open
 		--disable-warnings \
 		--durations=100 \
 		-rf \
-		-m "not enterprise" \
+		-m $(if $(MLRUN_SYSTEM_TEST_MARKERS),"$(MLRUN_SYSTEM_TEST_MARKERS)","not enterprise") \
 		$(MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX)
 
 .PHONY: test-package compile-schemas
@@ -539,23 +538,19 @@ test-package: ## Run mlrun package tests
 
 .PHONY: test-go
 test-go-unit: ## Run mlrun go unit tests
-	cd server/log-collector && \
-		make test-unit-local
+	$(MAKE) -C server/go test-unit-local
 
 .PHONY: test-go-dockerized
 test-go-unit-dockerized: ## Run mlrun go unit tests in docker container
-	cd server/log-collector && \
-		make test-unit-dockerized
+	$(MAKE) -C server/go test-unit-dockerized
 
 .PHONY: test-go
 test-go-integration: ## Run mlrun go unit tests
-	cd server/log-collector && \
-		make test-integration-local
+	$(MAKE) -C server/go test-integration-local
 
 .PHONY: test-go-dockerized
 test-go-integration-dockerized: ## Run mlrun go integration tests in docker container
-	cd server/log-collector && \
-		make test-integration-dockerized
+	$(MAKE) -C server/go test-integration-dockerized
 
 .PHONY: run-api-undockerized
 run-api-undockerized: ## Run mlrun api locally (un-dockerized)
@@ -644,13 +639,11 @@ lint-check: ## Check the code (using ruff)
 
 .PHONY: lint-go
 lint-go:
-	cd server/log-collector && \
-		make lint
+	$(MAKE) -C server/go lint
 
 .PHONY: fmt-go
 fmt-go:
-	cd server/log-collector && \
-		make fmt
+	$(MAKE) -C server/go fmt
 
 .PHONY: vale-docs
 vale-docs: ## Run vale check for docs and sorts ignore.txt file
@@ -710,9 +703,9 @@ ifndef MLRUN_BC_TESTS_OPENAPI_OUTPUT_PATH
 endif
 	export MLRUN_HTTPDB__DSN='sqlite:////mlrun/db/mlrun.db?check_same_thread=false' && \
 	export MLRUN_OPENAPI_JSON_NAME=mlrun_bc_base_oai.json && \
-	python -m pytest -v --capture=no --disable-warnings --durations=100 $(MLRUN_BC_TESTS_BASE_CODE_PATH)/tests/api/api/test_docs.py::test_save_openapi_json && \
+	python -m pytest -v --capture=no --disable-warnings --durations=100 $(MLRUN_BC_TESTS_BASE_CODE_PATH)/server/py/services/api/tests/unit/api/test_docs.py::test_save_openapi_json && \
 	export MLRUN_OPENAPI_JSON_NAME=mlrun_bc_head_oai.json && \
-	python -m pytest -v --capture=no --disable-warnings --durations=100 tests/api/api/test_docs.py::test_save_openapi_json && \
+	python -m pytest -v --capture=no --disable-warnings --durations=100 server/py/services/api/tests/unit/api/test_docs.py::test_save_openapi_json && \
 	docker run --rm -t -v $(MLRUN_BC_TESTS_OPENAPI_OUTPUT_PATH):/specs:ro openapitools/openapi-diff:latest /specs/mlrun_bc_base_oai.json /specs/mlrun_bc_head_oai.json --fail-on-incompatible
 
 

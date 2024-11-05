@@ -15,6 +15,7 @@
 import logging
 import os
 import uuid
+import warnings
 from copy import deepcopy
 from typing import Union
 
@@ -24,11 +25,11 @@ from dateutil import parser
 
 import mlrun
 import mlrun.common.constants as mlrun_constants
-from mlrun.artifacts import ModelArtifact
+import mlrun.common.formatters
+from mlrun.artifacts import Artifact, DatasetArtifact, ModelArtifact
 from mlrun.datastore.store_resources import get_store_resource
 from mlrun.errors import MLRunInvalidArgumentError
 
-from .artifacts import DatasetArtifact
 from .artifacts.manager import ArtifactManager, dict_to_artifact, extend_artifact_path
 from .datastore import store_manager
 from .features import Feature
@@ -192,6 +193,11 @@ class MLClientCtx:
     def artifacts(self):
         """Dictionary of artifacts (read-only)"""
         return deepcopy(self._artifacts_manager.artifact_list())
+
+    @property
+    def artifact_uris(self):
+        """Dictionary of artifact URIs (read-only)"""
+        return deepcopy(self._artifacts_manager.artifact_uris)
 
     @property
     def in_path(self):
@@ -424,8 +430,11 @@ class MLClientCtx:
             self._results = status.get("results", self._results)
             for artifact in status.get("artifacts", []):
                 artifact_obj = dict_to_artifact(artifact)
-                key = artifact_obj.key
-                self._artifacts_manager.artifacts[key] = artifact_obj
+                self._artifacts_manager.artifact_uris[artifact_obj.key] = (
+                    artifact_obj.uri
+                )
+            for key, uri in status.get("artifact_uris", {}).items():
+                self._artifacts_manager.artifact_uris[key] = uri
             self._state = status.get("state", self._state)
 
         # No need to store the run for every worker
@@ -572,22 +581,25 @@ class MLClientCtx:
         """Reserved for internal use"""
 
         if best:
+            # Recreate the best iteration context for the interface of getting its artifacts
+            best_context = MLClientCtx.from_dict(
+                task, store_run=False, include_status=True
+            )
             self._results["best_iteration"] = best
-            for k, v in get_in(task, ["status", "results"], {}).items():
-                self._results[k] = v
-            for artifact in get_in(task, ["status", RunKeys.artifacts], []):
-                self._artifacts_manager.artifacts[artifact["metadata"]["key"]] = (
-                    artifact
-                )
+            for key, result in best_context.results.items():
+                self._results[key] = result
+            for key, artifact_uri in best_context.artifact_uris.items():
+                self._artifacts_manager.artifact_uris[key] = artifact_uri
+                artifact = best_context.get_artifact(key)
                 self._artifacts_manager.link_artifact(
                     self.project,
                     self.name,
                     self.tag,
-                    artifact["metadata"]["key"],
+                    key,
                     self.iteration,
-                    artifact["spec"]["target_path"],
+                    artifact.target_path,
+                    db_key=artifact.db_key,
                     link_iteration=best,
-                    db_key=artifact["spec"]["db_key"],
                 )
 
         if summary is not None:
@@ -851,10 +863,18 @@ class MLClientCtx:
 
     def get_cached_artifact(self, key):
         """Return a logged artifact from cache (for potential updates)"""
-        return self._artifacts_manager.artifacts[key]
+        warnings.warn(
+            "get_cached_artifact is deprecated in 1.8.0 and will be removed in 1.10.0. Use get_artifact instead.",
+            FutureWarning,
+        )
+        return self.get_artifact(key)
 
-    def update_artifact(self, artifact_object):
-        """Update an artifact object in the cache and the DB"""
+    def get_artifact(self, key: str) -> Artifact:
+        artifact_uri = self._artifacts_manager.artifact_uris[key]
+        return self.get_store_resource(artifact_uri)
+
+    def update_artifact(self, artifact_object: Artifact):
+        """Update an artifact object in the DB and the cached uri"""
         self._artifacts_manager.update_artifact(self, artifact_object)
 
     def commit(self, message: str = "", completed=False):
@@ -926,12 +946,42 @@ class MLClientCtx:
                 updates, self._uid, self.project, iter=self._iteration
             )
 
-    def get_notifications(self):
-        """Get the list of notifications"""
-        return [
-            mlrun.model.Notification.from_dict(notification)
-            for notification in self._notifications
-        ]
+    def get_notifications(self, unmask_secret_params=False):
+        """
+        Get the list of notifications
+
+        :param unmask_secret_params: Used as a workaround for sending notification from workflow-runner.
+                                     When used, if the notification will be saved again a new secret will be created.
+        """
+
+        # Get the full notifications from the DB since the run context does not contain the params due to bloating
+        run = self._rundb.read_run(
+            self.uid, format_=mlrun.common.formatters.RunFormat.notifications
+        )
+
+        notifications = []
+        for notification in run["spec"]["notifications"]:
+            notification: mlrun.model.Notification = mlrun.model.Notification.from_dict(
+                notification
+            )
+            # Fill the secret params from the project secret. We cannot use the server side internal secret mechanism
+            # here as it is the client side.
+            # TODO: This is a workaround to allow the notification to get the secret params from project secret
+            #       instead of getting them from the internal project secret that should be mounted.
+            #       We should mount the internal project secret that was created to the workflow-runner
+            #       and get the secret from there.
+            if unmask_secret_params:
+                try:
+                    notification.enrich_unmasked_secret_params_from_project_secret()
+                    notifications.append(notification)
+                except mlrun.errors.MLRunValueError:
+                    logger.warning(
+                        "Failed to fill secret params from project secret for notification."
+                        "Skip this notification.",
+                        notification=notification.name,
+                    )
+
+        return notifications
 
     def to_dict(self):
         """Convert the run context to a dictionary"""
@@ -982,7 +1032,7 @@ class MLClientCtx:
         set_if_not_none(struct["status"], "commit", self._commit)
         set_if_not_none(struct["status"], "iterations", self._iteration_results)
 
-        struct["status"][RunKeys.artifacts] = self._artifacts_manager.artifact_list()
+        struct["status"][RunKeys.artifact_uris] = self._artifacts_manager.artifact_uris
         self._data_stores.to_dict(struct["spec"])
         return struct
 
@@ -1076,7 +1126,9 @@ class MLClientCtx:
         set_if_not_none(struct, "status.commit", self._commit)
         set_if_not_none(struct, "status.iterations", self._iteration_results)
 
-        struct[f"status.{RunKeys.artifacts}"] = self._artifacts_manager.artifact_list()
+        struct[f"status.{RunKeys.artifact_uris}"] = (
+            self._artifacts_manager.artifact_uris
+        )
         return struct
 
     def _init_dbs(self, rundb):
