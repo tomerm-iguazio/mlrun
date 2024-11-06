@@ -157,9 +157,8 @@
 |ML-7706|Changed `sync_functions` to be "best effort" when scheduling workflows or running remote workflows.|
 |ML-7796|New `project.run()` parameter {py:meth}`workflow_runner_node_selector <mlrun.projects.MlrunProject.run>` that defines the node selector for the workflow runner pod when using a remote engine.|
 |ML-7907|Fixed an issue with RabbitMQ event path when using Model serving functions.|
-|ML-8027|Resolved issue of MLRun taking too long to start. |
+|ML-8027|Fix periodic log collection to list only runs with pods. |
 |ML-8029|Notifications with secret params now send notifications. See [Notification parameters and secrets](../concepts/notifications.html#notification-parameters-and-secrets).|
-|ML-8097|UI now displays the pod status in **Monitor Jobs** when you hover over the status symbol.|
 
 ## v1.6.4 (2 July 2024)
 
@@ -1124,7 +1123,6 @@ with a drill-down to view the steps and their details. [Tech Preview]
 |ML-8110|The cross-project summary is not aligned with per project summary: In the Projects page, **Monitoring > Scheduled**, the Jobs and Total counters are incorrect.      |NA  | v1.7.0|
 
 
-
 ## Limitations
 | ID     |Description                                                                                                                                 |Workaround |Opened in|
 |---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------|     
@@ -1140,6 +1138,7 @@ with a drill-down to view the steps and their details. [Tech Preview]
 |ML-5669|When using mlrun.mlrun image, use PyTorch versions up to and including than 2.0.1, but not higher. See [MLRun runtime images](../runtimes/images.html#mlrun-runtime-images) | You can build your own images with newer CUDA for a later release of PyTorch. |v1.6.0|  
 |ML-5732|When using an MLRun client previous to v1.6.0, the workflow step status might show completed when it is actually aborted. | Upgrade the client to v1.6.0 or higher. | v1.6.0 |
 |ML-8115|Deploying a model without monitoring does not create an endpoint. | NA | v1.7.0|
+|ML-8174| A loaded system takes a few minutes (±5) to calculate the statistics in the Projects Monitoring pane.|
 
 ## Deprecations and removed code
 
