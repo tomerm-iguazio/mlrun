@@ -74,9 +74,9 @@ def test_load_object_into_dask_dataframe():
 
 def test_load_object_into_dask_dataframe_using_wasbs_url():
     # Load a parquet file from Azure Open Datasets
-    os.environ["AZURE_STORAGE_ACCOUNT_NAME"] = "azureopendatastorage"
+    os.environ["AZURE_STORAGE_ACCOUNT_NAME"] = "pandemicdatalake"
     data_item = mlrun.datastore.store_manager.object(
-        "wasbs://tutorials@dummyaccount/noaa_isd_weather/demo_data.parquet"
+        "wasbs://public@dummyaccount/curated/covid-19/ecdc_cases/latest/ecdc_cases.parquet"
     )
     ddf = data_item.as_df(df_module=dd)
     assert isinstance(ddf, dd.DataFrame)
