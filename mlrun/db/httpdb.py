@@ -22,12 +22,13 @@ import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta
 from os import path, remove
-from typing import Optional, Union
+from typing import Annotated, Literal, Optional, Union
 from urllib.parse import urlparse
 
 import pydantic
 import requests
 import semver
+from fastapi import Path
 from mlrun_pipelines.utils import compile_pipeline
 
 import mlrun
@@ -35,6 +36,8 @@ import mlrun.common.constants
 import mlrun.common.formatters
 import mlrun.common.runtimes
 import mlrun.common.schemas
+import mlrun.common.schemas.model_monitoring.constants as mm_constants
+import mlrun.common.schemas.model_monitoring.model_endpoints as mm_endpoints
 import mlrun.common.types
 import mlrun.model_monitoring.model_endpoint
 import mlrun.platforms
@@ -68,6 +71,11 @@ _artifact_keys = [
     "src_path",
     "target_path",
     "viewer",
+]
+
+ProjectAnnotation = Annotated[str, Path(pattern=mm_constants.PROJECT_PATTERN)]
+EndpointIDAnnotation = Annotated[
+    str, Path(pattern=mm_constants.MODEL_ENDPOINT_ID_PATTERN)
 ]
 
 
@@ -3196,6 +3204,32 @@ class HTTPRunDB(RunDBInterface):
             error_message,
             params=params,
         )
+
+    def get_model_endpoint_monitoring_metrics(
+        self,
+        project: str,
+        endpoint_id: str,
+        type: Literal["results", "metrics", "all"] = "all",
+    ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+        # TODO complete request to  "/{endpoint_id}/metrics"
+        path = f"/{endpoint_id}/metrics"
+        params = {"project": project, "type": type}
+        error_message = (
+            f"Failed to get model endpoint monitoring metrics,"
+            f" endpoint_id: {endpoint_id}, project: {project}"
+        )
+        response = self.api_call(
+            "POST",
+            path,
+            error_message,
+            params=params,
+        )
+        monitoring_metrics = response.json()["metrics"]  #  TODO check it...
+        if monitoring_metrics:
+            return [
+                mm_endpoints.ModelEndpointMonitoringMetric(**monitoring_metric)
+                for monitoring_metric in monitoring_metrics
+            ]
 
     def create_user_secrets(
         self,

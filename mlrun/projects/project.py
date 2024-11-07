@@ -29,7 +29,7 @@ import zipfile
 from copy import deepcopy
 from os import environ, makedirs, path
 from typing import Callable, Optional, Union
-from mlrun.model_monitoring.helpers import get_result_instance_fqn
+
 import dotenv
 import git
 import git.exc
@@ -59,6 +59,7 @@ import mlrun.utils.regex
 from mlrun.alerts.alert import AlertConfig
 from mlrun.common.schemas.alert import AlertTemplate, EventKind
 from mlrun.datastore.datastore_profile import DatastoreProfile, DatastoreProfile2Json
+from mlrun.model_monitoring.helpers import get_result_instance_fqn
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 
 from ..artifacts import Artifact, ArtifactProducer, DatasetArtifact, ModelArtifact
@@ -3420,23 +3421,32 @@ class MlrunProject(ModelObj):
         ),
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
+        alerts = []
         for endpoint in endpoints:
-            prj_alert_obj = get_result_instance_fqn(endpoint.metadata.uid, app_name='myapp',
-                                                    result_name='data_drift_test') # TODO understand
-            alert_config = mlrun.alerts.alert.AlertConfig(
-                project=self.name,
-                name='mm example alert',
-                summary='Test MM drift detection',
-                severity=severity,
-                entities=alert_constants.EventEntities(
-                    kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT, project=self.name,
-                    ids=[prj_alert_obj]
-                ),
-                trigger=alert_constants.AlertTrigger(events=['data_drift_detected']),
-                criteria=criteria,
-                notifications=[alert_constants.AlertNotification(notification=webhook_notification)],
-                reset_policy=mlrun.common.schemas.alert.ResetPolicy.AUTO
-            )
+            for result_name in result_names:
+                prj_alert_obj = get_result_instance_fqn(
+                    endpoint.metadata.uid, app_name="myapp", result_name=result_name
+                )  # TODO understand
+                alerts.append(
+                    mlrun.alerts.alert.AlertConfig(
+                        project=self.name,
+                        name="mm example alert",
+                        summary=summary,
+                        severity=severity,
+                        entities=alert_constants.EventEntities(
+                            kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
+                            project=self.name,
+                            ids=[prj_alert_obj],
+                        ),
+                        trigger=alert_constants.AlertTrigger(
+                            events=["data_drift_detected"]
+                        ),
+                        criteria=criteria,
+                        notifications=notifications,
+                        reset_policy=reset_policy,
+                    )
+                )
+
     def run_function(
         self,
         function: typing.Union[str, mlrun.runtimes.BaseRuntime],
