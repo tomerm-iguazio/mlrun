@@ -351,28 +351,16 @@ async def get_model_endpoint_monitoring_metrics(
     await _verify_model_endpoint_read_permission(
         project=project, endpoint_id=endpoint_id, auth_info=auth_info
     )
-    try:
-        get_model_endpoint_metrics = (
-            services.api.crud.model_monitoring.helpers.get_store_object(
-                project=project
-            ).get_model_endpoint_metrics
-        )
-    except mlrun.errors.MLRunInvalidMMStoreTypeError as e:
-        logger.debug(
-            "Failed to list model endpoint metrics because store connection is not defined."
-            " Returning an empty list of metrics",
-            error=mlrun.errors.err_to_str(e),
-        )
-        return []
     metrics: list[mm_endpoints.ModelEndpointMonitoringMetric] = []
     tasks: list[asyncio.Task] = []
     if type == "results" or type == "all":
         tasks.append(
             asyncio.create_task(
                 run_in_threadpool(
-                    get_model_endpoint_metrics,
+                    services.api.crud.ModelEndpoints.get_model_endpoints_metrics,
                     endpoint_id=endpoint_id,
                     type=mm_constants.ModelEndpointMonitoringMetricType.RESULT,
+                    project=project,
                 )
             )
         )
@@ -380,9 +368,10 @@ async def get_model_endpoint_monitoring_metrics(
         tasks.append(
             asyncio.create_task(
                 run_in_threadpool(
-                    get_model_endpoint_metrics,
+                    services.api.crud.ModelEndpoints.get_model_endpoints_metrics,
                     endpoint_id=endpoint_id,
                     type=mm_constants.ModelEndpointMonitoringMetricType.METRIC,
+                    project=project,
                 )
             )
         )
