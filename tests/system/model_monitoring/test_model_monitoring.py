@@ -349,6 +349,12 @@ class TestBasicModelMonitoring(TestMLRunSystem):
 
         self._assert_model_uri(model_obj=model_obj, endpoint=endpoint)
 
+        metrics = mlrun.get_run_db().get_model_endpoint_monitoring_metrics(
+            self.project_name, endpoint.metadata.uid
+        )
+        assert len(metrics) == 1
+        assert metrics[0] == f"{self.project_name}.mlrun-infra.metric.invocations"
+
     def _assert_model_uri(
         self,
         model_obj: mlrun.artifacts.ModelArtifact,

@@ -3223,20 +3223,19 @@ class HTTPRunDB(RunDBInterface):
         endpoint_id: str,
         type: Literal["results", "metrics", "all"] = "all",
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
-        # TODO complete request to  "/{endpoint_id}/metrics"
-        path = f"/{endpoint_id}/metrics"
-        params = {"project": project, "type": type}
+        path = f"projects/{project}/model-endpoints/{endpoint_id}/metrics"
+        params = {"type": type}
         error_message = (
             f"Failed to get model endpoint monitoring metrics,"
             f" endpoint_id: {endpoint_id}, project: {project}"
         )
         response = self.api_call(
-            "POST",
+            "GET",
             path,
             error_message,
             params=params,
         )
-        monitoring_metrics = response.json()["metrics"]  #  TODO check it...
+        monitoring_metrics = response.json()
         if monitoring_metrics:
             return [
                 mm_endpoints.ModelEndpointMonitoringMetric(**monitoring_metric)
