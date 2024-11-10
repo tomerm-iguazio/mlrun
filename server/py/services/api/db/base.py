@@ -11,6 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+
 import datetime
 import typing
 from abc import ABC, abstractmethod
@@ -79,12 +80,12 @@ class DBInterface(ABC):
     def list_distinct_runs_uids(
         self,
         session,
-        project: str = None,
-        requested_logs_modes: list[bool] = None,
+        project: Optional[str] = None,
+        requested_logs_modes: Optional[list[bool]] = None,
         only_uids: bool = False,
-        last_update_time_from: datetime.datetime = None,
-        states: list[str] = None,
-        specific_uids: list[str] = None,
+        last_update_time_from: Optional[datetime.datetime] = None,
+        states: Optional[list[str]] = None,
+        specific_uids: Optional[list[str]] = None,
     ):
         pass
 
@@ -99,7 +100,7 @@ class DBInterface(ABC):
         self,
         session,
         uid: str,
-        project: str = None,
+        project: Optional[str] = None,
         iter: int = 0,
         with_notifications: bool = False,
         populate_existing: bool = False,
@@ -118,16 +119,16 @@ class DBInterface(ABC):
         sort: bool = True,
         last: int = 0,
         iter: bool = False,
-        start_time_from: datetime.datetime = None,
-        start_time_to: datetime.datetime = None,
-        last_update_time_from: datetime.datetime = None,
-        last_update_time_to: datetime.datetime = None,
+        start_time_from: Optional[datetime.datetime] = None,
+        start_time_to: Optional[datetime.datetime] = None,
+        last_update_time_from: Optional[datetime.datetime] = None,
+        last_update_time_to: Optional[datetime.datetime] = None,
         partition_by: mlrun.common.schemas.RunPartitionByField = None,
         rows_per_partition: int = 1,
         partition_sort_by: mlrun.common.schemas.SortField = None,
         partition_order: mlrun.common.schemas.OrderType = mlrun.common.schemas.OrderType.desc,
         max_partitions: int = 0,
-        requested_logs: bool = None,
+        requested_logs: Optional[bool] = None,
         return_as_run_structs: bool = True,
         with_notifications: bool = False,
         page: Optional[int] = None,
@@ -209,8 +210,8 @@ class DBInterface(ABC):
         tag="",
         iter=None,
         project="",
-        producer_id: str = None,
-        uid: str = None,
+        producer_id: Optional[str] = None,
+        uid: Optional[str] = None,
         raise_on_not_found: bool = True,
         format_: mlrun.common.formatters.ArtifactFormat = mlrun.common.formatters.ArtifactFormat.full,
     ):
@@ -224,18 +225,18 @@ class DBInterface(ABC):
         project="",
         tag="",
         labels=None,
-        since: datetime.datetime = None,
-        until: datetime.datetime = None,
+        since: Optional[datetime.datetime] = None,
+        until: Optional[datetime.datetime] = None,
         kind=None,
         category: mlrun.common.schemas.ArtifactCategories = None,
-        iter: int = None,
+        iter: Optional[int] = None,
         best_iteration: bool = False,
         as_records: bool = False,
-        uid: str = None,
-        producer_id: str = None,
-        producer_uri: str = None,
+        uid: Optional[str] = None,
+        producer_id: Optional[str] = None,
+        producer_uri: Optional[str] = None,
         format_: mlrun.common.formatters.ArtifactFormat = mlrun.common.formatters.ArtifactFormat.full,
-        limit: int = None,
+        limit: Optional[int] = None,
         page: Optional[int] = None,
         page_size: Optional[int] = None,
     ) -> typing.Union[list, mlrun.lists.ArtifactList]:
@@ -329,11 +330,11 @@ class DBInterface(ABC):
     def get_function(
         self,
         session,
-        name: str = None,
-        project: str = None,
-        tag: str = None,
-        hash_key: str = None,
-        format_: str = None,
+        name: Optional[str] = None,
+        project: Optional[str] = None,
+        tag: Optional[str] = None,
+        hash_key: Optional[str] = None,
+        format_: Optional[str] = None,
     ):
         pass
 
@@ -351,16 +352,16 @@ class DBInterface(ABC):
     def list_functions(
         self,
         session,
-        name: str = None,
-        project: str = None,
-        tag: str = None,
-        labels: list[str] = None,
-        hash_key: str = None,
+        name: Optional[str] = None,
+        project: Optional[str] = None,
+        tag: Optional[str] = None,
+        labels: Optional[list[str]] = None,
+        hash_key: Optional[str] = None,
         format_: mlrun.common.formatters.FunctionFormat = mlrun.common.formatters.FunctionFormat.full,
-        page: int = None,
-        page_size: int = None,
-        since: datetime.datetime = None,
-        until: datetime.datetime = None,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        since: Optional[datetime.datetime] = None,
+        until: Optional[datetime.datetime] = None,
     ):
         pass
 
@@ -370,9 +371,9 @@ class DBInterface(ABC):
         session,
         name,
         updates: dict,
-        project: str = None,
-        tag: str = None,
-        hash_key: str = None,
+        project: Optional[str] = None,
+        tag: Optional[str] = None,
+        hash_key: Optional[str] = None,
     ):
         pass
 
@@ -399,8 +400,8 @@ class DBInterface(ABC):
         scheduled_object: Any,
         cron_trigger: mlrun.common.schemas.ScheduleCronTrigger,
         concurrency_limit: int,
-        labels: dict = None,
-        next_run_time: datetime.datetime = None,
+        labels: Optional[dict] = None,
+        next_run_time: Optional[datetime.datetime] = None,
     ):
         pass
 
@@ -412,10 +413,10 @@ class DBInterface(ABC):
         name: str,
         scheduled_object: Any = None,
         cron_trigger: mlrun.common.schemas.ScheduleCronTrigger = None,
-        labels: dict = None,
-        last_run_uri: str = None,
-        concurrency_limit: int = None,
-        next_run_time: datetime.datetime = None,
+        labels: Optional[dict] = None,
+        last_run_uri: Optional[str] = None,
+        concurrency_limit: Optional[int] = None,
+        next_run_time: Optional[datetime.datetime] = None,
     ):
         pass
 
@@ -427,10 +428,10 @@ class DBInterface(ABC):
         kind: mlrun.common.schemas.ScheduleKinds = None,
         scheduled_object: Any = None,
         cron_trigger: mlrun.common.schemas.ScheduleCronTrigger = None,
-        labels: dict = None,
-        last_run_uri: str = None,
-        concurrency_limit: int = None,
-        next_run_time: datetime = None,
+        labels: Optional[dict] = None,
+        last_run_uri: Optional[str] = None,
+        concurrency_limit: Optional[int] = None,
+        next_run_time: Optional[datetime.datetime] = None,
     ):
         pass
 
@@ -438,9 +439,9 @@ class DBInterface(ABC):
     def list_schedules(
         self,
         session,
-        project: str = None,
-        name: str = None,
-        labels: list[str] = None,
+        project: Optional[str] = None,
+        name: Optional[str] = None,
+        labels: Optional[list[str]] = None,
         kind: mlrun.common.schemas.ScheduleKinds = None,
     ) -> list[mlrun.common.schemas.ScheduleRecord]:
         pass
@@ -481,9 +482,9 @@ class DBInterface(ABC):
     def list_projects(
         self,
         session,
-        owner: str = None,
+        owner: Optional[str] = None,
         format_: mlrun.common.formatters.ProjectFormat = mlrun.common.formatters.ProjectFormat.full,
-        labels: list[str] = None,
+        labels: Optional[list[str]] = None,
         state: mlrun.common.schemas.ProjectState = None,
         names: Optional[list[str]] = None,
     ) -> mlrun.common.schemas.ProjectsOutput:
@@ -493,8 +494,8 @@ class DBInterface(ABC):
     def get_project(
         self,
         session,
-        name: str = None,
-        project_id: int = None,
+        name: Optional[str] = None,
+        project_id: Optional[int] = None,
     ) -> mlrun.common.schemas.Project:
         pass
 
@@ -551,10 +552,10 @@ class DBInterface(ABC):
     def list_project_summaries(
         self,
         session,
-        owner: str = None,
-        labels: list[str] = None,
+        owner: Optional[str] = None,
+        labels: Optional[list[str]] = None,
         state: mlrun.common.schemas.ProjectState = None,
-        names: list[str] = None,
+        names: Optional[list[str]] = None,
     ):
         pass
 
@@ -589,7 +590,12 @@ class DBInterface(ABC):
 
     @abstractmethod
     def get_feature_set(
-        self, session, project: str, name: str, tag: str = None, uid: str = None
+        self,
+        session,
+        project: str,
+        name: str,
+        tag: Optional[str] = None,
+        uid: Optional[str] = None,
     ) -> mlrun.common.schemas.FeatureSet:
         pass
 
@@ -604,10 +610,10 @@ class DBInterface(ABC):
         self,
         session,
         project: str,
-        name: str = None,
-        tag: str = None,
-        entities: list[str] = None,
-        labels: list[str] = None,
+        name: Optional[str] = None,
+        tag: Optional[str] = None,
+        entities: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
     ) -> mlrun.common.schemas.FeaturesOutput:
         pass
 
@@ -616,10 +622,10 @@ class DBInterface(ABC):
         self,
         session,
         project: str,
-        name: str = None,
-        tag: str = None,
-        entities: list[str] = None,
-        labels: list[str] = None,
+        name: Optional[str] = None,
+        tag: Optional[str] = None,
+        entities: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
     ) -> mlrun.common.schemas.FeaturesOutputV2:
         pass
 
@@ -634,9 +640,9 @@ class DBInterface(ABC):
         self,
         session,
         project: str,
-        name: str = None,
-        tag: str = None,
-        labels: list[str] = None,
+        name: Optional[str] = None,
+        tag: Optional[str] = None,
+        labels: Optional[list[str]] = None,
     ) -> mlrun.common.schemas.EntitiesOutput:
         pass
 
@@ -645,9 +651,9 @@ class DBInterface(ABC):
         self,
         session,
         project: str,
-        name: str = None,
-        tag: str = None,
-        labels: list[str] = None,
+        name: Optional[str] = None,
+        tag: Optional[str] = None,
+        labels: Optional[list[str]] = None,
     ) -> mlrun.common.schemas.EntitiesOutputV2:
         pass
 
@@ -656,12 +662,12 @@ class DBInterface(ABC):
         self,
         session,
         project: str,
-        name: str = None,
-        tag: str = None,
-        state: str = None,
-        entities: list[str] = None,
-        features: list[str] = None,
-        labels: list[str] = None,
+        name: Optional[str] = None,
+        tag: Optional[str] = None,
+        state: Optional[str] = None,
+        entities: Optional[list[str]] = None,
+        features: Optional[list[str]] = None,
+        labels: Optional[list[str]] = None,
         partition_by: mlrun.common.schemas.FeatureStorePartitionByField = None,
         rows_per_partition: int = 1,
         partition_sort_by: mlrun.common.schemas.SortField = None,
@@ -710,7 +716,12 @@ class DBInterface(ABC):
 
     @abstractmethod
     def get_feature_vector(
-        self, session, project: str, name: str, tag: str = None, uid: str = None
+        self,
+        session,
+        project: str,
+        name: str,
+        tag: Optional[str] = None,
+        uid: Optional[str] = None,
     ) -> mlrun.common.schemas.FeatureVector:
         pass
 
@@ -719,10 +730,10 @@ class DBInterface(ABC):
         self,
         session,
         project: str,
-        name: str = None,
-        tag: str = None,
-        state: str = None,
-        labels: list[str] = None,
+        name: Optional[str] = None,
+        tag: Optional[str] = None,
+        state: Optional[str] = None,
+        labels: Optional[list[str]] = None,
         partition_by: mlrun.common.schemas.FeatureStorePartitionByField = None,
         rows_per_partition: int = 1,
         partition_sort_by: mlrun.common.schemas.SortField = None,
@@ -809,8 +820,8 @@ class DBInterface(ABC):
         name: str,
         project: str,
         state: str = mlrun.common.schemas.BackgroundTaskState.running,
-        timeout: int = None,
-        error: str = None,
+        timeout: Optional[int] = None,
+        error: Optional[str] = None,
     ):
         pass
 
@@ -825,10 +836,10 @@ class DBInterface(ABC):
         project: str,
         background_task_exceeded_timeout_func,
         states: Optional[list[str]] = None,
-        created_from: datetime.datetime = None,
-        created_to: datetime.datetime = None,
-        last_update_time_from: datetime.datetime = None,
-        last_update_time_to: datetime.datetime = None,
+        created_from: Optional[datetime.datetime] = None,
+        created_to: Optional[datetime.datetime] = None,
+        last_update_time_from: Optional[datetime.datetime] = None,
+        last_update_time_to: Optional[datetime.datetime] = None,
     ) -> list[mlrun.common.schemas.BackgroundTask]:
         pass
 
@@ -867,7 +878,7 @@ class DBInterface(ABC):
 
     @abstractmethod
     def list_alerts(
-        self, session, project: str = None
+        self, session, project: Optional[str] = None
     ) -> list[mlrun.common.schemas.AlertConfig]:
         pass
 
@@ -897,7 +908,7 @@ class DBInterface(ABC):
         session,
         project: str,
         name: str,
-        last_updated: datetime,
+        last_updated: datetime.datetime,
         count: typing.Optional[int] = None,
         active: bool = False,
         obj: typing.Optional[dict] = None,
@@ -944,9 +955,9 @@ class DBInterface(ABC):
     def delete_run_notifications(
         self,
         session,
-        name: str = None,
-        run_uid: str = None,
-        project: str = None,
+        name: Optional[str] = None,
+        run_uid: Optional[str] = None,
+        project: Optional[str] = None,
         commit: bool = True,
     ):
         pass
@@ -1015,10 +1026,10 @@ class DBInterface(ABC):
     def list_paginated_query_cache_record(
         self,
         session,
-        key: str = None,
-        user: str = None,
-        function: str = None,
-        last_accessed_before: datetime = None,
+        key: Optional[str] = None,
+        user: Optional[str] = None,
+        function: Optional[str] = None,
+        last_accessed_before: Optional[datetime.datetime] = None,
         order_by: Optional[mlrun.common.schemas.OrderType] = None,
         as_query: bool = False,
     ):
@@ -1070,4 +1081,132 @@ class DBInterface(ABC):
     def get_time_window_tracker_record(
         self, session, key: str, raise_on_not_found: bool = True
     ):
+        pass
+
+    def store_model_endpoint(
+        self,
+        session,
+        model_endpoint: mlrun.common.schemas.ModelEndpointV2,
+        name: str,
+        project: str,
+    ) -> str:
+        """
+        Store a model endpoint in the DB.
+
+        :param session:         The database session.
+        :param model_endpoint:  The model endpoint object.
+        :param name:            The model endpoint name.
+        :param project:         The project name.
+        :return:                The model endpoint uid.
+        """
+        pass
+
+    def get_model_endpoint(
+        self,
+        session,
+        project: str,
+        name: str,
+        uid: typing.Optional[str] = None,
+    ) -> mlrun.common.schemas.ModelEndpointV2:
+        """
+        Get a model endpoint by project, name and uid.
+        If uid is not provided, the latest model endpoint with the provided name and project will be returned.
+
+        :param session: The database session.
+        :param project: The project name.
+        :param name:    The model endpoint name.
+        :param uid:     The model endpoint uid.
+        :return:        The model endpoint object.
+        """
+        pass
+
+    def update_model_endpoint(
+        self,
+        session,
+        project: str,
+        name: str,
+        attributes: dict,
+        uid: typing.Optional[str] = None,
+    ) -> str:
+        """
+        Update a model endpoint by project, name and uid.
+        If uid is not provided, the latest model endpoint with the provided name and project will be updated.
+        The attributes parameter is a flatten dictionary which should contain the fields that need to be update.
+
+        :param session:     The database session.
+        :param project:     The project name.
+        :param name:        The model endpoint name.
+        :param attributes:  The attributes to update.
+        :param uid:         The model endpoint uid.
+        :return:            The updated model endpoint uid.
+        """
+        pass
+
+    def list_model_endpoints(
+        self,
+        session,
+        project: str,
+        name: typing.Optional[str] = None,
+        function_name: typing.Optional[str] = None,
+        model_name: typing.Optional[str] = None,
+        top_level: typing.Optional[bool] = None,
+        labels: typing.Optional[list[str]] = None,
+        start: typing.Optional[datetime.datetime] = None,
+        end: typing.Optional[datetime.datetime] = None,
+        uids: typing.Optional[list[str]] = None,
+        latest_only: bool = False,
+        page: typing.Optional[int] = None,
+        page_size: typing.Optional[int] = None,
+    ) -> list[mlrun.common.schemas.ModelEndpointV2]:
+        """
+        List model endpoints by project and optional filters.
+
+        :param session:     The database session.
+        :param project:     The project name.
+        :param name:        The model endpoint name.
+        :param function_name: The function name.
+        :param model_name:  The model name.
+        :param top_level:   Whether to return only top level model endpoints (1,2,4).
+        :param labels:      The labels to filter by.
+        :param start:       The start time to filter by.
+        :param end:         The end time to filter by.
+        :param uids:        The model endpoint uids to filter by.
+        :param latest_only: Whether to return only the latest model endpoint for each name.
+        :param page:        The page number.
+        :param page_size:   The page size.
+        :return:            A list of model endpoints.
+        """
+        pass
+
+    def delete_model_endpoint(
+        self,
+        session,
+        project: str,
+        name: str,
+        uid: str,
+    ) -> None:
+        """
+        Delete a model endpoint by project, name and uid.
+        In order to delete all the model endpoints with the same name and project pass uid=*.
+
+        :param session: The database session.
+        :param project: The project name.
+        :param name:    The model endpoint name.
+        :param uid:     The model endpoint uid.
+        """
+        pass
+
+    def delete_model_endpoints(
+        self,
+        session,
+        project: str,
+        names: typing.Optional[typing.Union[str, list[str]]] = None,
+    ) -> None:
+        """
+        Delete model endpoints across projects and names.
+
+        :param session: The database session.
+        :param project: The project name.
+        :param names:   The model endpoint names.
+        """
         pass

@@ -37,22 +37,23 @@ import mlrun.errors
 import mlrun.runtimes.pod
 import mlrun.utils.helpers
 import mlrun.utils.notifications.notification_pusher
-import services.api.constants
-import services.api.crud
-import services.api.crud.runtimes.nuclio
-import services.api.db.base
-import services.api.db.session
-import services.api.utils.auth.verifier
-import services.api.utils.background_tasks
-import services.api.utils.clients.iguazio
-import services.api.utils.helpers
-import services.api.utils.singletons.k8s
 from mlrun.common.helpers import parse_versioned_object_uri
 from mlrun.config import config
 from mlrun.errors import err_to_str
 from mlrun.run import import_function, new_function
 from mlrun.runtimes.utils import enrich_function_from_dict
 from mlrun.utils import get_in, logger
+
+import services.api.constants
+import services.api.crud
+import services.api.db.base
+import services.api.db.session
+import services.api.utils.auth.verifier
+import services.api.utils.background_tasks
+import services.api.utils.clients.iguazio
+import services.api.utils.helpers
+import services.api.utils.notification_pusher
+import services.api.utils.singletons.k8s
 from services.api.crud.runtimes.nuclio import delete_nuclio_functions_in_batches
 from services.api.db.sqldb.db import SQLDB
 from services.api.rundb.sqldb import SQLRunDB
@@ -475,7 +476,8 @@ def validate_and_mask_notification_list(
         # validate notification schema
         mlrun.common.schemas.Notification(**notification_object.to_dict())
 
-        notification_object.validate_notification_params()
+        default_notification_params = services.api.utils.notification_pusher.resolve_notifications_default_params()
+        notification_object.validate_notification_params(default_notification_params)
 
         notification_objects.append(notification_object)
 
@@ -712,7 +714,7 @@ def _mask_v3io_access_key_env_var(
             username = v3io_username
         if not username:
             if services.api.utils.auth.verifier.AuthVerifier().is_jobs_auth_required():
-                # auth_info should always has username, sanity
+                # auth_info should always have username, sanity
                 if not auth_info.username:
                     raise mlrun.errors.MLRunInvalidArgumentError(
                         "Username is missing from auth info"
@@ -1214,7 +1216,7 @@ async def _delete_project(
     auth_info: mlrun.common.schemas.AuthInfo,
     wait_for_project_deletion: bool,
     background_task_name: str,
-    model_monitoring_access_key: str = None,
+    model_monitoring_access_key: typing.Optional[str] = None,
 ):
     force_delete = False
     project_name = project.metadata.name
