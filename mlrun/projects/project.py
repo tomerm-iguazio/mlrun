@@ -33,13 +33,11 @@ from typing import Callable, Optional, Union
 import dotenv
 import git
 import git.exc
-import mlrun_pipelines.common.models
-import mlrun_pipelines.mounts
 import nuclio.utils
 import requests
 import yaml
-from mlrun_pipelines.models import PipelineNodeWrapper
 
+import mlrun.artifacts.model
 import mlrun.common.formatters
 import mlrun.common.helpers
 import mlrun.common.runtimes.constants
@@ -58,11 +56,14 @@ import mlrun.runtimes.utils
 import mlrun.serving
 import mlrun.utils
 import mlrun.utils.regex
+import mlrun_pipelines.common.models
+import mlrun_pipelines.mounts
 from mlrun.alerts.alert import AlertConfig
 from mlrun.common.schemas.alert import AlertTemplate, EventKind
 from mlrun.datastore.datastore_profile import DatastoreProfile, DatastoreProfile2Json
 from mlrun.model_monitoring.helpers import get_result_instance_fqn
 from mlrun.runtimes.nuclio.function import RemoteRuntime
+from mlrun_pipelines.models import PipelineNodeWrapper
 
 from ..artifacts import Artifact, ArtifactProducer, DatasetArtifact, ModelArtifact
 from ..artifacts.manager import ArtifactManager, dict_to_artifact, extend_artifact_path
@@ -3881,7 +3882,7 @@ class MlrunProject(ModelObj):
         Examples::
 
             # Get latest version of all artifacts in project
-            latest_artifacts = project.list_artifacts("", tag="latest")
+            latest_artifacts = project.list_artifacts(tag="latest")
             # check different artifact versions for a specific artifact, return as objects list
             result_versions = project.list_artifacts("results", tag="*").to_objects()
 
@@ -3926,6 +3927,69 @@ class MlrunProject(ModelObj):
             limit=limit,
         )
 
+    def paginated_list_artifacts(
+        self,
+        *args,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        page_token: Optional[str] = None,
+        **kwargs,
+    ) -> tuple[mlrun.lists.ArtifactList, Optional[str]]:
+        """List artifacts with support for pagination and various filtering options.
+
+        This method retrieves a paginated list of artifacts based on the specified filter parameters.
+        Pagination is controlled using the `page`, `page_size`, and `page_token` parameters. The method
+        will return a list of artifacts that match the filtering criteria provided.
+
+        The returned result is an `ArtifactList` (list of dict), use `.to_objects()` to convert it to a list of
+        RunObjects, `.show()` to view graphically in Jupyter, and `.to_df()` to convert to a DataFrame.
+
+        For detailed information about the parameters, refer to the list_artifacts method:
+            See :py:func:`~list_artifacts` for more details.
+
+        Examples::
+
+            # Fetch first page of artifacts with page size of 5
+            artifacts, token = project.paginated_list_artifacts("results", page_size=5)
+            # Fetch next page using the pagination token from the previous response
+            artifacts, token = project.paginated_list_artifacts("results", page_token=token)
+            # Fetch artifacts for a specific page (e.g., page 3)
+            artifacts, token = project.paginated_list_artifacts(
+                "results", page=3, page_size=5
+            )
+
+            # Automatically iterate over all pages without explicitly specifying the page number
+            artifacts = []
+            token = None
+            while True:
+                page_artifacts, token = project.paginated_list_artifacts(
+                    page_token=token, page_size=5
+                )
+                artifacts.extend(page_artifacts)
+
+                # If token is None and page_artifacts is empty, we've reached the end (no more artifacts).
+                # If token is None and page_artifacts is not empty, we've fetched the last page of artifacts.
+                if not token:
+                    break
+            print(f"Total artifacts retrieved: {len(artifacts)}")
+
+        :param page: The page number to retrieve. If not provided, the next page will be retrieved.
+        :param page_size: The number of items per page to retrieve. Up to `page_size` responses are expected.
+        :param page_token: A pagination token used to retrieve the next page of results. Should not be provided
+            for the first request.
+
+        :returns: A tuple containing the list of artifacts and an optional `page_token` for pagination.
+        """
+        db = mlrun.db.get_run_db(secrets=self._secrets)
+        return db.paginated_list_artifacts(
+            *args,
+            project=self.metadata.name,
+            page=page,
+            page_size=page_size,
+            page_token=page_token,
+            **kwargs,
+        )
+
     def list_models(
         self,
         name=None,
@@ -3946,7 +4010,7 @@ class MlrunProject(ModelObj):
         Examples::
 
             # Get latest version of all models in project
-            latest_models = project.list_models("", tag="latest")
+            latest_models = project.list_models(tag="latest")
 
 
         :param name: Name of artifacts to retrieve. Name with '~' prefix is used as a like query, and is not
@@ -3981,11 +4045,70 @@ class MlrunProject(ModelObj):
             until=until,
             iter=iter,
             best_iteration=best_iteration,
-            kind="model",
+            kind=mlrun.artifacts.model.ModelArtifact.kind,
             tree=tree,
             limit=limit,
             format_=format_,
         ).to_objects()
+
+    def paginated_list_models(
+        self,
+        *args,
+        page: Optional[int] = None,
+        page_size: Optional[int] = None,
+        page_token: Optional[str] = None,
+        **kwargs,
+    ) -> tuple[mlrun.lists.ArtifactList, Optional[str]]:
+        """List models in project with support for pagination and various filtering options.
+
+        This method retrieves a paginated list of artifacts based on the specified filter parameters.
+        Pagination is controlled using the `page`, `page_size`, and `page_token` parameters. The method
+        will return a list of artifacts that match the filtering criteria provided.
+
+        For detailed information about the parameters, refer to the list_models method:
+            See :py:func:`~list_models` for more details.
+
+        Examples::
+
+            # Fetch first page of artifacts with page size of 5
+            artifacts, token = project.paginated_list_models("results", page_size=5)
+            # Fetch next page using the pagination token from the previous response
+            artifacts, token = project.paginated_list_models("results", page_token=token)
+            # Fetch artifacts for a specific page (e.g., page 3)
+            artifacts, token = project.paginated_list_models("results", page=3, page_size=5)
+
+            # Automatically iterate over all pages without explicitly specifying the page number
+            artifacts = []
+            token = None
+            while True:
+                page_artifacts, token = project.paginated_list_models(
+                    page_token=token, page_size=5
+                )
+                artifacts.extend(page_artifacts)
+
+                # If token is None and page_artifacts is empty, we've reached the end (no more artifacts).
+                # If token is None and page_artifacts is not empty, we've fetched the last page of artifacts.
+                if not token:
+                    break
+            print(f"Total artifacts retrieved: {len(artifacts)}")
+
+        :param page: The page number to retrieve. If not provided, the next page will be retrieved.
+        :param page_size: The number of items per page to retrieve. Up to `page_size` responses are expected.
+        :param page_token: A pagination token used to retrieve the next page of results. Should not be provided
+            for the first request.
+
+        :returns: A tuple containing the list of artifacts and an optional `page_token` for pagination.
+        """
+        db = mlrun.db.get_run_db(secrets=self._secrets)
+        return db.paginated_list_artifacts(
+            *args,
+            project=self.metadata.name,
+            kind=mlrun.artifacts.model.ModelArtifact.kind,
+            page=page,
+            page_size=page_size,
+            page_token=page_token,
+            **kwargs,
+        )
 
     def list_functions(
         self,
