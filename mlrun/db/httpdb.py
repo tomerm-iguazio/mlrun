@@ -22,21 +22,18 @@ import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta
 from os import path, remove
-from typing import Annotated, Literal, Optional, Union
+from typing import Literal, Optional, Union
 from urllib.parse import urlparse
 
 import pydantic
 import requests
 import semver
-from fastapi import Path
-from mlrun_pipelines.utils import compile_pipeline
 
 import mlrun
 import mlrun.common.constants
 import mlrun.common.formatters
 import mlrun.common.runtimes
 import mlrun.common.schemas
-import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.common.schemas.model_monitoring.model_endpoints as mm_endpoints
 import mlrun.common.types
 import mlrun.model_monitoring.model_endpoint
@@ -72,11 +69,6 @@ _artifact_keys = [
     "src_path",
     "target_path",
     "viewer",
-]
-
-ProjectAnnotation = Annotated[str, Path(pattern=mm_constants.PROJECT_PATTERN)]
-EndpointIDAnnotation = Annotated[
-    str, Path(pattern=mm_constants.MODEL_ENDPOINT_ID_PATTERN)
 ]
 
 
