@@ -41,7 +41,6 @@ import mlrun.artifacts.model
 import mlrun.common.formatters
 import mlrun.common.helpers
 import mlrun.common.runtimes.constants
-import mlrun.common.schemas.alert as alert_constants
 import mlrun.common.schemas.artifact
 import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.db
@@ -59,9 +58,8 @@ import mlrun.utils.regex
 import mlrun_pipelines.common.models
 import mlrun_pipelines.mounts
 from mlrun.alerts.alert import AlertConfig
-from mlrun.common.schemas.alert import AlertTemplate, EventKind
+from mlrun.common.schemas.alert import AlertTemplate
 from mlrun.datastore.datastore_profile import DatastoreProfile, DatastoreProfile2Json
-from mlrun.model_monitoring.helpers import get_result_instance_fqn
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 from mlrun_pipelines.models import PipelineNodeWrapper
 
@@ -3413,50 +3411,6 @@ class MlrunProject(ModelObj):
             top_level=top_level,
             uids=uids,
         )
-
-    def create_model_monitoring_alert_configs(
-        self,
-        name: str,
-        summary: str,
-        endpoints: list[mlrun.model_monitoring.model_endpoint.ModelEndpoint],
-        events: Union[list[EventKind], EventKind],
-        notifications: list[alert_constants.AlertNotification],
-        result_names: Optional[
-            list[str]
-        ] = None,  # can use wildcards - see below for explanation.
-        severity: alert_constants.AlertSeverity = alert_constants.AlertSeverity.MEDIUM,
-        criteria: alert_constants.AlertCriteria = alert_constants.AlertCriteria(
-            count=1, period="10m"
-        ),
-        reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
-    ) -> list[mlrun.alerts.alert.AlertConfig]:
-        if not result_names:
-            result_names = []
-        alerts = []
-        for endpoint in endpoints:
-            for result_name in result_names:
-                prj_alert_obj = get_result_instance_fqn(
-                    endpoint.metadata.uid, app_name="myapp", result_name=result_name
-                )  # TODO understand
-                alerts.append(
-                    mlrun.alerts.alert.AlertConfig(
-                        project=self.name,
-                        name="mm example alert",
-                        summary=summary,
-                        severity=severity,
-                        entities=alert_constants.EventEntities(
-                            kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
-                            project=self.name,
-                            ids=[prj_alert_obj],
-                        ),
-                        trigger=alert_constants.AlertTrigger(
-                            events=["data_drift_detected"]
-                        ),
-                        criteria=criteria,
-                        notifications=notifications,
-                        reset_policy=reset_policy,
-                    )
-                )
 
     def run_function(
         self,
