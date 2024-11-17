@@ -3396,7 +3396,7 @@ class MlrunProject(ModelObj):
         self,
         model: Optional[str] = None,
         function: Optional[str] = None,
-        labels: list[str] = None,
+        labels: Optional[list[str]] = None,
         start: str = "now-1h",
         end: str = "now",
         top_level: bool = False,
@@ -3421,13 +3421,17 @@ class MlrunProject(ModelObj):
         endpoints: list[mlrun.model_monitoring.model_endpoint.ModelEndpoint],
         events: Union[list[EventKind], EventKind],
         notifications: list[alert_constants.AlertNotification],
-        result_names: list[str] = [],  # can use wildcards - see below for explanation.
+        result_names: Optional[
+            list[str]
+        ] = None,  # can use wildcards - see below for explanation.
         severity: alert_constants.AlertSeverity = alert_constants.AlertSeverity.MEDIUM,
         criteria: alert_constants.AlertCriteria = alert_constants.AlertCriteria(
             count=1, period="10m"
         ),
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
+        if not result_names:
+            result_names = []
         alerts = []
         for endpoint in endpoints:
             for result_name in result_names:
