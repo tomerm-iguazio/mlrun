@@ -3392,13 +3392,10 @@ class HTTPRunDB(RunDBInterface):
             params=params,
         )
         monitoring_metrics = response.json()
-        if monitoring_metrics:
-            return [
-                mm_endpoints.ModelEndpointMonitoringMetric(**monitoring_metric)
-                for monitoring_metric in monitoring_metrics
-            ]
-        else:
-            return []
+        return [
+            mm_endpoints.ModelEndpointMonitoringMetric(**monitoring_metric)
+            for monitoring_metric in monitoring_metrics
+        ]
 
     def create_user_secrets(
         self,
