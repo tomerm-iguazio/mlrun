@@ -3390,6 +3390,8 @@ class HTTPRunDB(RunDBInterface):
                 mm_endpoints.ModelEndpointMonitoringMetric(**monitoring_metric)
                 for monitoring_metric in monitoring_metrics
             ]
+        else:
+            return []
 
     def create_user_secrets(
         self,
