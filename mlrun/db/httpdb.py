@@ -28,6 +28,7 @@ from urllib.parse import urlparse
 import pydantic
 import requests
 import semver
+from pydantic import parse_obj_as
 
 import mlrun
 import mlrun.common.constants
@@ -3372,12 +3373,13 @@ class HTTPRunDB(RunDBInterface):
         endpoint_id: str,
         type: Literal["results", "metrics", "all"] = "all",
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
-        """
+        """Get application metrics/results by endpoint id and project.
+
         :param project: The name of the project.
         :param endpoint_id: The unique id of the model endpoint.
         :param type: The type of the metrics to return. "all" means "results" and "metrics".
-        :return: A list of the application metrics or/and results for this model endpoint.
 
+        :return: A list of the application metrics or/and results for this model endpoint.
         """
         path = f"projects/{project}/model-endpoints/{endpoint_id}/metrics"
         params = {"type": type}
@@ -3392,10 +3394,9 @@ class HTTPRunDB(RunDBInterface):
             params=params,
         )
         monitoring_metrics = response.json()
-        return [
-            mm_endpoints.ModelEndpointMonitoringMetric(**monitoring_metric)
-            for monitoring_metric in monitoring_metrics
-        ]
+        return parse_obj_as(
+            list[mm_endpoints.ModelEndpointMonitoringMetric], monitoring_metrics
+        )
 
     def create_user_secrets(
         self,
