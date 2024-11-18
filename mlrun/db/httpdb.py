@@ -3372,6 +3372,13 @@ class HTTPRunDB(RunDBInterface):
         endpoint_id: str,
         type: Literal["results", "metrics", "all"] = "all",
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+        """
+        :param project: The name of the project.
+        :param endpoint_id: The unique id of the model endpoint.
+        :param type: The type of the metrics to return. "all" means "results" and "metrics".
+        :return: A list of the application metrics or/and results for this model endpoint.
+
+        """
         path = f"projects/{project}/model-endpoints/{endpoint_id}/metrics"
         params = {"type": type}
         error_message = (
@@ -3379,7 +3386,7 @@ class HTTPRunDB(RunDBInterface):
             f" endpoint_id: {endpoint_id}, project: {project}"
         )
         response = self.api_call(
-            "GET",
+            mlrun.common.types.HTTPMethod.GET,
             path,
             error_message,
             params=params,

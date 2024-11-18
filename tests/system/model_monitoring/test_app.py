@@ -248,9 +248,7 @@ class _V3IORecordsChecker:
         run_db: mlrun.db.httpdb.HTTPRunDB,
         type: typing.Literal["metrics", "results"] = "results",
     ) -> list[str]:
-        cls._logger.debug(
-            "querying httpdb get_model_endpoint_monitoring_metrics", type=type
-        )
+        cls._logger.debug("Checking the metrics", type=type)
         monitoring_metrics = run_db.get_model_endpoint_monitoring_metrics(
             project=cls.project_name, endpoint_id=ep_id, type=type
         )
