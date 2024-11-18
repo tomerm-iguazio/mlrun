@@ -679,7 +679,7 @@ class RunDBInterface(ABC):
         metrics: Optional[list[str]] = None,
         top_level: bool = False,
         uids: Optional[list[str]] = None,
-    ):
+    ) -> list[mlrun.model_monitoring.model_endpoint.ModelEndpoint]:
         pass
 
     @abstractmethod

@@ -3430,6 +3430,8 @@ class MlrunProject(ModelObj):
                       `m` = minutes, `h` = hours, `'d'` = days, and `'s'` = seconds), or 0 for the earliest time.
         :param top_level: if true will return only routers and endpoint that are NOT children of any router
         :param uids: if passed will return a list `ModelEndpoint` object with uid in uids
+
+        :returns: Returns a list of `ModelEndpoint` objects.
         """
         db = mlrun.db.get_run_db(secrets=self._secrets)
         return db.list_model_endpoints(

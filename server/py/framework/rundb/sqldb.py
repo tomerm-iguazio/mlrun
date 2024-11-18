@@ -1019,7 +1019,7 @@ class SQLRunDB(RunDBInterface):
         metrics: Optional[list[str]] = None,
         top_level: bool = False,
         uids: Optional[list[str]] = None,
-    ):
+    ) -> list[mlrun.model_monitoring.model_endpoint.ModelEndpoint]:
         raise NotImplementedError()
 
     def get_model_endpoint(
