@@ -968,10 +968,10 @@ with warnings.catch_warnings():
         )
 
         id = Column(Integer, primary_key=True)
-        base_period = Column(Integer)
         project = Column(
             String(255, collation=SQLTypesUtil.collation()), nullable=False
         )
+        base_period = Column(Integer)
         created = Column(
             SQLTypesUtil.timestamp(),
             default=datetime.now(timezone.utc),

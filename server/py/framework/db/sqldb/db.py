@@ -110,6 +110,7 @@ from framework.db.sqldb.models import (
     HubSource,
     Log,
     ModelEndpoint,
+    ModelMonitoringProject,
     PaginationCache,
     Project,
     ProjectSummary,
@@ -117,7 +118,6 @@ from framework.db.sqldb.models import (
     Schedule,
     TimeWindowTracker,
     User,
-    ModelMonitoringProject,
     _labeled,
     _tagged,
     _with_notifications,
@@ -2699,6 +2699,15 @@ class SQLDB(DBInterface):
             self.create_project(session, project)
         else:
             self._update_project_record_from_project(session, project_record, project)
+
+    def store_model_monitoring_project(
+        self, session: Session, project: str, base_period: int
+    ):
+        model_monitoring_project = ModelMonitoringProject(
+            project=project,
+            base_period=base_period,
+        )
+        self._upsert(session, [model_monitoring_project])
 
     @staticmethod
     def _normalize_project_parameters(project: mlrun.common.schemas.Project):
