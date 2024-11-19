@@ -117,6 +117,7 @@ from framework.db.sqldb.models import (
     Schedule,
     TimeWindowTracker,
     User,
+    ModelMonitoringProject,
     _labeled,
     _tagged,
     _with_notifications,
@@ -3259,7 +3260,7 @@ class SQLDB(DBInterface):
         self._delete_project_feature_vectors(session, name)
         self._delete_project_background_tasks(session, project=name)
         self._delete_project_datastore_profiles(session, project=name)
-
+        self._delete_model_monitoring_project(session, project=name)
         # resources deletion should remove their tags and labels as well, but doing another try in case there are
         # orphan resources
         self._delete_resources_tags(session, name)
@@ -4264,6 +4265,14 @@ class SQLDB(DBInterface):
         self._delete_multi_objects(
             session=session,
             main_table=FeatureSet,
+            project=project,
+        )
+
+    def _delete_model_monitoring_project(self, session: Session, project: str):
+        logger.debug("Removing project feature-sets from db", project=project)
+        self._delete(
+            session=session,
+            cls=ModelMonitoringProject,
             project=project,
         )
 
