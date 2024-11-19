@@ -961,8 +961,8 @@ with warnings.catch_warnings():
         def get_identifier_string(self) -> str:
             return f"{self.project}_{self.name}_{self.created}"
 
-    class ModelMonitoringMetadata(Base, mlrun.utils.db.BaseModel):
-        __tablename__ = "model_monitoring_metadata"
+    class ModelMonitoringProjects(Base, mlrun.utils.db.BaseModel):
+        __tablename__ = "model_monitoring_projects"
         __table_args__ = (
             UniqueConstraint("project", name="_model_monitoring_project_uc"),
         )
