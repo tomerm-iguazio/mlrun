@@ -194,7 +194,9 @@ class _V3IORecordsChecker:
         else:
             # TDEngine
             predictions_df: pd.DataFrame = cls._tsdb_storage._get_records(
-                table=mm_constants.TDEngineSuperTables.PREDICTIONS,
+                table=cls._tsdb_storage.tables[
+                    mm_constants.TDEngineSuperTables.PREDICTIONS
+                ].super_table,
                 start=datetime.min,
                 end=datetime.now().astimezone(),
             )
