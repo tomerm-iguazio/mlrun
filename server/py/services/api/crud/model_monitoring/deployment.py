@@ -35,6 +35,7 @@ import mlrun.model_monitoring.controller
 import mlrun.model_monitoring.stream_processing
 import mlrun.model_monitoring.writer
 import mlrun.serving.states
+import server.py.framework.db.sqldb.db
 from mlrun import feature_store as fstore
 from mlrun.config import config
 from mlrun.model_monitoring.writer import ModelMonitoringWriter
@@ -128,6 +129,11 @@ class MonitoringDeployment:
         self.deploy_model_monitoring_stream_processing(
             stream_image=image, overwrite=rebuild_images
         )
+        framework.utils.singletons.db.get_db().store_model_monitoring_project(session=self.db_session,
+                                                                              project=self.project,
+                                                                              base_period=base_period)
+        #TODO check it.
+        server.py.framework.db.sqldb.db.SQLDB.store_model_monitoring_project(self.db_session,)
         if deploy_histogram_data_drift_app:
             self.deploy_histogram_data_drift_app(image=image, overwrite=rebuild_images)
 
