@@ -35,7 +35,6 @@ import mlrun.model_monitoring.controller
 import mlrun.model_monitoring.stream_processing
 import mlrun.model_monitoring.writer
 import mlrun.serving.states
-import server.py.framework.db.sqldb.db
 from mlrun import feature_store as fstore
 from mlrun.config import config
 from mlrun.model_monitoring.writer import ModelMonitoringWriter
@@ -45,6 +44,7 @@ from mlrun.utils import logger
 import framework.api.utils
 import framework.db.session
 import framework.utils.background_tasks
+import framework.utils.singletons.db
 import framework.utils.singletons.k8s
 import services.api.api.endpoints.nuclio
 import services.api.crud.model_monitoring.helpers
@@ -129,10 +129,10 @@ class MonitoringDeployment:
         self.deploy_model_monitoring_stream_processing(
             stream_image=image, overwrite=rebuild_images
         )
-        #TODO check it.
-        framework.utils.singletons.db.get_db().store_model_monitoring_project(session=self.db_session,
-                                                                              project=self.project,
-                                                                              base_period=base_period)
+        # TODO check it.
+        framework.utils.singletons.db.get_db().store_model_monitoring_project(
+            session=self.db_session, project=self.project, base_period=base_period
+        )
         if deploy_histogram_data_drift_app:
             self.deploy_histogram_data_drift_app(image=image, overwrite=rebuild_images)
 

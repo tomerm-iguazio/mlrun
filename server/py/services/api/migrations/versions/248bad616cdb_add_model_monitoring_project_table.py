@@ -15,9 +15,9 @@
 
 """Add model_monitoring_project table
 
-Revision ID: 1e5d3e823476
+Revision ID: 248bad616cdb
 Revises: 0914542d88f0
-Create Date: 2024-11-19 17:27:35.128691
+Create Date: 2024-11-20 14:49:51.783295
 
 """
 from alembic import op
@@ -25,7 +25,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = '1e5d3e823476'
+revision = '248bad616cdb'
 down_revision = '0914542d88f0'
 branch_labels = None
 depends_on = None
