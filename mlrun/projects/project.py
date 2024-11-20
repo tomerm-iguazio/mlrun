@@ -1995,8 +1995,6 @@ class MlrunProject(ModelObj):
         :param application_kwargs:      Additional keyword arguments to be passed to the
                                         monitoring application's constructor.
         """
-
-        function_object: RemoteRuntime = None
         (
             resolved_function_name,
             function_object,
@@ -2094,7 +2092,6 @@ class MlrunProject(ModelObj):
     ) -> tuple[str, mlrun.runtimes.BaseRuntime, dict]:
         import mlrun.model_monitoring.api
 
-        function_object: RemoteRuntime = None
         kind = None
         if (isinstance(func, str) or func is None) and application_class is not None:
             kind = mlrun.run.RuntimeKinds.serving
@@ -2132,9 +2129,6 @@ class MlrunProject(ModelObj):
             mm_constants.ModelMonitoringAppLabel.KEY,
             mm_constants.ModelMonitoringAppLabel.VAL,
         )
-
-        if not mlrun.mlconf.is_ce_mode():
-            function_object.apply(mlrun.mount_v3io())
 
         return resolved_function_name, function_object, func
 
@@ -4199,9 +4193,8 @@ class MlrunProject(ModelObj):
             page_token=page_token,
             **kwargs,
         )
-        if functions:
-            # convert dict to function objects
-            return [mlrun.new_function(runtime=func) for func in functions], token
+        # convert dict to function objects
+        return [mlrun.new_function(runtime=func) for func in functions], token
 
     def list_model_monitoring_functions(
         self,
