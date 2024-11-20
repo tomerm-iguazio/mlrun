@@ -157,6 +157,7 @@ from .model_monitoring import (
     MonitoringFunctionNames,
     TSDBTarget,
     V3IOTSDBTables,
+    ModelMonitoringProject
 )
 from .notification import (
     Notification,

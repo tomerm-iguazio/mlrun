@@ -2702,6 +2702,16 @@ class SQLDB(DBInterface):
         )
         self._upsert(session, [model_monitoring_project])
 
+    def list_model_monitoring_projects(self, session: Session):
+        results = []
+        query = self._query(session, ModelMonitoringProject).order_by(
+            ModelMonitoringProject.created
+        )
+
+        for record in query.all():
+            results.append(self._transform_model_monitoring_project_to_schema(record))
+        return results
+
     @staticmethod
     def _normalize_project_parameters(project: mlrun.common.schemas.Project):
         # remove leading & trailing whitespaces from the project parameters keys and values to prevent duplications
@@ -5343,6 +5353,13 @@ class SQLDB(DBInterface):
         return mlrun.common.schemas.IndexedHubSource(
             index=hub_source_record.index, source=hub_source
         )
+
+    @staticmethod
+    def _transform_model_monitoring_project_to_schema(
+        model_monitoring_project: ModelMonitoringProject,
+    ) -> mlrun.common.schemas.ModelMonitoringProject:
+        model_monitoring_project_full_dict = model_monitoring_project.full_object
+        return mlrun.common.schemas.ModelMonitoringProject(**model_monitoring_project_full_dict)
 
     @staticmethod
     def _transform_hub_source_schema_to_record(
