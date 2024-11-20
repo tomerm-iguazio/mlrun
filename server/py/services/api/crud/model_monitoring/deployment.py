@@ -129,11 +129,10 @@ class MonitoringDeployment:
         self.deploy_model_monitoring_stream_processing(
             stream_image=image, overwrite=rebuild_images
         )
+        #TODO check it.
         framework.utils.singletons.db.get_db().store_model_monitoring_project(session=self.db_session,
                                                                               project=self.project,
                                                                               base_period=base_period)
-        #TODO check it.
-        server.py.framework.db.sqldb.db.SQLDB.store_model_monitoring_project(self.db_session,)
         if deploy_histogram_data_drift_app:
             self.deploy_histogram_data_drift_app(image=image, overwrite=rebuild_images)
 
