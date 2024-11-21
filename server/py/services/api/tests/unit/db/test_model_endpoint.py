@@ -12,6 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
+import uuid
+
 import pytest
 
 import mlrun
@@ -56,6 +58,13 @@ class TestModelEndpoints(TestDatabaseBase):
             project="project-1",
         )
         return model_uid
+
+    def test_model_monitoring_project(self):
+        project_name = f"mm-test-{uuid.uuid4()}"
+        self._db.store_model_monitoring_project(self._db_session,project=project_name,base_period=20)
+        self._db.list_model_endpoints()
+        self._db.delete_project_related_resources(session=self.db_session,name=project_name)
+
 
     def test_sanity(self) -> None:
         uids = []
