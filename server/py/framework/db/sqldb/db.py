@@ -3275,7 +3275,7 @@ class SQLDB(DBInterface):
         self._delete_project_feature_vectors(session, name)
         self._delete_project_background_tasks(session, project=name)
         self._delete_project_datastore_profiles(session, project=name)
-        self._delete_model_monitoring_project(session, project=name)
+        self.delete_model_monitoring_project(session, project=name)
         # resources deletion should remove their tags and labels as well, but doing another try in case there are
         # orphan resources
         self._delete_resources_tags(session, name)
@@ -4283,7 +4283,7 @@ class SQLDB(DBInterface):
             project=project,
         )
 
-    def _delete_model_monitoring_project(self, session: Session, project: str):
+    def delete_model_monitoring_project(self, session: Session, project: str):
         logger.debug("Removing project feature-sets from db", project=project)
         self._delete(
             session=session,
@@ -5359,9 +5359,10 @@ class SQLDB(DBInterface):
     def _transform_model_monitoring_project_to_schema(
         model_monitoring_project: ModelMonitoringProject,
     ) -> mlrun.common.schemas.ModelMonitoringProject:
-        model_monitoring_project_full_dict = model_monitoring_project.full_object
         return mlrun.common.schemas.ModelMonitoringProject(
-            **model_monitoring_project_full_dict
+            project=model_monitoring_project.project,
+            base_period=model_monitoring_project.base_period,
+            created=model_monitoring_project.created,
         )
 
     @staticmethod

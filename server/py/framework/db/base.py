@@ -527,6 +527,9 @@ class DBInterface(ABC):
     def store_model_monitoring_project(self, session, project: str, base_period: int):
         pass
 
+    def delete_model_monitoring_project(self, session, project: str):
+        pass
+
     @abstractmethod
     def patch_project(
         self,
