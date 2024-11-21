@@ -153,11 +153,11 @@ from .model_monitoring import (
     ModelEndpointV2Spec,
     ModelEndpointV2Status,
     ModelMonitoringMode,
+    ModelMonitoringProject,
     ModelMonitoringStoreKinds,
     MonitoringFunctionNames,
     TSDBTarget,
     V3IOTSDBTables,
-    ModelMonitoringProject
 )
 from .notification import (
     Notification,

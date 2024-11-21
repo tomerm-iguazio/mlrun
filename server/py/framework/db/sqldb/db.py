@@ -5360,7 +5360,9 @@ class SQLDB(DBInterface):
         model_monitoring_project: ModelMonitoringProject,
     ) -> mlrun.common.schemas.ModelMonitoringProject:
         model_monitoring_project_full_dict = model_monitoring_project.full_object
-        return mlrun.common.schemas.ModelMonitoringProject(**model_monitoring_project_full_dict)
+        return mlrun.common.schemas.ModelMonitoringProject(
+            **model_monitoring_project_full_dict
+        )
 
     @staticmethod
     def _transform_hub_source_schema_to_record(
