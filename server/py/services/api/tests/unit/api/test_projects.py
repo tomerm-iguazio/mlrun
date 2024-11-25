@@ -1482,6 +1482,8 @@ def _create_resources_of_all_kinds(
         project=model_endpoint.metadata.project,
     )
 
+    db.store_model_monitoring_project(db_session, project=project, base_period=10)
+
 
 def _assert_resources_in_project(
     db_session: Session,
