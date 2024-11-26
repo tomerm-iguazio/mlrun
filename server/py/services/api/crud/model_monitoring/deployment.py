@@ -766,7 +766,6 @@ class MonitoringDeployment:
                                 f"{name} is not a model monitoring application, skipping",
                                 project=self.project,
                             )
-
                     except mlrun.errors.MLRunNotFoundError:
                         logger.warning(
                             f"{name} is not found, skipping",
