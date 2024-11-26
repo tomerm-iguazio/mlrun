@@ -4284,7 +4284,7 @@ class SQLDB(DBInterface):
         )
 
     def delete_model_monitoring_project(self, session: Session, project: str):
-        logger.debug("Removing project feature-sets from db", project=project)
+        logger.debug("Removing model monitoring project from db", project=project)
         self._delete(
             session=session,
             cls=ModelMonitoringProject,
