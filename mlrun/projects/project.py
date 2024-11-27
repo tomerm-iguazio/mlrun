@@ -58,8 +58,13 @@ import mlrun.utils
 import mlrun.utils.regex
 import mlrun_pipelines.common.models
 from mlrun.alerts.alert import AlertConfig
+from mlrun.common.schemas import alert as alert_constants
 from mlrun.common.schemas.alert import AlertTemplate
 from mlrun.datastore.datastore_profile import DatastoreProfile, DatastoreProfile2Json
+from mlrun.model_monitoring.helpers import (
+    filter_metrics_by_regex,
+    get_result_instance_fqn,
+)
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 from mlrun_pipelines.models import PipelineNodeWrapper
 
@@ -1950,6 +1955,64 @@ class MlrunProject(ModelObj):
             self.context, self.spec.subpath or "", "project_setup.py"
         )
         return _run_project_setup(self, setup_file_path, save)
+
+    def create_model_monitoring_alert_configs(
+        self,
+        app_name: str,
+        summary: str,
+        endpoints: list[mlrun.model_monitoring.model_endpoint.ModelEndpoint],
+        events: Union[list[alert_constants.EventKind], alert_constants.EventKind],
+        notifications: list[alert_constants.AlertNotification],
+        result_names: Optional[
+            list[str]
+        ] = None,  # can use wildcards - see below for explanation.
+        severity: alert_constants.AlertSeverity = alert_constants.AlertSeverity.MEDIUM,
+        criteria: alert_constants.AlertCriteria = alert_constants.AlertCriteria(
+            count=1, period="10m"
+        ),
+        reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
+    ) -> list[mlrun.alerts.alert.AlertConfig]:
+        db = mlrun.db.get_run_db(secrets=self._secrets)
+        # all metrics is before filters.
+        all_metrics = []
+        alerts = []
+        for endpoint in endpoints:
+            metrics_by_endpoint = db.get_model_endpoint_monitoring_metrics(
+                project=self.name, endpoint_id=endpoint.metadata.uid
+            )
+            metrics_by_endpoint_names = [
+                metric.full_name for metric in metrics_by_endpoint
+            ]
+            all_metrics += filter_metrics_by_regex(
+                metrics_names=metrics_by_endpoint_names
+            )
+            # if not result_names:
+            #     result_names = []
+            #
+            # for endpoint in endpoints:
+            for result_name in result_names:
+                prj_alert_obj = get_result_instance_fqn(
+                    endpoint.metadata.uid, app_name=app_name, result_name=result_name
+                )  # TODO continue
+                alerts.append(
+                    mlrun.alerts.alert.AlertConfig(
+                        project=self.name,
+                        name="mm example alert",
+                        summary=summary,
+                        severity=severity,
+                        entities=alert_constants.EventEntities(
+                            kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
+                            project=self.name,
+                            ids=[prj_alert_obj],
+                        ),
+                        trigger=alert_constants.AlertTrigger(
+                            events=["data_drift_detected"]
+                        ),
+                        criteria=criteria,
+                        notifications=notifications,
+                        reset_policy=reset_policy,
+                    )
+                )
 
     def set_model_monitoring_function(
         self,
