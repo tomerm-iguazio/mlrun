@@ -60,7 +60,6 @@ import mlrun.utils.regex
 import mlrun_pipelines.common.models
 from mlrun.alerts.alert import AlertConfig
 from mlrun.common.schemas import alert as alert_constants
-from mlrun.model_monitoring.helpers import filter_metrics_by_regex
 from mlrun.datastore.datastore_profile import (
     DatastoreProfile,
     DatastoreProfile2Json,
@@ -68,6 +67,7 @@ from mlrun.datastore.datastore_profile import (
     datastore_profile_read,
 )
 from mlrun.datastore.vectorstore import VectorStoreCollection
+from mlrun.model_monitoring.helpers import filter_metrics_by_regex
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 from mlrun_pipelines.models import PipelineNodeWrapper
 
@@ -2064,8 +2064,7 @@ class MlrunProject(ModelObj):
                 metric.full_name for metric in metrics_by_endpoint
             ]
             metrics += filter_metrics_by_regex(
-                metrics_names=metrics_by_endpoint_names,
-                result_names=result_names
+                metrics_names=metrics_by_endpoint_names, result_names=result_names
             )
         for metric_full_name in metrics:
             alerts.append(

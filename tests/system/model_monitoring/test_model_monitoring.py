@@ -39,6 +39,8 @@ import mlrun.runtimes.mounts
 import mlrun.runtimes.utils
 import mlrun.serving.routers
 import mlrun.utils
+from mlrun.common.schemas import alert as alert_constants
+from mlrun.common.schemas.notification import Notification, NotificationKind
 from mlrun.errors import MLRunNotFoundError
 from mlrun.model import BaseMetadata
 from mlrun.runtimes import BaseRuntime
@@ -332,7 +334,8 @@ class TestBasicModelMonitoring(TestMLRunSystem):
 
         sleep(15)
         endpoints_list = mlrun.get_run_db().list_model_endpoints(
-            self.project_name, metrics=["predictions_per_second"]
+            self.project_name,
+            metrics=[mm_constants.EventLiveStats.PREDICTIONS_PER_SECOND],
         )
         assert len(endpoints_list) == 1
 
@@ -353,10 +356,30 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             self.project_name, endpoint.metadata.uid
         )
         assert len(metrics) == 1
-        assert (
-            metrics[0].full_name
-            == f"{self.project_name}.mlrun-infra.metric.invocations"
+        expected_metric_name = f"{self.project_name}.mlrun-infra.metric.invocations"
+        assert metrics[0].full_name == expected_metric_name
+
+        notification = Notification(
+            kind=NotificationKind.mail,
+            name="my_test_notification",
+            email_addresses=["invalid_address@mlrun.com"],
+            subject="test alert",
+            body="test",
         )
+        alert_notification = alert_constants.AlertNotification(
+            notification=notification, cooldown_period="5m"
+        )
+
+        alerts = self.project.create_model_monitoring_alert_configs(
+            name="",
+            endpoints=endpoints_list,
+            summary="summary",
+            events=alert_constants.EventKind.FAILED,
+            notifications=[alert_notification],
+        )
+        assert len(alerts) == 1
+        alert = alerts[0]
+        assert alert.entities.ids[0] == expected_metric_name
 
     def _assert_model_uri(
         self,
