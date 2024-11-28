@@ -52,9 +52,9 @@ def is_metrics_regex_match(
     metric_name: Optional[str],
     result_names: Optional[list[str]],
 ):
+    metric_name = ".".join(metric_name.split(".")[i] for i in [1, 3])
     for result_name in result_names:
-        metric_name = ".".join(metric_name.split(".")[i] for i in [1, 3])
-        if fnmatch(result_name, metric_name):
+        if fnmatch(metric_name, result_name):
             return True
     return False
 
@@ -69,7 +69,7 @@ def filter_metrics_by_regex(
     #  result_names validations
     validated_result_names = []
     for result_name in result_names:
-        if result_name.count("*") != 1:
+        if result_name.count(".") != 1:
             logger.warning(
                 f"filter_metrics_by_regex: result_name illegal, will be ignored."
                 f" Result_name: {result_name}"
@@ -78,7 +78,7 @@ def filter_metrics_by_regex(
             validated_result_names.append(result_name)
     filtered_metrics_names = []
     for metric_name in metrics_names:
-        if metric_name.count("*") != 3 or any(
+        if metric_name.count(".") != 3 or any(
             part == "" for part in metric_name.split(".")
         ):
             logger.warning(

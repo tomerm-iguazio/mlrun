@@ -506,5 +506,37 @@ def test_batch_dict2timedelta() -> None:
 
 
 def test_filter_metrics_by_regex():
-    # TODO continue
-    filter_metrics_by_regex(metrics_names=[], result_names=[])
+    metrics_names = [
+        "mep1.app1.result.metric1",
+        "mep1.app1.result.metric2",
+        "mep1.app2.result.metric1",
+        "mep1.app2.result.metric2",
+        "mep1.app2.result.metric3",
+        "mep1.app2.result.result-a",
+        "mep1.app2.result.result-b",
+        "mep1.app3.result.result1",
+        "mep1.app3.result.result2",
+        "mep1.app4.result.result1",
+        "mep1.app4.result.result2",
+    ]
+
+    expected_metrics_names = [
+        "mep1.app1.result.metric1",
+        "mep1.app2.result.metric1",
+        "mep1.app2.result.result-a",
+        "mep1.app2.result.result-b",
+        "mep1.app3.result.result1",
+        "mep1.app3.result.result2",
+        "mep1.app4.result.result1",
+    ]
+
+    results_names = [
+        "*.metric1",
+        "app2.result-*",
+        "app3.*",
+        "app4.result1",
+    ]
+    filtered_metrics = filter_metrics_by_regex(
+        metrics_names=metrics_names, result_names=results_names
+    )
+    assert sorted(filtered_metrics) == sorted(expected_metrics_names)
