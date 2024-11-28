@@ -1958,7 +1958,7 @@ class MlrunProject(ModelObj):
 
     def create_model_monitoring_alert_configs(
         self,
-        app_name: str,
+        name: str,
         summary: str,
         endpoints: list[mlrun.model_monitoring.model_endpoint.ModelEndpoint],
         events: Union[list[alert_constants.EventKind], alert_constants.EventKind],
@@ -1973,9 +1973,9 @@ class MlrunProject(ModelObj):
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
         db = mlrun.db.get_run_db(secrets=self._secrets)
-        # all metrics is before filters.
-        all_metrics = []
+        metrics = []
         alerts = []
+        # TODO: Refactor to use a single request to improve performance at scale, ML-8473
         for endpoint in endpoints:
             metrics_by_endpoint = db.get_model_endpoint_monitoring_metrics(
                 project=self.name, endpoint_id=endpoint.metadata.uid
@@ -1983,36 +1983,31 @@ class MlrunProject(ModelObj):
             metrics_by_endpoint_names = [
                 metric.full_name for metric in metrics_by_endpoint
             ]
-            all_metrics += filter_metrics_by_regex(
-                metrics_names=metrics_by_endpoint_names
+            metrics += filter_metrics_by_regex(
+                metrics_names=metrics_by_endpoint_names,
+                result_names=result_names
             )
-            # if not result_names:
-            #     result_names = []
-            #
-            # for endpoint in endpoints:
-            for result_name in result_names:
-                prj_alert_obj = get_result_instance_fqn(
-                    endpoint.metadata.uid, app_name=app_name, result_name=result_name
-                )  # TODO continue
-                alerts.append(
-                    mlrun.alerts.alert.AlertConfig(
+        for metric_full_name in metrics:
+            alerts.append(
+                mlrun.alerts.alert.AlertConfig(
+                    project=self.name,
+                    name=name,
+                    summary=summary,
+                    severity=severity,
+                    entities=alert_constants.EventEntities(
+                        kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
                         project=self.name,
-                        name="mm example alert",
-                        summary=summary,
-                        severity=severity,
-                        entities=alert_constants.EventEntities(
-                            kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
-                            project=self.name,
-                            ids=[prj_alert_obj],
-                        ),
-                        trigger=alert_constants.AlertTrigger(
-                            events=["data_drift_detected"]
-                        ),
-                        criteria=criteria,
-                        notifications=notifications,
-                        reset_policy=reset_policy,
-                    )
+                        ids=[metric_full_name],
+                    ),
+                    trigger=alert_constants.AlertTrigger(
+                        events=events if isinstance(events, list) else [events]
+                    ),
+                    criteria=criteria,
+                    notifications=notifications,
+                    reset_policy=reset_policy,
                 )
+            )
+        return alerts
 
     def set_model_monitoring_function(
         self,
