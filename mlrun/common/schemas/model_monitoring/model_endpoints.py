@@ -359,7 +359,7 @@ class ModelEndpointMonitoringMetricNoData(_ModelEndpointMonitoringMetricValuesBa
 class ModelMonitoringProject(BaseModel):
     project: constr(regex=PROJECT_PATTERN)
     base_period: int = 10
-    updated: Optional[datetime] = None
+    created: Optional[datetime] = None
 
 
 def _mapping_attributes(

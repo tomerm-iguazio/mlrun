@@ -2705,6 +2705,14 @@ class SQLDB(DBInterface):
         )
         self._upsert(session, [model_monitoring_project])
 
+    def update_model_monitoring_project(
+        self, session: Session, project: str, base_period: int
+    ):
+        query = self._query(session, ModelMonitoringProject, project=project)
+        model_monitoring_project = query.one_or_none()
+        model_monitoring_project.base_period = base_period
+        self._upsert(session, [model_monitoring_project])
+
     def list_model_monitoring_projects(self, session: Session):
         results = []
         query = self._query(session, ModelMonitoringProject).order_by(

@@ -58,19 +58,39 @@ class TestModelEndpoints(TestDatabaseBase):
         )
         return model_uid
 
+    def _get_model_monitoring_project_by_name(self, project_name):
+        model_monitoring_projects = self._db.list_model_monitoring_projects(
+            session=self._db_session
+        )
+        model_monitoring_projects_by_name = [
+            model_monitoring_project
+            for model_monitoring_project in model_monitoring_projects
+            if model_monitoring_project.project == project_name
+        ]
+        assert len(model_monitoring_projects_by_name) == 1
+        return model_monitoring_projects_by_name[0]
+
     def test_model_monitoring_project(self):
         project_name = "mm-test"
         self._db.store_model_monitoring_project(
             self._db_session, project=project_name, base_period=20
         )
-        model_monitoring_projects = self._db.list_model_monitoring_projects(
-            session=self._db_session
+        model_monitoring_project = self._get_model_monitoring_project_by_name(
+            project_name=project_name
         )
-        project_names = [
-            model_monitoring_project.project
-            for model_monitoring_project in model_monitoring_projects
-        ]
-        assert project_name in project_names
+        assert model_monitoring_project.base_period == 20
+        created = model_monitoring_project.created
+        assert created is not None
+
+        self._db.update_model_monitoring_project(
+            self._db_session, project=project_name, base_period=40
+        )
+        model_monitoring_project = self._get_model_monitoring_project_by_name(
+            project_name=project_name
+        )
+        assert model_monitoring_project.base_period == 40
+        assert created == model_monitoring_project.created
+
         self._db.delete_project_related_resources(
             session=self._db_session, name=project_name
         )
