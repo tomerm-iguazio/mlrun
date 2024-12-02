@@ -81,6 +81,8 @@ class TestModelEndpoints(TestDatabaseBase):
         assert model_monitoring_project.base_period == 20
         created = model_monitoring_project.created
         assert created is not None
+        updated = model_monitoring_project.updated
+        assert updated is not None
 
         self._db.update_model_monitoring_project(
             self._db_session, project=project_name, base_period=40
@@ -90,6 +92,7 @@ class TestModelEndpoints(TestDatabaseBase):
         )
         assert model_monitoring_project.base_period == 40
         assert created == model_monitoring_project.created
+        assert model_monitoring_project.updated > updated
 
         self._db.delete_project_related_resources(
             session=self._db_session, name=project_name

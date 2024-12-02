@@ -5372,6 +5372,7 @@ class SQLDB(DBInterface):
             project=model_monitoring_project.project,
             base_period=model_monitoring_project.base_period,
             created=model_monitoring_project.created,
+            updated=model_monitoring_project.updated,
         )
 
     @staticmethod
