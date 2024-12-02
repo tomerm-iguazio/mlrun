@@ -2066,6 +2066,7 @@ class MlrunProject(ModelObj):
             metrics += filter_metrics_by_regex(
                 metrics_names=metrics_by_endpoint_names, result_names=result_names
             )
+        metrics = list(set(metrics))
         for metric_full_name in metrics:
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
