@@ -2711,6 +2711,7 @@ class SQLDB(DBInterface):
         query = self._query(session, ModelMonitoringProject, project=project)
         model_monitoring_project = query.one_or_none()
         model_monitoring_project.base_period = base_period
+        model_monitoring_project.updated = datetime.now(timezone.utc)
         self._upsert(session, [model_monitoring_project])
 
     def list_model_monitoring_projects(self, session: Session):

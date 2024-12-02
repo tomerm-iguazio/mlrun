@@ -981,6 +981,10 @@ with warnings.catch_warnings():
             SQLTypesUtil.timestamp(),
             default=datetime.now(timezone.utc),
         )
+        updated = Column(
+            SQLTypesUtil.timestamp(),
+            default=datetime.now(timezone.utc),
+        )
 
         def get_identifier_string(self) -> str:
             return f"{self.project}"
