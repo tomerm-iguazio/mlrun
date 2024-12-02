@@ -44,6 +44,7 @@ from mlrun.utils import logger
 import framework.api.utils
 import framework.db.session
 import framework.utils.background_tasks
+import framework.utils.singletons.db
 import framework.utils.singletons.k8s
 import services.api.api.endpoints.nuclio
 import services.api.crud.model_monitoring.helpers
@@ -128,6 +129,10 @@ class MonitoringDeployment:
         self.deploy_model_monitoring_stream_processing(
             stream_image=image, overwrite=rebuild_images
         )
+        #  TODO enable when integrate with publish api.
+        # framework.utils.singletons.db.get_db().store_model_monitoring_project(
+        #     session=self.db_session, project=self.project, base_period=base_period
+        # )
         if deploy_histogram_data_drift_app:
             self.deploy_histogram_data_drift_app(image=image, overwrite=rebuild_images)
 
@@ -724,7 +729,10 @@ class MonitoringDeployment:
                     access_key=self.model_monitoring_access_key,
                 )
                 tasks.append(task)
-
+        #  TODO enable when integrate with publish api.
+        # framework.utils.singletons.db.get_db().delete_model_monitoring_project(
+        #     session=self.db_session, project=self.project
+        # )
         return mlrun.common.schemas.BackgroundTaskList(background_tasks=tasks)
 
     def _get_monitoring_application_to_delete(

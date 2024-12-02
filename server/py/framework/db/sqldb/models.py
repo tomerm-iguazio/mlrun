@@ -966,6 +966,29 @@ with warnings.catch_warnings():
         def get_identifier_string(self) -> str:
             return f"{self.project}_{self.name}_{self.created}"
 
+    class ModelMonitoringProject(Base, mlrun.utils.db.BaseModel):
+        __tablename__ = "model_monitoring_projects"
+        __table_args__ = (
+            UniqueConstraint("project", name="_model_monitoring_project_uc"),
+        )
+
+        id = Column(Integer, primary_key=True)
+        project = Column(
+            String(255, collation=SQLTypesUtil.collation()), nullable=False
+        )
+        base_period = Column(Integer)
+        created = Column(
+            SQLTypesUtil.timestamp(),
+            default=datetime.now(timezone.utc),
+        )
+        updated = Column(
+            SQLTypesUtil.timestamp(),
+            default=datetime.now(timezone.utc),
+        )
+
+        def get_identifier_string(self) -> str:
+            return f"{self.project}"
+
 
 # Must be after all table definitions
 post_table_definitions(base_cls=Base)

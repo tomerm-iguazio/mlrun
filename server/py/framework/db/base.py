@@ -524,6 +524,15 @@ class DBInterface(ABC):
     def store_project(self, session, name: str, project: mlrun.common.schemas.Project):
         pass
 
+    def store_model_monitoring_project(self, session, project: str, base_period: int):
+        pass
+
+    def update_model_monitoring_project(self, session, project: str, base_period: int):
+        pass
+
+    def delete_model_monitoring_project(self, session, project: str):
+        pass
+
     @abstractmethod
     def patch_project(
         self,

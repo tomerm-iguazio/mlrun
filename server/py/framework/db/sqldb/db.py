@@ -112,6 +112,7 @@ from framework.db.sqldb.models import (
     HubSource,
     Log,
     ModelEndpoint,
+    ModelMonitoringProject,
     PaginationCache,
     Project,
     ProjectSummary,
@@ -2695,6 +2696,34 @@ class SQLDB(DBInterface):
         else:
             self._update_project_record_from_project(session, project_record, project)
 
+    def store_model_monitoring_project(
+        self, session: Session, project: str, base_period: int
+    ):
+        model_monitoring_project = ModelMonitoringProject(
+            project=project,
+            base_period=base_period,
+        )
+        self._upsert(session, [model_monitoring_project])
+
+    def update_model_monitoring_project(
+        self, session: Session, project: str, base_period: int
+    ):
+        query = self._query(session, ModelMonitoringProject, project=project)
+        model_monitoring_project = query.one_or_none()
+        model_monitoring_project.base_period = base_period
+        model_monitoring_project.updated = datetime.now(timezone.utc)
+        self._upsert(session, [model_monitoring_project])
+
+    def list_model_monitoring_projects(self, session: Session):
+        results = []
+        query = self._query(session, ModelMonitoringProject).order_by(
+            ModelMonitoringProject.created
+        )
+
+        for record in query.all():
+            results.append(self._transform_model_monitoring_project_to_schema(record))
+        return results
+
     @staticmethod
     def _normalize_project_parameters(project: mlrun.common.schemas.Project):
         # remove leading & trailing whitespaces from the project parameters keys and values to prevent duplications
@@ -3255,7 +3284,7 @@ class SQLDB(DBInterface):
         self._delete_project_feature_vectors(session, name)
         self._delete_project_background_tasks(session, project=name)
         self._delete_project_datastore_profiles(session, project=name)
-
+        self.delete_model_monitoring_project(session, project=name)
         # resources deletion should remove their tags and labels as well, but doing another try in case there are
         # orphan resources
         self._delete_resources_tags(session, name)
@@ -4260,6 +4289,14 @@ class SQLDB(DBInterface):
         self._delete_multi_objects(
             session=session,
             main_table=FeatureSet,
+            project=project,
+        )
+
+    def delete_model_monitoring_project(self, session: Session, project: str):
+        logger.debug("Removing model monitoring project from db", project=project)
+        self._delete(
+            session=session,
+            cls=ModelMonitoringProject,
             project=project,
         )
 
@@ -5325,6 +5362,17 @@ class SQLDB(DBInterface):
         hub_source = mlrun.common.schemas.HubSource(**source_full_dict)
         return mlrun.common.schemas.IndexedHubSource(
             index=hub_source_record.index, source=hub_source
+        )
+
+    @staticmethod
+    def _transform_model_monitoring_project_to_schema(
+        model_monitoring_project: ModelMonitoringProject,
+    ) -> mlrun.common.schemas.ModelMonitoringProject:
+        return mlrun.common.schemas.ModelMonitoringProject(
+            project=model_monitoring_project.project,
+            base_period=model_monitoring_project.base_period,
+            created=model_monitoring_project.created,
+            updated=model_monitoring_project.updated,
         )
 
     @staticmethod

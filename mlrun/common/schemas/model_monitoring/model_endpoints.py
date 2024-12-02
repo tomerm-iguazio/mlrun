@@ -356,6 +356,13 @@ class ModelEndpointMonitoringMetricNoData(_ModelEndpointMonitoringMetricValuesBa
     data: bool = False
 
 
+class ModelMonitoringProject(BaseModel):
+    project: constr(regex=PROJECT_PATTERN)
+    base_period: int = 10
+    created: Optional[datetime] = None
+    updated: Optional[datetime] = None
+
+
 def _mapping_attributes(
     model_class: type[Model], flattened_dictionary: dict, json_parse_values: list
 ) -> Model:

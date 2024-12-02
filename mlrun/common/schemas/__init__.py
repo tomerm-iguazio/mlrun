@@ -153,6 +153,7 @@ from .model_monitoring import (
     ModelEndpointV2Spec,
     ModelEndpointV2Status,
     ModelMonitoringMode,
+    ModelMonitoringProject,
     ModelMonitoringStoreKinds,
     MonitoringFunctionNames,
     TSDBTarget,

@@ -73,4 +73,5 @@ from .model_endpoints import (
     ModelEndpointMonitoringResultValues,
     ModelEndpointSpec,
     ModelEndpointStatus,
+    ModelMonitoringProject,
 )
