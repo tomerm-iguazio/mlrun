@@ -48,7 +48,7 @@ class _BatchDict(typing.TypedDict):
     days: int
 
 
-def is_metrics_regex_match(
+def _is_metrics_regex_match(
     metric_name: Optional[str],
     result_names: Optional[list[str]],
 ):
@@ -62,9 +62,12 @@ def is_metrics_regex_match(
 def filter_metrics_by_regex(
     metrics_names: Optional[list[str]] = None,
     result_names: Optional[list[str]] = None,
-):
+) -> list[str]:
     if not result_names:
         return metrics_names
+
+    if not metrics_names:
+        return []
 
     #  result_names validations
     validated_result_names = []
@@ -86,7 +89,7 @@ def filter_metrics_by_regex(
                 f" Metric_name: {metric_name}"
             )
             continue
-        if is_metrics_regex_match(
+        if _is_metrics_regex_match(
             metric_name=metric_name, result_names=validated_result_names
         ):
             filtered_metrics_names.append(metric_name)
