@@ -30,6 +30,7 @@ from framework.api import deps
 router = APIRouter()
 
 
+@router.get("/projects/{project}/alerts/{name}/activations")
 @router.get("/projects/{project}/alert-activations")
 async def list_alert_activations(
     project: str,
@@ -39,7 +40,7 @@ async def list_alert_activations(
     entity: Optional[str] = None,
     severity: Optional[
         list[Union[mlrun.common.schemas.alert.AlertSeverity, str]]
-    ] = None,
+    ] = Query([], alias="severity"),
     entity_kind: Optional[
         Union[mlrun.common.schemas.alert.EventEntityKind, str]
     ] = Query(None, alias="entity-kind"),
