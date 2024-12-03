@@ -335,7 +335,6 @@ class TestBasicModelMonitoring(TestMLRunSystem):
 
         sleep(15)
         endpoints_list = project.list_model_endpoints(
-            self.project_name,
             metrics=[mm_constants.EventLiveStats.PREDICTIONS_PER_SECOND],
         )
         assert len(endpoints_list) == 1
