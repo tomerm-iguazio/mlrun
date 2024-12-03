@@ -334,7 +334,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             sleep(choice([0.01, 0.04]))
 
         sleep(15)
-        endpoints_list = mlrun.get_run_db().list_model_endpoints(
+        endpoints_list = project.list_model_endpoints(
             self.project_name,
             metrics=[mm_constants.EventLiveStats.PREDICTIONS_PER_SECOND],
         )
