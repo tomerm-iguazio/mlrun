@@ -356,7 +356,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             self.project_name, endpoint.metadata.uid
         )
         assert len(metrics) == 1
-        expected_metric_fqn = f"{endpoint.metadata.uid}.mlrun-infra.metric.invocations"
+        expected_metric_fqn = f"{endpoint.metadata.uid}.mlrun-infra.result.invocations"
         metric_fqn = get_result_instance_fqn(
             model_endpoint_id=endpoint.metadata.uid,
             app_name=metrics[0].app,
