@@ -43,6 +43,7 @@ from mlrun.common.schemas import alert as alert_constants
 from mlrun.common.schemas.notification import Notification, NotificationKind
 from mlrun.errors import MLRunNotFoundError
 from mlrun.model import BaseMetadata
+from mlrun.model_monitoring.helpers import get_result_instance_fqn
 from mlrun.runtimes import BaseRuntime
 from mlrun.utils.v3io_clients import get_frames_client
 from tests.system.base import TestMLRunSystem
@@ -356,8 +357,13 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             self.project_name, endpoint.metadata.uid
         )
         assert len(metrics) == 1
-        expected_metric_name = f"{endpoint.metadata.uid}.mlrun-infra.metric.invocations"
-        assert metrics[0].full_name == expected_metric_name
+        expected_metric_fqn = f"{endpoint.metadata.uid}.mlrun-infra.metric.invocations"
+        metric_fqn = get_result_instance_fqn(
+            model_endpoint_id=endpoint.metadata.uid,
+            app_name=metrics[0].app,
+            result_name=metrics[0].name,
+        )
+        assert metric_fqn == expected_metric_fqn
 
         notification = Notification(
             kind=NotificationKind.mail,
@@ -379,7 +385,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
         )
         assert len(alerts) == 1
         alert = alerts[0]
-        assert alert.entities.ids[0] == expected_metric_name
+        assert alert.entities.ids[0] == expected_metric_fqn
 
     def _assert_model_uri(
         self,
