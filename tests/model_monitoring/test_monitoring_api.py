@@ -165,9 +165,10 @@ def test_project_create_model_monitoring_alert_configs() -> None:
         for alert in alerts:
             alert_ids += alert.entities.ids
         expected_ids = [
-            "mm-project.test_app.metric.metric-2",
-            "mm-project.test_app.metric.metric-1",
-            "mm-project.test_app.result.result-b",
+            "mep_id1.test_app.result.metric-1",
+            "mep_id1.test_app.result.metric-2",
+            "mep_id2.test_app.result.metric-1",
+            "mep_id2.test_app.result.result-b",
         ]
         assert sorted(alert_ids) == sorted(expected_ids)
 

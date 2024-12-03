@@ -67,7 +67,10 @@ from mlrun.datastore.datastore_profile import (
     datastore_profile_read,
 )
 from mlrun.datastore.vectorstore import VectorStoreCollection
-from mlrun.model_monitoring.helpers import filter_metrics_by_regex
+from mlrun.model_monitoring.helpers import (
+    filter_metrics_by_regex,
+    get_result_instance_fqn,
+)
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 from mlrun_pipelines.models import PipelineNodeWrapper
 
@@ -2060,14 +2063,18 @@ class MlrunProject(ModelObj):
             metrics_by_endpoint = db.get_model_endpoint_monitoring_metrics(
                 project=self.name, endpoint_id=endpoint.metadata.uid
             )
-            metrics_by_endpoint_names = [
-                metric.full_name for metric in metrics_by_endpoint
+            metrics_fqn_by_endpoint = [
+                get_result_instance_fqn(
+                    model_endpoint_id=endpoint.metadata.uid,
+                    app_name=metric.app,
+                    result_name=metric.name,
+                )
+                for metric in metrics_by_endpoint
             ]
             metrics += filter_metrics_by_regex(
-                metrics_names=metrics_by_endpoint_names, result_names=result_names
+                metrics_names=metrics_fqn_by_endpoint, result_names=result_names
             )
-        metrics = list(set(metrics))
-        for metric_full_name in metrics:
+        for metric_fqn in metrics:
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,
@@ -2077,7 +2084,7 @@ class MlrunProject(ModelObj):
                     entities=alert_constants.EventEntities(
                         kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
                         project=self.name,
-                        ids=[metric_full_name],
+                        ids=[metric_fqn],
                     ),
                     trigger=alert_constants.AlertTrigger(
                         events=events if isinstance(events, list) else [events]
