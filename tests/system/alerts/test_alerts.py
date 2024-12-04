@@ -138,8 +138,31 @@ class TestAlerts(TestMLRunSystem):
         assert token is None
 
     @staticmethod
-    def _generate_events(
-        endpoint_id: str, result_name: str
+    def _generate_typical_event(
+        endpoint_id: str, result_name: str, app_name=None
+    ) -> dict[str, typing.Any]:
+        return  {
+            mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
+            mm_constants.WriterEvent.APPLICATION_NAME: mm_constants.HistogramDataDriftApplicationConstants.NAME,
+            mm_constants.WriterEvent.START_INFER_TIME: "2023-09-11T12:00:00",
+            mm_constants.WriterEvent.END_INFER_TIME: "2023-09-11T12:01:00",
+            mm_constants.WriterEvent.EVENT_KIND: "result",
+            mm_constants.WriterEvent.DATA: json.dumps(
+                {
+                    mm_constants.ResultData.RESULT_NAME: result_name,
+                    mm_constants.ResultData.RESULT_KIND: mm_constants.ResultKindApp.model_performance.value,
+                    mm_constants.ResultData.RESULT_VALUE: 0.1,
+                    mm_constants.ResultData.RESULT_STATUS: mm_constants.ResultStatusApp.detected.value,
+                    mm_constants.ResultData.RESULT_EXTRA_DATA: json.dumps(
+                        {"threshold": 0.3}
+                    ),
+                }
+            ),
+        }
+
+    @staticmethod
+    def _generate_anomaly_events(
+        endpoint_id: str, result_name: str, app_name=None
     ) -> list[dict[str, typing.Any]]:
         data_drift_example = {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
@@ -294,12 +317,6 @@ class TestAlerts(TestMLRunSystem):
             context=mlrun.get_or_create_ctx("demo"),
         )
 
-        # generate alerts for the different result kind and return text from the expected notifications that will be
-        # used later to validate that the notifications were sent as expected
-        expected_notifications = self._generate_alerts(
-            nuclio_function_url=nuclio_function_url, model_endpoint=mep
-        )
-
         # waits for the writer function to be deployed
         writer = self.project.get_function(
             key=mm_constants.MonitoringFunctionNames.WRITER
@@ -317,12 +334,18 @@ class TestAlerts(TestMLRunSystem):
         result_name = (
             mm_constants.HistogramDataDriftApplicationConstants.GENERAL_RESULT_NAME
         )
-
-        output_stream.push(self._generate_events(endpoint_id, result_name))
+        #  app_name = mm_constants.HistogramDataDriftApplicationConstants.NAME  # in dev
+        output_stream.push(self._generate_typical_event(endpoint_id, result_name))
 
         # wait for the nuclio function to check for the stream inputs
         time.sleep(10)
-
+        # generate alerts for the different result kind and return text from the expected notifications that will be
+        # used later to validate that the notifications were sent as expected
+        expected_notifications = self._generate_alerts(
+            nuclio_function_url=nuclio_function_url, model_endpoint=mep
+        )
+        output_stream.push(self._generate_anomaly_events(endpoint_id, result_name))
+        time.sleep(10)
         self._validate_notifications_on_nuclio(
             nuclio_function_url, expected_notifications
         )
