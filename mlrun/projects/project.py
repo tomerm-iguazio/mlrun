@@ -3542,7 +3542,6 @@ class MlrunProject(ModelObj):
         labels: Optional[list[str]] = None,
         start: str = "now-1h",
         end: str = "now",
-        metrics: Optional[list[str]] = None,
         top_level: bool = False,
         uids: Optional[list[str]] = None,
     ) -> list[mlrun.model_monitoring.model_endpoint.ModelEndpoint]:
@@ -3574,7 +3573,6 @@ class MlrunProject(ModelObj):
         :param end: The end time of the metrics. Can be represented by a string containing an RFC 3339 time, a
                       Unix timestamp in milliseconds, a relative time (`'now'` or `'now-[0-9]+[mhd]'`, where
                       `m` = minutes, `h` = hours, `'d'` = days, and `'s'` = seconds), or 0 for the earliest time.
-        :param metrics: A list of metrics to return for each endpoint, read more in 'TimeMetric'
         :param top_level: if true will return only routers and endpoint that are NOT children of any router
         :param uids: if passed will return a list `ModelEndpoint` object with uid in uids
 
@@ -3588,7 +3586,6 @@ class MlrunProject(ModelObj):
             labels=labels,
             start=start,
             end=end,
-            metrics=metrics,
             top_level=top_level,
             uids=uids,
         )
