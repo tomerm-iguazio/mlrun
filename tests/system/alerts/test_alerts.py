@@ -64,7 +64,6 @@ class TestAlerts(TestMLRunSystem):
         run_id = "test-func-handler"
         notifications = self._generate_failure_notifications(nuclio_function_url)
         self._create_alert_config(
-            self.project_name,
             alert_name,
             alert_objects.EventEntityKind.JOB,
             run_id,
@@ -226,7 +225,7 @@ class TestAlerts(TestMLRunSystem):
         ]
 
     def _generate_alerts(
-        self, nuclio_function_url: str, result_endpoint_fqn
+        self, nuclio_function_url: str, model_endpoint
     ) -> list[str]:
         """Generate alerts for the different result kind and return data from the expected notifications."""
         expected_notifications = []
@@ -243,22 +242,32 @@ class TestAlerts(TestMLRunSystem):
             )
             alert_summary = "Model is drifting"
             self._create_alert_config(
-                self.project_name,
-                alert_name,
-                alert_objects.EventEntityKind.MODEL_ENDPOINT_RESULT,
-                result_endpoint_fqn,
-                alert_summary,
-                alert_kind,
-                self._generate_drift_notifications(
+                name=alert_name,
+                summary=alert_summary,
+                model_endpoint=model_endpoint,
+                events=[alert_kind],
+                notifications=self._generate_drift_notifications(
                     nuclio_function_url, alert_kind.value
-                ),
-            )
+                ), )
             expected_notifications.extend(
                 [
                     f"first drift of {alert_kind.value}",
                     f"second drift of {alert_kind.value}",
                 ]
             )
+
+
+        ## v2
+        # alert_name = "drift-webhook"
+        # alert_summary = "Model is drifting"
+        # self._create_alert_config(
+        #     name= alert_name,
+        #     summary=alert_summary,
+        #     model_endpoint=model_endpoint,
+        #     events = alerts_kind_to_test,
+        #     notifications=self._generate_drift_notifications(
+        #         nuclio_function_url, alert_kind.value
+        #     ),)
         return expected_notifications
 
     @pytest.mark.model_monitoring
@@ -279,10 +288,16 @@ class TestAlerts(TestMLRunSystem):
         )
         endpoint_id = "demo-endpoint"
 
+        mep = mlrun.model_monitoring.api.get_or_create_model_endpoint(
+            project=self.project.metadata.name,
+            endpoint_id=endpoint_id,
+            context=mlrun.get_or_create_ctx("demo"),
+        )
+
         # generate alerts for the different result kind and return text from the expected notifications that will be
         # used later to validate that the notifications were sent as expected
         expected_notifications = self._generate_alerts(
-            nuclio_function_url, get_default_result_instance_fqn(endpoint_id)
+            nuclio_function_url=nuclio_function_url, model_endpoint=mep
         )
 
         # waits for the writer function to be deployed
@@ -291,11 +306,6 @@ class TestAlerts(TestMLRunSystem):
         )
         writer._wait_for_function_deployment(db=writer._get_db())
 
-        mlrun.model_monitoring.api.get_or_create_model_endpoint(
-            project=self.project.metadata.name,
-            endpoint_id=endpoint_id,
-            context=mlrun.get_or_create_ctx("demo"),
-        )
         stream_uri = get_stream_path(
             project=self.project.metadata.name,
             function_name=mm_constants.MonitoringFunctionNames.WRITER,
@@ -350,8 +360,8 @@ class TestAlerts(TestMLRunSystem):
         run_id = "test-func-handler"
         notifications = self._generate_failure_notifications(nuclio_function_url)
 
+        #todo fix
         self._create_alert_config(
-            self.project_name,
             alert_name,
             alert_objects.EventEntityKind.JOB,
             run_id,
@@ -433,31 +443,42 @@ class TestAlerts(TestMLRunSystem):
             alert_objects.AlertNotification(notification=second_notification),
         ]
 
-    @staticmethod
     def _create_alert_config(
-        project,
+        self,
         name,
-        entity_kind,
-        entity_id,
         summary,
-        event_name,
+        model_endpoint,
+        #event_name,
+        events,
         notifications,
         criteria=None,
     ):
-        alert_data = mlrun.alerts.alert.AlertConfig(
-            project=project,
+        # alert_data = mlrun.alerts.alert.AlertConfig(
+        #     project=cls.project_name,
+        #     name=name,
+        #     summary=summary,
+        #     severity=alert_objects.AlertSeverity.LOW,
+        #     entities=alert_objects.EventEntities(
+        #         kind=entity_kind, project=cls.project_name, ids=[entity_id]
+        #     ),
+        #     trigger=alert_objects.AlertTrigger(events=[event_name]),
+        #     criteria=criteria,
+        #     notifications=notifications,
+        # )
+        alert_data = self.project.create_model_monitoring_alert_configs(
             name=name,
             summary=summary,
-            severity=alert_objects.AlertSeverity.LOW,
-            entities=alert_objects.EventEntities(
-                kind=entity_kind, project=project, ids=[entity_id]
-            ),
-            trigger=alert_objects.AlertTrigger(events=[event_name]),
-            criteria=criteria,
+            endpoints=[model_endpoint],
+            events=events,
             notifications=notifications,
-        )
-
-        mlrun.get_run_db().store_alert_config(name, alert_data)
+            result_names=[],
+            severity=alert_objects.AlertSeverity.LOW,
+            # entities=alert_objects.EventEntities(
+            #     kind=entity_kind, project=cls.project_name, ids=[entity_id]
+            # ),
+            criteria=criteria,
+            )
+        mlrun.get_run_db().store_alert_config(name, alert_data[0])
 
     @staticmethod
     def _validate_notifications_on_nuclio(nuclio_function_url, expected_notifications):
