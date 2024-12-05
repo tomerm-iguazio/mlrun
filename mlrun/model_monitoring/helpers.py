@@ -24,7 +24,7 @@ if typing.TYPE_CHECKING:
     from mlrun.db.base import RunDBInterface
     from mlrun.projects import MlrunProject
 
-from fnmatch import fnmatch
+from fnmatch import fnmatchcase
 from typing import Optional
 
 import mlrun
@@ -54,7 +54,7 @@ def _is_metrics_regex_match(
 ):
     metric_name = ".".join(metric_name.split(".")[i] for i in [1, 3])
     for result_name in result_names:
-        if fnmatch(metric_name, result_name):
+        if fnmatchcase(metric_name, result_name):
             return True
     return False
 
