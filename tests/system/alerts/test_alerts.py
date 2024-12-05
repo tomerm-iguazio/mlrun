@@ -27,6 +27,7 @@ import mlrun.model_monitoring.api
 import tests.system.common.helpers.notifications as notification_helpers
 from mlrun.datastore import get_stream_pusher
 from mlrun.model_monitoring.helpers import (
+    get_default_result_instance_fqn,
     get_stream_path,
 )
 from tests.system.base import TestMLRunSystem
@@ -138,10 +139,11 @@ class TestAlerts(TestMLRunSystem):
 
     @staticmethod
     def _generate_typical_event(
-        endpoint_id: str, result_name: str, app_name=None
+            endpoint_id: str, result_name: str, endpoint_name: str,
     ) -> dict[str, typing.Any]:
         return {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
+            mm_constants.WriterEvent.ENDPOINT_NAME: endpoint_name,
             mm_constants.WriterEvent.APPLICATION_NAME: mm_constants.HistogramDataDriftApplicationConstants.NAME,
             mm_constants.WriterEvent.START_INFER_TIME: "2023-09-11T12:00:00",
             mm_constants.WriterEvent.END_INFER_TIME: "2023-09-11T12:01:00",
@@ -160,11 +162,14 @@ class TestAlerts(TestMLRunSystem):
         }
 
     @staticmethod
-    def _generate_anomaly_events(
-        endpoint_id: str, result_name: str, app_name=None
+    def _generate_events(
+        endpoint_id: str,
+        result_name: str,
+        endpoint_name: str,
     ) -> list[dict[str, typing.Any]]:
         data_drift_example = {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
+            mm_constants.WriterEvent.ENDPOINT_NAME: endpoint_name,
             mm_constants.WriterEvent.APPLICATION_NAME: mm_constants.HistogramDataDriftApplicationConstants.NAME,
             mm_constants.WriterEvent.START_INFER_TIME: "2023-09-11T12:00:00",
             mm_constants.WriterEvent.END_INFER_TIME: "2023-09-11T12:01:00",
@@ -184,6 +189,7 @@ class TestAlerts(TestMLRunSystem):
 
         concept_drift_example = {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
+            mm_constants.WriterEvent.ENDPOINT_NAME: endpoint_name,
             mm_constants.WriterEvent.APPLICATION_NAME: mm_constants.HistogramDataDriftApplicationConstants.NAME,
             mm_constants.WriterEvent.START_INFER_TIME: "2023-09-11T12:00:00",
             mm_constants.WriterEvent.END_INFER_TIME: "2023-09-11T12:01:00",
@@ -203,6 +209,7 @@ class TestAlerts(TestMLRunSystem):
 
         anomaly_example = {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
+            mm_constants.WriterEvent.ENDPOINT_NAME: endpoint_name,
             mm_constants.WriterEvent.APPLICATION_NAME: mm_constants.HistogramDataDriftApplicationConstants.NAME,
             mm_constants.WriterEvent.START_INFER_TIME: "2023-09-11T12:00:00",
             mm_constants.WriterEvent.END_INFER_TIME: "2023-09-11T12:01:00",
@@ -222,6 +229,7 @@ class TestAlerts(TestMLRunSystem):
 
         system_performance_example = {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
+            mm_constants.WriterEvent.ENDPOINT_NAME: endpoint_name,
             mm_constants.WriterEvent.APPLICATION_NAME: mm_constants.HistogramDataDriftApplicationConstants.NAME,
             mm_constants.WriterEvent.START_INFER_TIME: "2023-09-11T12:00:00",
             mm_constants.WriterEvent.END_INFER_TIME: "2023-09-11T12:01:00",
@@ -287,7 +295,6 @@ class TestAlerts(TestMLRunSystem):
         """
         # enable model monitoring - deploy writer function
         self.project.set_model_monitoring_credentials(
-            endpoint_store_connection=mlrun.mlconf.model_endpoint_monitoring.endpoint_store_connection,
             stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
@@ -296,12 +303,11 @@ class TestAlerts(TestMLRunSystem):
         nuclio_function_url = notification_helpers.deploy_notification_nuclio(
             self.project, self.image
         )
-        endpoint_id = "demo-endpoint"
-
-        mep = mlrun.model_monitoring.api.get_or_create_model_endpoint(
+        model_endpoint = mlrun.model_monitoring.api.get_or_create_model_endpoint(
             project=self.project.metadata.name,
-            endpoint_id=endpoint_id,
+            model_endpoint_name="test-endpoint",
             context=mlrun.get_or_create_ctx("demo"),
+            endpoint_id=None,
         )
 
         # waits for the writer function to be deployed
@@ -321,16 +327,17 @@ class TestAlerts(TestMLRunSystem):
         result_name = (
             mm_constants.HistogramDataDriftApplicationConstants.GENERAL_RESULT_NAME
         )
-        output_stream.push(self._generate_typical_event(endpoint_id, result_name))
+        output_stream.push(self._generate_typical_event(model_endpoint.metadata.uid, result_name))
 
         time.sleep(5)
         # generate alerts for the different result kind and return text from the expected notifications that will be
         # used later to validate that the notifications were sent as expected
         expected_notifications = self._generate_alerts(
-            nuclio_function_url=nuclio_function_url, model_endpoint=mep
+            nuclio_function_url,
+            get_default_result_instance_fqn(model_endpoint.metadata.uid),
         )
         # wait for the nuclio function to check for the stream inputs
-        output_stream.push(self._generate_anomaly_events(endpoint_id, result_name))
+        output_stream.push(self._generate_anomaly_events(model_endpoint.metadata.uid, result_name, model_endpoint.metadata.name))
         time.sleep(10)
         self._validate_notifications_on_nuclio(
             nuclio_function_url, expected_notifications
