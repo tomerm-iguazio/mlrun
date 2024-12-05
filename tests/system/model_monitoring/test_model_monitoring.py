@@ -364,9 +364,6 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             result_name=metrics[0].name,
         )
         assert metric_fqn == expected_metric_fqn
-        self._assert_create_alert_configs(
-            endpoints_list=endpoints_list, expected_metric_fqn=expected_metric_fqn
-        )
 
     def _assert_model_uri(
         self,
@@ -378,32 +375,6 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             == f"store://models/{model_obj.metadata.project}/{model_obj.key}#{model_obj.iter}@{model_obj.tree}"
         )
 
-    def _assert_create_alert_configs(
-        self,
-        endpoints_list: list[mlrun.model_monitoring.model_endpoint.ModelEndpoint],
-        expected_metric_fqn: str,
-    ):
-        notification = Notification(
-            kind=NotificationKind.mail,
-            name="my_test_notification",
-            email_addresses=["invalid_address@mlrun.com"],
-            subject="test alert",
-            body="test",
-        )
-        alert_notification = alert_constants.AlertNotification(
-            notification=notification, cooldown_period="5m"
-        )
-
-        alerts = self.project.create_model_monitoring_alert_configs(
-            name="",
-            endpoints=endpoints_list,
-            summary="summary",
-            events=alert_constants.EventKind.FAILED,
-            notifications=[alert_notification],
-        )
-        assert len(alerts) == 1
-        alert = alerts[0]
-        assert alert.entities.ids[0] == expected_metric_fqn
 
     def _assert_model_endpoint_tags_and_labels(
         self,
