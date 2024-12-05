@@ -52,6 +52,14 @@ def _is_metrics_regex_match(
     metric_name: Optional[str],
     result_names: Optional[list[str]],
 ):
+    if metric_name.count(".") != 3 or any(
+            part == "" for part in metric_name.split(".")
+    ):
+        logger.warning(
+            f"filter_metrics_by_regex: metric_name illegal, will be ignored."
+            f" Metric_name: {metric_name}"
+        )
+        return False
     metric_name = ".".join(metric_name.split(".")[i] for i in [1, 3])
     for result_name in result_names:
         if fnmatchcase(metric_name, result_name):
@@ -81,14 +89,6 @@ def filter_metrics_by_regex(
             validated_result_names.append(result_name)
     filtered_metrics_names = []
     for metric_name in metrics_names:
-        if metric_name.count(".") != 3 or any(
-            part == "" for part in metric_name.split(".")
-        ):
-            logger.warning(
-                f"filter_metrics_by_regex: metric_name illegal, will be ignored."
-                f" Metric_name: {metric_name}"
-            )
-            continue
         if _is_metrics_regex_match(
             metric_name=metric_name, result_names=validated_result_names
         ):
