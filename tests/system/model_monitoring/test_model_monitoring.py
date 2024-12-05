@@ -39,8 +39,6 @@ import mlrun.runtimes.mounts
 import mlrun.runtimes.utils
 import mlrun.serving.routers
 import mlrun.utils
-from mlrun.common.schemas import alert as alert_constants
-from mlrun.common.schemas.notification import Notification, NotificationKind
 from mlrun.errors import MLRunNotFoundError
 from mlrun.model import BaseMetadata
 from mlrun.model_monitoring.helpers import get_result_instance_fqn
@@ -374,7 +372,6 @@ class TestBasicModelMonitoring(TestMLRunSystem):
             endpoint.spec.model_uri
             == f"store://models/{model_obj.metadata.project}/{model_obj.key}#{model_obj.iter}@{model_obj.tree}"
         )
-
 
     def _assert_model_endpoint_tags_and_labels(
         self,

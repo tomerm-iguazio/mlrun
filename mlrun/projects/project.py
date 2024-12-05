@@ -2061,6 +2061,25 @@ class MlrunProject(ModelObj):
         ),
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
+        """
+        :param name:           AlertConfig name.
+        :param summary:        Summary of the alert, will be sent in the generated notifications
+        :param endpoints:      The endpoints from which to retrieve the metrics that the alerts will be based on.
+        :param events:         AlertTrigger event types (EventKind).
+        :param notifications:  List of notifications to invoke once the alert is triggered
+        :param result_names:   Optional. Filters the result names used to create the alert configuration,
+                               constructed from the app and result_name regex.
+
+                               For example:
+                               [app1.result-*, *.result1]
+                               will match "mep1.app1.result.result-1" and "mep1.app2.result.result1".
+        :param severity:       Severity of the alert.
+        :param criteria:       When the alert will be triggered based on the specified number of events within the
+                               defined time period.
+        :param reset_policy:   When to clear the alert. May be "manual" for manual reset of the alert, or
+                               "auto" if the criteria contains a time period.
+        :return:               List of AlertConfig according to endpoints results, filtered by result_names.
+        """
         db = mlrun.db.get_run_db(secrets=self._secrets)
         metrics = []
         alerts = []
