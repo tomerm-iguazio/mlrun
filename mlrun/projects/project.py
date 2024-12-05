@@ -68,7 +68,7 @@ from mlrun.datastore.datastore_profile import (
 )
 from mlrun.datastore.vectorstore import VectorStoreCollection
 from mlrun.model_monitoring.helpers import (
-    filter_metrics_by_regex,
+    filter_results_by_regex,
     get_result_instance_fqn,
 )
 from mlrun.runtimes.nuclio.function import RemoteRuntime
@@ -2062,44 +2062,47 @@ class MlrunProject(ModelObj):
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
         """
-        :param name:           AlertConfig name.
-        :param summary:        Summary of the alert, will be sent in the generated notifications
-        :param endpoints:      The endpoints from which to retrieve the metrics that the alerts will be based on.
-        :param events:         AlertTrigger event types (EventKind).
-        :param notifications:  List of notifications to invoke once the alert is triggered
-        :param result_names:   Optional. Filters the result names used to create the alert configuration,
-                               constructed from the app and result_name regex.
+        :param name:                   AlertConfig name.
+        :param summary:                Summary of the alert, will be sent in the generated notifications
+        :param endpoints:              The endpoints from which to retrieve the metrics that the
+                                       alerts will be based on.
+        :param events:                 AlertTrigger event types (EventKind).
+        :param notifications:          List of notifications to invoke once the alert is triggered
+        :param result_names:           Optional. Filters the result names used to create the alert configuration,
+                                       constructed from the app and result_name regex.
 
-                               For example:
-                               [app1.result-*, *.result1]
-                               will match "mep1.app1.result.result-1" and "mep1.app2.result.result1".
-        :param severity:       Severity of the alert.
-        :param criteria:       When the alert will be triggered based on the specified number of events within the
-                               defined time period.
-        :param reset_policy:   When to clear the alert. May be "manual" for manual reset of the alert, or
-                               "auto" if the criteria contains a time period.
-        :return:               List of AlertConfig according to endpoints results, filtered by result_names.
+                                       For example:
+                                       [app1.result-*, *.result1]
+                                       will match "mep1.app1.result.result-1" and "mep1.app2.result.result1".
+        :param severity:               Severity of the alert.
+        :param criteria:               When the alert will be triggered based on the
+                                       specified number of events within the defined time period.
+        :param reset_policy:           When to clear the alert. May be "manual" for manual reset of the alert,
+                                       or "auto" if the criteria contains a time period.
+        :return:                       List of AlertConfig according to endpoints results,
+                                       filtered by result_names.
         """
         db = mlrun.db.get_run_db(secrets=self._secrets)
-        metrics = []
+        matching_results = []
         alerts = []
         # TODO: Refactor to use a single request to improve performance at scale, ML-8473
         for endpoint in endpoints:
-            metrics_by_endpoint = db.get_model_endpoint_monitoring_metrics(
+            results_by_endpoint = db.get_model_endpoint_monitoring_metrics(
                 project=self.name, endpoint_id=endpoint.metadata.uid, type="results"
             )
-            metrics_fqn_by_endpoint = [
+            results_fqn_by_endpoint = [
                 get_result_instance_fqn(
                     model_endpoint_id=endpoint.metadata.uid,
-                    app_name=metric.app,
-                    result_name=metric.name,
+                    app_name=result.app,
+                    result_name=result.name,
                 )
-                for metric in metrics_by_endpoint
+                for result in results_by_endpoint
             ]
-            metrics += filter_metrics_by_regex(
-                metrics_names=metrics_fqn_by_endpoint, result_names=result_names
+            matching_results += filter_results_by_regex(
+                existing_result_names=results_fqn_by_endpoint,
+                result_name_filters=result_names,
             )
-        for metric_fqn in metrics:
+        for result_fqn in matching_results:
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,
@@ -2109,7 +2112,7 @@ class MlrunProject(ModelObj):
                     entities=alert_constants.EventEntities(
                         kind=alert_constants.EventEntityKind.MODEL_ENDPOINT_RESULT,
                         project=self.name,
-                        ids=[metric_fqn],
+                        ids=[result_fqn],
                     ),
                     trigger=alert_constants.AlertTrigger(
                         events=events if isinstance(events, list) else [events]

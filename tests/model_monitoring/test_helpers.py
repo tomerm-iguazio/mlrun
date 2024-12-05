@@ -42,7 +42,7 @@ from mlrun.model_monitoring.helpers import (
     _BatchDict,
     _get_monitoring_time_window_from_controller_run,
     batch_dict2timedelta,
-    filter_metrics_by_regex,
+    filter_results_by_regex,
     get_invocations_fqn,
     update_model_endpoint_last_request,
 )
@@ -505,8 +505,8 @@ def test_batch_dict2timedelta() -> None:
     ) == datetime.timedelta(minutes=32, days=4), "Different timedelta than expected"
 
 
-def test_filter_metrics_by_regex():
-    metrics_names = [
+def test_filter_results_by_regex():
+    existing_result_names = [
         "mep1.app1.result.metric1",
         "mep1.app1.result.metric2",
         "mep1.app2.result.metric1",
@@ -520,7 +520,7 @@ def test_filter_metrics_by_regex():
         "mep1.app4.result.result2",
     ]
 
-    expected_metrics_names = [
+    expected_result_names = [
         "mep1.app1.result.metric1",
         "mep1.app2.result.metric1",
         "mep1.app2.result.result-a",
@@ -530,13 +530,14 @@ def test_filter_metrics_by_regex():
         "mep1.app4.result.result1",
     ]
 
-    results_names = [
+    results_names_filters = [
         "*.metric1",
         "app2.result-*",
         "app3.*",
         "app4.result1",
     ]
-    filtered_metrics = filter_metrics_by_regex(
-        metrics_names=metrics_names, result_names=results_names
+    filtered_results = filter_results_by_regex(
+        existing_result_names=existing_result_names,
+        result_name_filters=results_names_filters,
     )
-    assert sorted(filtered_metrics) == sorted(expected_metrics_names)
+    assert sorted(filtered_results) == sorted(expected_result_names)
