@@ -25,6 +25,7 @@ import mlrun.common.schemas.alert as alert_objects
 import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.model_monitoring.api
 import tests.system.common.helpers.notifications as notification_helpers
+from mlrun.common.schemas.model_monitoring.model_endpoints import ModelEndpointList
 from mlrun.datastore import get_stream_pusher
 from mlrun.model_monitoring.helpers import (
     get_default_result_instance_fqn,
@@ -504,7 +505,7 @@ class TestAlerts(TestMLRunSystem):
         alert_data = self.project.create_model_monitoring_alert_configs(
             name=name,
             summary=summary,
-            endpoints=[model_endpoint],
+            endpoints=ModelEndpointList(endpoints=[model_endpoint]),
             events=events,
             notifications=notifications,
             result_names=[],

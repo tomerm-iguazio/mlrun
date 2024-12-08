@@ -22,12 +22,16 @@ import pytest
 import mlrun.model_monitoring.api
 from mlrun.common.schemas import alert as alert_constants
 from mlrun.common.schemas.model_monitoring.model_endpoints import (
+    ModelEndpoint,
+    ModelEndpointList,
+    ModelEndpointMetadata,
     ModelEndpointMonitoringMetric,
     ModelEndpointMonitoringMetricType,
+    ModelEndpointSpec,
+    ModelEndpointStatus,
 )
 from mlrun.common.schemas.notification import Notification, NotificationKind
 from mlrun.db import RunDBInterface
-from mlrun.model_monitoring import ModelEndpoint
 
 from .assets.application import DemoMonitoringApp
 
@@ -148,11 +152,21 @@ def test_project_create_model_monitoring_alert_configs() -> None:
     )
 
     with patch("mlrun.db.get_run_db", return_value=db_mock):
-        mep1 = mlrun.common.schemas.ModelEndpoint()
-        mep1.metadata.uid = "mep_id1"
-        mep2 = mlrun.common.schemas.ModelEndpoint()
-        mep2.metadata.uid = "mep_id2"
-        meps_list = mlrun.common.schemas.ModelEndpointList([mep1, mep2])
+        mep1 = ModelEndpoint(
+            metadata=ModelEndpointMetadata(
+                project=project.name, uid="mep_id1", name="mep_id1"
+            ),
+            spec=ModelEndpointSpec(),
+            status=ModelEndpointStatus(),
+        )
+        mep2 = ModelEndpoint(
+            metadata=ModelEndpointMetadata(
+                project=project.name, uid="mep_id2", name="mep_id2"
+            ),
+            spec=ModelEndpointSpec(),
+            status=ModelEndpointStatus(),
+        )
+        meps_list = ModelEndpointList(endpoints=[mep1, mep2])
         alerts = project.create_model_monitoring_alert_configs(
             name="test",
             endpoints=meps_list,

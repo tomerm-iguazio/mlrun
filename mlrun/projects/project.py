@@ -2077,7 +2077,7 @@ class MlrunProject(ModelObj):
         matching_results = []
         alerts = []
         # TODO: Refactor to use a single request to improve performance at scale, ML-8473
-        for endpoint in endpoints:
+        for endpoint in endpoints.endpoints:
             results_by_endpoint = db.get_model_endpoint_monitoring_metrics(
                 project=self.name, endpoint_id=endpoint.metadata.uid, type="results"
             )
