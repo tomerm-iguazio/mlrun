@@ -340,12 +340,13 @@ class TestAlerts(TestMLRunSystem):
             nuclio_function_url,
             get_default_result_instance_fqn(model_endpoint.metadata.uid),
         )
-        # wait for the nuclio function to check for the stream inputs
         output_stream.push(
             self._generate_anomaly_events(
                 model_endpoint.metadata.uid, result_name, model_endpoint.metadata.name
             )
         )
+
+        # wait for the nuclio function to check for the stream inputs
         time.sleep(10)
         self._validate_notifications_on_nuclio(
             nuclio_function_url, expected_notifications
