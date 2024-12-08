@@ -139,7 +139,9 @@ class TestAlerts(TestMLRunSystem):
 
     @staticmethod
     def _generate_typical_event(
-            endpoint_id: str, result_name: str, endpoint_name: str,
+        endpoint_id: str,
+        result_name: str,
+        endpoint_name: str,
     ) -> dict[str, typing.Any]:
         return {
             mm_constants.WriterEvent.ENDPOINT_ID: endpoint_id,
@@ -327,7 +329,9 @@ class TestAlerts(TestMLRunSystem):
         result_name = (
             mm_constants.HistogramDataDriftApplicationConstants.GENERAL_RESULT_NAME
         )
-        output_stream.push(self._generate_typical_event(model_endpoint.metadata.uid, result_name))
+        output_stream.push(
+            self._generate_typical_event(model_endpoint.metadata.uid, result_name)
+        )
 
         time.sleep(5)
         # generate alerts for the different result kind and return text from the expected notifications that will be
@@ -337,7 +341,11 @@ class TestAlerts(TestMLRunSystem):
             get_default_result_instance_fqn(model_endpoint.metadata.uid),
         )
         # wait for the nuclio function to check for the stream inputs
-        output_stream.push(self._generate_anomaly_events(model_endpoint.metadata.uid, result_name, model_endpoint.metadata.name))
+        output_stream.push(
+            self._generate_anomaly_events(
+                model_endpoint.metadata.uid, result_name, model_endpoint.metadata.name
+            )
+        )
         time.sleep(10)
         self._validate_notifications_on_nuclio(
             nuclio_function_url, expected_notifications
