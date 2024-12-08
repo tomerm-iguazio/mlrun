@@ -2040,7 +2040,7 @@ class MlrunProject(ModelObj):
         self,
         name: str,
         summary: str,
-        endpoints: list[mlrun.model_monitoring.model_endpoint.ModelEndpoint],
+        endpoints: mlrun.common.schemas.ModelEndpointList,
         events: Union[list[alert_constants.EventKind], alert_constants.EventKind],
         notifications: list[alert_constants.AlertNotification],
         result_names: Optional[

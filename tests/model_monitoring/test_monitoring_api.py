@@ -148,14 +148,14 @@ def test_project_create_model_monitoring_alert_configs() -> None:
     )
 
     with patch("mlrun.db.get_run_db", return_value=db_mock):
-        mep1 = mlrun.model_monitoring.model_endpoint.ModelEndpoint()
+        mep1 = mlrun.common.schemas.ModelEndpoint()
         mep1.metadata.uid = "mep_id1"
-        mep2 = mlrun.model_monitoring.model_endpoint.ModelEndpoint()
+        mep2 = mlrun.common.schemas.ModelEndpoint()
         mep2.metadata.uid = "mep_id2"
-
+        meps_list = mlrun.common.schemas.ModelEndpointList([mep1, mep2])
         alerts = project.create_model_monitoring_alert_configs(
             name="test",
-            endpoints=[mep1, mep2],
+            endpoints=meps_list,
             summary="summary",
             events=alert_constants.EventKind.FAILED,
             notifications=[alert_notification],
