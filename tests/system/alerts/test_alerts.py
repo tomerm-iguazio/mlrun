@@ -310,7 +310,6 @@ class TestAlerts(TestMLRunSystem):
             project=self.project.metadata.name,
             model_endpoint_name="test-endpoint",
             context=mlrun.get_or_create_ctx("demo"),
-            endpoint_id=None,
         )
 
         # waits for the writer function to be deployed
