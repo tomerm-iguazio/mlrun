@@ -2063,14 +2063,14 @@ class MlrunProject(ModelObj):
                                        constructed from the app and result_name regex.
 
                                        For example:
-                                       [app1.result-*, *.result1]
+                                       [`app1.result-*`, `*.result1`]
                                        will match "mep1.app1.result.result-1" and "mep1.app2.result.result1".
         :param severity:               Severity of the alert.
         :param criteria:               When the alert will be triggered based on the
                                        specified number of events within the defined time period.
         :param reset_policy:           When to clear the alert. May be "manual" for manual reset of the alert,
                                        or "auto" if the criteria contains a time period.
-        :return:                       List of AlertConfig according to endpoints results,
+        :returns:                       List of AlertConfig according to endpoints results,
                                        filtered by result_names.
         """
         db = mlrun.db.get_run_db(secrets=self._secrets)
