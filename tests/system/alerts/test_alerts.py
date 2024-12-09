@@ -25,10 +25,12 @@ import mlrun.common.schemas.alert as alert_objects
 import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.model_monitoring.api
 import tests.system.common.helpers.notifications as notification_helpers
-from mlrun.common.schemas.model_monitoring.model_endpoints import ModelEndpointList
+from mlrun.common.schemas.model_monitoring.model_endpoints import (
+    ModelEndpoint,
+    ModelEndpointList,
+)
 from mlrun.datastore import get_stream_pusher
 from mlrun.model_monitoring.helpers import (
-    get_default_result_instance_fqn,
     get_stream_path,
 )
 from tests.system.base import TestMLRunSystem
@@ -165,7 +167,7 @@ class TestAlerts(TestMLRunSystem):
         }
 
     @staticmethod
-    def _generate_events(
+    def _generate_anomaly_events(
         endpoint_id: str,
         result_name: str,
         endpoint_name: str,
@@ -257,7 +259,9 @@ class TestAlerts(TestMLRunSystem):
             system_performance_example,
         ]
 
-    def _generate_alerts(self, nuclio_function_url: str, model_endpoint) -> list[str]:
+    def _generate_alerts(
+        self, nuclio_function_url: str, model_endpoint: ModelEndpoint
+    ) -> list[str]:
         """Generate alerts for the different result kind and return data from the expected notifications."""
         expected_notifications = []
         alerts_kind_to_test = [
@@ -330,7 +334,9 @@ class TestAlerts(TestMLRunSystem):
             mm_constants.HistogramDataDriftApplicationConstants.GENERAL_RESULT_NAME
         )
         output_stream.push(
-            self._generate_typical_event(model_endpoint.metadata.uid, result_name)
+            self._generate_typical_event(
+                model_endpoint.metadata.uid, result_name, model_endpoint.metadata.name
+            )
         )
 
         time.sleep(5)
@@ -338,7 +344,7 @@ class TestAlerts(TestMLRunSystem):
         # used later to validate that the notifications were sent as expected
         expected_notifications = self._generate_alerts(
             nuclio_function_url,
-            get_default_result_instance_fqn(model_endpoint.metadata.uid),
+            model_endpoint,
         )
         output_stream.push(
             self._generate_anomaly_events(
