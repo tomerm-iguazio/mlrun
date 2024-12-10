@@ -234,7 +234,7 @@ class TSDBConnector(ABC):
     @abstractmethod
     def get_metrics_metadata(
         self,
-        endpoint_id: str,
+        endpoint_id: typing.Optional[str, list[str]],
         start: typing.Optional[datetime] = None,
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
@@ -252,7 +252,7 @@ class TSDBConnector(ABC):
     @abstractmethod
     def get_results_metadata(
         self,
-        endpoint_id: str,
+        endpoint_id: typing.Optional[str, list[str]],
         start: typing.Optional[datetime] = None,
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
