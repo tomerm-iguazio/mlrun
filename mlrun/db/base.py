@@ -378,7 +378,9 @@ class RunDBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_project(self, name: str) -> mlrun.common.schemas.Project:
+    def get_project(
+        self, name: str
+    ) -> Union[mlrun.common.schemas.Project, "mlrun.MlrunProject"]:
         pass
 
     @abstractmethod
@@ -1062,4 +1064,8 @@ class RunDBInterface(ABC):
         credentials: dict[str, str],
         replace_creds: bool,
     ) -> None:
+        pass
+
+    @abstractmethod
+    def get_project_summary(self, project: str) -> mlrun.common.schemas.ProjectSummary:
         pass
