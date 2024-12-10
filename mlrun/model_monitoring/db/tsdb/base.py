@@ -241,7 +241,7 @@ class TSDBConnector(ABC):
         """
         Fetches distinct metrics metadata from the metrics TSDB table for a specified model endpoint.
 
-        :param endpoint_id:        The model endpoint identifier.
+        :param endpoint_id:        The model endpoint identifier. Can be a single id or a list of ids.
         :param start:              The start time of the query.
         :param end:                The end time of the query.
 
@@ -259,7 +259,7 @@ class TSDBConnector(ABC):
         """
         Fetches distinct results metadata from the app-results TSDB table for a specified model endpoint.
 
-        :param endpoint_id:        The model endpoint identifier.
+        :param endpoint_id:        The model endpoint identifier. Can be a single id or a list of ids.
         :param start:              The start time of the query.
         :param end:                The end time of the query.
 

@@ -609,14 +609,14 @@ class ModelEndpoints:
     @staticmethod
     def get_model_endpoints_metrics(
         project: str,
-        endpoint_id: str,
+        endpoint_id: typing.Optional[str, list[str]],
         type: str,
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
         """
         Get the metrics for a given model endpoint.
 
         :param project:     The name of the project.
-        :param endpoint_id: The unique id of the model endpoint.
+        :param endpoint_id: The unique id of the model endpoint, Can be a single id or a list of ids.
         :param type:        metric or result.
 
         :return: A dictionary of metrics.
