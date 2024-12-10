@@ -330,7 +330,7 @@ class RunDBInterface(ABC):
     def get_model_endpoints_monitoring_metrics(
         self,
         project: str,
-        endpoint_ids: Optional[str, list[str]],
+        endpoint_ids: Union[str, list[str]],
         type: Literal["results", "metrics", "all"] = "all",
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
         pass

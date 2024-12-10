@@ -609,7 +609,7 @@ class ModelEndpoints:
     @staticmethod
     def get_model_endpoints_metrics(
         project: str,
-        endpoint_id: typing.Optional[str, list[str]],
+        endpoint_id: typing.Union[str, list[str]],
         type: str,
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
         """

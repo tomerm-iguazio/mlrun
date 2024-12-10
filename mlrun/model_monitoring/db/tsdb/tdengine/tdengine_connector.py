@@ -165,7 +165,7 @@ class TDEngineConnector(TSDBConnector):
         return datetime.fromisoformat(val) if isinstance(val, str) else val
 
     @staticmethod
-    def _get_endpoint_filter(endpoint_id: typing.Optional[str, list[str]]):
+    def _get_endpoint_filter(endpoint_id: typing.Union[str, list[str]]):
         if isinstance(endpoint_id, str):
             return f"endpoint_id='{endpoint_id}'"
         elif isinstance(endpoint_id, list):
@@ -599,7 +599,7 @@ class TDEngineConnector(TSDBConnector):
 
     def get_metrics_metadata(
         self,
-        endpoint_id: typing.Optional[str, list[str]],
+        endpoint_id: typing.Union[str, list[str]],
         start: typing.Optional[datetime] = None,
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
@@ -635,7 +635,7 @@ class TDEngineConnector(TSDBConnector):
 
     def get_results_metadata(
         self,
-        endpoint_id: typing.Optional[str, list[str]],
+        endpoint_id: typing.Union[str, list[str]],
         start: typing.Optional[datetime] = None,
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:

@@ -334,7 +334,7 @@ async def get_model_endpoint(
 
 
 async def _collect_metrics_by_endpoints(
-    endpoint_ids: Optional[list[EndpointIDAnnotation], EndpointIDAnnotation],
+    endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
 ):
@@ -402,7 +402,7 @@ async def get_model_endpoint_monitoring_metrics(
 )
 async def get_model_endpoints_monitoring_metrics(
     project: ProjectAnnotation,
-    endpoint_ids: Optional[list[EndpointIDAnnotation], EndpointIDAnnotation],
+    endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
