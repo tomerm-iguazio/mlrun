@@ -3490,6 +3490,37 @@ class HTTPRunDB(RunDBInterface):
             list[mm_endpoints.ModelEndpointMonitoringMetric], monitoring_metrics
         )
 
+    def get_model_endpoints_monitoring_metrics(
+        self,
+        project: str,
+        endpoint_ids: Optional[str, list[str]],
+        type: Literal["results", "metrics", "all"] = "all",
+    ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+        """Get application metrics/results by endpoint id and project.
+
+        :param project: The name of the project.
+        :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
+        :param type: The type of the metrics to return. "all" means "results" and "metrics".
+
+        :return: A list of the application metrics or/and results for these model endpoints.
+        """
+        path = f"projects/{project}/model-endpoints/metrics"
+        params = {"type": type, endpoint_ids: endpoint_ids}
+        error_message = (
+            f"Failed to get model monitoring metrics,"
+            f" endpoint_ids: {endpoint_ids}, project: {project}"
+        )
+        response = self.api_call(
+            mlrun.common.types.HTTPMethod.GET,
+            path,
+            error_message,
+            params=params,
+        )
+        monitoring_metrics = response.json()
+        return parse_obj_as(
+            list[mm_endpoints.ModelEndpointMonitoringMetric], monitoring_metrics
+        )
+
     def create_user_secrets(
         self,
         user: str,

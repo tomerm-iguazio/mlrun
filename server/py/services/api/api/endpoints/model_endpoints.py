@@ -413,7 +413,7 @@ async def get_model_endpoints_monitoring_metrics(
     :param type:        The type of the metrics to return. "all" means "results"
                         and "metrics".
 
-    :returns:           A list of the application metrics or/and results for this model endpoint.
+    :returns:           A list of the application metrics or/and results for these model endpoints.
     """
 
     if isinstance(endpoint_ids, list):
