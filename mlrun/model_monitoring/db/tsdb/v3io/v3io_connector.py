@@ -570,6 +570,15 @@ class V3IOTSDBConnector(TSDBConnector):
             container=v3io_container,
         )
 
+    @staticmethod
+    def _get_endpoint_filter(endpoint_id: Optional[str, list[str]]):
+        if isinstance(endpoint_id, str):
+            return f"endpoint_id=='{endpoint_id}'"
+        elif isinstance(endpoint_id, list):
+            return f"endpoint_id IN({str(endpoint_id)[1:-1]}) "
+        else:
+            raise mlrun.errors.MLRunInvalidArgumentError("Invalid 'endpoint_id' filter: must be a string or a list.")
+
     def read_metrics_data(
         self,
         *,
@@ -806,7 +815,7 @@ class V3IOTSDBConnector(TSDBConnector):
 
     def get_metrics_metadata(
         self,
-        endpoint_id: str,
+        endpoint_id: Optional[str, list[str]],
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> pd.DataFrame:
@@ -816,7 +825,7 @@ class V3IOTSDBConnector(TSDBConnector):
             start=start,
             end=end,
             columns=[mm_schemas.MetricData.METRIC_VALUE],
-            filter_query=f"endpoint_id=='{endpoint_id}'",
+            filter_query=self._get_endpoint_filter(endpoint_id=endpoint_id),
             agg_funcs=["last"],
         )
         if not df.empty:
@@ -827,7 +836,7 @@ class V3IOTSDBConnector(TSDBConnector):
 
     def get_results_metadata(
         self,
-        endpoint_id: str,
+        endpoint_id: Optional[str, list[str]],
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
     ) -> pd.DataFrame:
@@ -839,7 +848,7 @@ class V3IOTSDBConnector(TSDBConnector):
             columns=[
                 mm_schemas.ResultData.RESULT_KIND,
             ],
-            filter_query=f"endpoint_id=='{endpoint_id}'",
+            filter_query=self._get_endpoint_filter(endpoint_id=endpoint_id),
             agg_funcs=["last"],
         )
         if not df.empty:
