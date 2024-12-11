@@ -67,6 +67,68 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
 
+    def _generate_event(
+        self,
+        endpoint_id,
+        result_name,
+        app_name="my_app",
+    ):
+        result_kind = 0
+        start_infer_time = datetime.isoformat(datetime(2024, 1, 1, tzinfo=timezone.utc))
+        end_infer_time = datetime.isoformat(
+            datetime(2024, 1, 1, second=1, tzinfo=timezone.utc)
+        )
+        result_status = 0
+        result_value = 123
+
+        data = {
+            "endpoint_id": endpoint_id,
+            "application_name": app_name,
+            "result_name": result_name,
+            "result_kind": result_kind,
+            "start_infer_time": start_infer_time,
+            "end_infer_time": end_infer_time,
+            "result_status": result_status,
+            # make sure we can write apostrophes (ML-7535)
+            "result_extra_data": """{}""",
+            "result_value": result_value,
+        }
+        return data
+
+    def test_get_metrics(self):
+        tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
+            project=self.project_name,
+            tsdb_connection_string="v3io",
+        )
+
+        db = mlrun.get_run_db()
+        model_endpoint = self._mock_random_endpoint("testing")
+        model_endpoint = db.create_model_endpoint(model_endpoint)
+
+        model_endpoint2 = self._mock_random_endpoint("testing2")
+        model_endpoint2 = db.create_model_endpoint(model_endpoint2)
+
+        mep_uid = model_endpoint.metadata.uid
+        mep2_uid = model_endpoint2.metadata.uid
+        tsdb_client.create_tables()
+        tsdb_client.write_application_event(
+            self._generate_event(endpoint_id=mep_uid, result_name="result1")
+        )
+        tsdb_client.write_application_event(
+            self._generate_event(endpoint_id=mep_uid, result_name="result2")
+        )
+        tsdb_client.write_application_event(
+            self._generate_event(endpoint_id=mep2_uid, result_name="result3")
+        )
+        income_events = self._run_db.get_model_endpoint_monitoring_metrics(
+            project=self.project.name, endpoint_id=mep_uid
+        )
+        print(income_events)
+        income_events_total = self._run_db.get_model_endpoints_monitoring_metrics(
+            project=self.project.name, endpoint_ids=[mep_uid, mep_uid]
+        )
+        print(income_events_total)
+
     def test_clear_endpoint(self):
         """Validates the process of create and delete a basic model endpoint"""
         db = mlrun.get_run_db()
