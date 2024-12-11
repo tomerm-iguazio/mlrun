@@ -289,50 +289,6 @@ async def _verify_model_endpoint_read_permission(
     )
 
 
-@router.get(
-    "/{name}",
-    status_code=HTTPStatus.OK.value,
-    response_model=schemas.ModelEndpoint,
-)
-async def get_model_endpoint(
-    name: str,
-    project: ProjectAnnotation,
-    function_name: Optional[str] = None,
-    endpoint_id: Optional[EndpointIDAnnotation] = None,
-    tsdb_metrics: bool = True,
-    feature_analysis: bool = False,
-    auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
-    db_session: Session = Depends(deps.get_db_session),
-) -> schemas.ModelEndpoint:
-    """
-    Get a model endpoint record from the DB.
-
-    :param name:                The model endpoint name.
-    :param project:             The name of the project.
-    :param function_name:       The name of the function.
-    :param endpoint_id:         The unique id of the model endpoint.
-    :param tsdb_metrics:        Whether to include metrics from the time series DB.
-    :param feature_analysis:    Whether to include feature analysis.
-    :param auth_info:           The auth info of the request.
-    :param db_session:          A session that manages the current dialog with the database.
-    :return:                    The model endpoint object.
-    """
-    await _verify_model_endpoint_read_permission(
-        project=project, name_or_uid=name, auth_info=auth_info
-    )
-
-    return await run_in_threadpool(
-        services.api.crud.ModelEndpoints().get_model_endpoint,
-        name=name,
-        project=project,
-        function_name=function_name,
-        endpoint_id=endpoint_id,
-        feature_analysis=feature_analysis,
-        tsdb_metrics=tsdb_metrics,
-        db_session=db_session,
-    )
-
-
 async def _collect_metrics_by_endpoints(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
@@ -429,6 +385,50 @@ async def get_model_endpoints_monitoring_metrics(
 
     return await _collect_metrics_by_endpoints(
         endpoint_ids=endpoint_ids, project=project, application_result_types=type
+    )
+
+
+@router.get(
+    "/{name}",
+    status_code=HTTPStatus.OK.value,
+    response_model=schemas.ModelEndpoint,
+)
+async def get_model_endpoint(
+    name: str,
+    project: ProjectAnnotation,
+    function_name: Optional[str] = None,
+    endpoint_id: Optional[EndpointIDAnnotation] = None,
+    tsdb_metrics: bool = True,
+    feature_analysis: bool = False,
+    auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
+    db_session: Session = Depends(deps.get_db_session),
+) -> schemas.ModelEndpoint:
+    """
+    Get a model endpoint record from the DB.
+
+    :param name:                The model endpoint name.
+    :param project:             The name of the project.
+    :param function_name:       The name of the function.
+    :param endpoint_id:         The unique id of the model endpoint.
+    :param tsdb_metrics:        Whether to include metrics from the time series DB.
+    :param feature_analysis:    Whether to include feature analysis.
+    :param auth_info:           The auth info of the request.
+    :param db_session:          A session that manages the current dialog with the database.
+    :return:                    The model endpoint object.
+    """
+    await _verify_model_endpoint_read_permission(
+        project=project, name_or_uid=name, auth_info=auth_info
+    )
+
+    return await run_in_threadpool(
+        services.api.crud.ModelEndpoints().get_model_endpoint,
+        name=name,
+        project=project,
+        function_name=function_name,
+        endpoint_id=endpoint_id,
+        feature_analysis=feature_analysis,
+        tsdb_metrics=tsdb_metrics,
+        db_session=db_session,
     )
 
 
