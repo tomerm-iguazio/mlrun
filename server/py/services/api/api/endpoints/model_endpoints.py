@@ -56,6 +56,7 @@ async def create_model_endpoint(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> schemas.ModelEndpoint:
+    print("in create_model_endpoint")
     """
     Create a new model endpoint record in the DB.
     :param model_endpoint:  The model endpoint object.
@@ -105,6 +106,7 @@ async def patch_model_endpoint(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> schemas.ModelEndpoint:
+    print("in patch_model_endpoint")
     """
     Patch the model endpoint record in the DB.
     :param project:         The name of the project.
@@ -170,6 +172,7 @@ async def delete_model_endpoint(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> None:
+    print("in delete_model_endpoint")
     """
     Delete a model endpoint record from the DB.
     :param project:         The name of the project.
@@ -238,7 +241,7 @@ async def list_model_endpoints(
     :param db_session:      A session that manages the current dialog with the database.
     :return:                A list of model endpoints.
     """
-
+    print("in get_model_endpoints_monitoring_metrics")
     await framework.utils.auth.verifier.AuthVerifier().query_project_permissions(
         project_name=project,
         action=schemas.AuthorizationAction.read,
@@ -353,7 +356,7 @@ async def get_model_endpoint_monitoring_metrics(
 
 
 @router.get(
-    "/metrics",
+    "/my_metrics",
     response_model=list[mm_endpoints.ModelEndpointMonitoringMetric],
 )
 async def get_model_endpoints_monitoring_metrics(
@@ -371,7 +374,7 @@ async def get_model_endpoints_monitoring_metrics(
 
     :returns:           A list of the application metrics or/and results for these model endpoints.
     """
-
+    print(f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}")
     if isinstance(endpoint_ids, list):
         # todo improve, can it be done with single request?
         for endpoint_id in endpoint_ids:
@@ -382,7 +385,7 @@ async def get_model_endpoints_monitoring_metrics(
         await _verify_model_endpoint_read_permission(
             project=project, name_or_uid=endpoint_ids, auth_info=auth_info
         )
-
+    print("pass permissions check in get_model_endpoints_monitoring_metrics")
     return await _collect_metrics_by_endpoints(
         endpoint_ids=endpoint_ids, project=project, application_result_types=type
     )

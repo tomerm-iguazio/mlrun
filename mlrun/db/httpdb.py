@@ -3505,7 +3505,7 @@ class HTTPRunDB(RunDBInterface):
 
         :return: A list of the application metrics or/and results for these model endpoints.
         """
-        path = f"projects/{project}/model-endpoints/metrics"
+        path = f"projects/{project}/model-endpoints/my_metrics"
         params = {"type": type, "endpoint_ids": endpoint_ids}
         error_message = (
             f"Failed to get model monitoring metrics,"
