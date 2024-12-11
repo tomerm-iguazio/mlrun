@@ -64,6 +64,11 @@ class VectorStoreCollection:
         self._mlrun_context = mlrun_context
         self.collection_name = collection_name or _extract_collection_name(vector_store)
 
+    @property
+    def __class__(self):
+        # Make isinstance() check the wrapped object's class
+        return self._collection_impl.__class__
+
     def __getattr__(self, name):
         # This method is called when an attribute is not found in the usual places
         # Forward the attribute access to _collection_impl
@@ -76,6 +81,9 @@ class VectorStoreCollection:
         else:
             # Forward the attribute setting to _collection_impl
             setattr(self._collection_impl, name, value)
+
+    def delete(self, *args, **kwargs):
+        self._collection_impl.delete(*args, **kwargs)
 
     def add_documents(
         self,
