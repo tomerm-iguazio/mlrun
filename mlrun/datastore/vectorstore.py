@@ -123,23 +123,29 @@ class VectorStoreCollection:
         Converts artifacts to LangChain documents, adds them to the vector store, and
         updates the MLRun context. If documents are split, the IDs are handled appropriately.
 
-        Args:
-            artifacts (list[DocumentArtifact]): List of DocumentArtifact objects to add
-            splitter (optional): Document splitter to break artifacts into smaller chunks.
-                If None, each artifact becomes a single document.
-            **kwargs: Additional arguments passed to the underlying add_documents method.
-                Special handling for 'ids' kwarg:
-                - If provided and document is split, IDs are generated as "{original_id}_{i}"
-                    where i starts from 1 (e.g., "doc1_1", "doc1_2", etc.)
-                - If provided and document isn't split, original IDs are used as-is
+        :param artifacts: List of DocumentArtifact objects to add
+        :type artifacts: list[DocumentArtifact]
+        :param splitter: Document splitter to break artifacts into smaller chunks.
+                        If None, each artifact becomes a single document.
+        :type splitter: TextSplitter, optional
+        :param kwargs: Additional arguments passed to the underlying add_documents method.
+                    Special handling for 'ids' kwarg:
 
-        Returns:
-            list: List of IDs for all added documents. When no custom IDs are provided:
-                - Without splitting: Vector store generates IDs automatically
-                - With splitting: Vector store generates separate IDs for each chunk
+                    * If provided and document is split, IDs are generated as "{original_id}_{i}"
+                        where i starts from 1 (e.g., "doc1_1", "doc1_2", etc.)
+                    * If provided and document isn't split, original IDs are used as-is
+
+        :return: List of IDs for all added documents. When no custom IDs are provided:
+
+                * Without splitting: Vector store generates IDs automatically
+                * With splitting: Vector store generates separate IDs for each chunk
+
                 When custom IDs are provided:
-                - Without splitting: Uses provided IDs directly
-                - With splitting: Generates sequential IDs as "{original_id}_{i}" for each chunk
+
+                * Without splitting: Uses provided IDs directly
+                * With splitting: Generates sequential IDs as "{original_id}_{i}" for each chunk
+        :rtype: list
+
         """
         all_ids = []
         user_ids = kwargs.pop("ids", None)
