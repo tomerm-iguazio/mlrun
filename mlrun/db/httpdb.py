@@ -996,7 +996,7 @@ class HTTPRunDB(RunDBInterface):
         tag=None,
         project="",
         tree=None,
-    ):
+    ) -> dict[str, str]:
         """Store an artifact in the DB.
 
         :param key: Identifying key of the artifact.
@@ -1008,6 +1008,7 @@ class HTTPRunDB(RunDBInterface):
         :param tag: Tag of the artifact.
         :param project: Project that the artifact belongs to.
         :param tree: The tree (producer id) which generated this artifact.
+        :returns: The stored artifact dictionary.
         """
         if uid:
             warnings.warn(
@@ -1032,9 +1033,10 @@ class HTTPRunDB(RunDBInterface):
             params["tree"] = tree
 
         body = _as_json(artifact)
-        self.api_call(
+        response = self.api_call(
             "PUT", endpoint_path, error, body=body, params=params, version="v2"
         )
+        return response.json()
 
     def read_artifact(
         self,

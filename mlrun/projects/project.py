@@ -3984,18 +3984,21 @@ class MlrunProject(ModelObj):
             mock=mock,
         )
 
-    def get_artifact(self, key, tag=None, iter=None, tree=None):
+    def get_artifact(
+        self, key, tag=None, iter=None, tree=None, uid=None
+    ) -> typing.Optional[Artifact]:
         """Return an artifact object
 
-        :param key: artifact key
-        :param tag: version tag
-        :param iter: iteration number (for hyper-param tasks)
-        :param tree: the producer id (tree)
+        :param key: Artifact key
+        :param tag: Version tag
+        :param iter: Iteration number (for hyper-param tasks)
+        :param tree: The producer id (tree)
+        :param uid: The artifact uid
         :return: Artifact object
         """
         db = mlrun.db.get_run_db(secrets=self._secrets)
         artifact = db.read_artifact(
-            key, tag, iter=iter, project=self.metadata.name, tree=tree
+            key, tag, iter=iter, project=self.metadata.name, tree=tree, uid=uid
         )
 
         # in tests, if an artifact is not found, the db returns None
