@@ -1870,13 +1870,13 @@ class MlrunProject(ModelObj):
 
     def get_vector_store_collection(
         self,
-        collection_name: str,
         vector_store: "VectorStore",  # noqa: F821
+        collection_name: Optional[str] = None,
     ) -> VectorStoreCollection:
         return VectorStoreCollection(
             self,
-            collection_name,
             vector_store,
+            collection_name,
         )
 
     def log_document(

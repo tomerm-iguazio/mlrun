@@ -14,9 +14,30 @@
 
 import inspect
 from collections.abc import Iterable
-from typing import Union
+from typing import Optional, Union
 
 from mlrun.artifacts import DocumentArtifact
+
+
+def _extract_collection_name(vectorstore: "VectorStore") -> str:  # noqa: F821
+    # List of possible attribute names for collection name
+    possible_attributes = ["collection_name", "_collection_name"]
+
+    for attr in possible_attributes:
+        if hasattr(vectorstore, attr):
+            collection_name = getattr(vectorstore, attr)
+            if collection_name:
+                return collection_name
+
+    store_class = vectorstore.__class__.__name__.lower()
+    if store_class == "mongodbatlasvectorsearch":
+        return vectorstore.collection.name
+
+    # If we get here, we couldn't find a valid collection name
+    raise ValueError(
+        "Failed to extract collection name from the vector store. "
+        "Please provide the collection name explicitly. "
+    )
 
 
 class VectorStoreCollection:
@@ -36,12 +57,12 @@ class VectorStoreCollection:
     def __init__(
         self,
         mlrun_context: Union["MlrunProject", "MLClientCtx"],  # noqa: F821
-        collection_name: str,
         vector_store: "VectorStore",  # noqa: F821
+        collection_name: Optional[str] = None,
     ):
         self._collection_impl = vector_store
         self._mlrun_context = mlrun_context
-        self.collection_name = collection_name
+        self.collection_name = collection_name or _extract_collection_name(vector_store)
 
     def __getattr__(self, name):
         # This method is called when an attribute is not found in the usual places
