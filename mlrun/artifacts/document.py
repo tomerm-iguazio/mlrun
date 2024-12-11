@@ -277,6 +277,7 @@ class DocumentArtifact(Artifact):
             )
 
         results = []
+        idx = 0
         for document in documents:
             if splitter:
                 texts = splitter.split_text(document.page_content)
@@ -293,13 +294,14 @@ class DocumentArtifact(Artifact):
                     self.get_target_path()
                 )
 
-            for idx, text in enumerate(texts):
+            for text in texts:
                 metadata[self.METADATA_CHUNK_KEY] = str(idx)
                 doc = Document(
                     page_content=text,
                     metadata=metadata.copy(),
                 )
                 results.append(doc)
+                idx = idx + 1
         return results
 
     def collection_add(self, collection_id: str) -> None:
