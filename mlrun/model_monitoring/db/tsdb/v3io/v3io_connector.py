@@ -822,12 +822,14 @@ class V3IOTSDBConnector(TSDBConnector):
         end: Optional[datetime] = None,
     ) -> pd.DataFrame:
         start, end = self._get_start_end(start, end)
+        filter_query = self._get_endpoint_filter(endpoint_id=endpoint_id)
+        print(f"results - filter_query: {filter_query}")
         df = self._get_records(
             table=mm_schemas.V3IOTSDBTables.METRICS,
             start=start,
             end=end,
             columns=[mm_schemas.MetricData.METRIC_VALUE],
-            filter_query=self._get_endpoint_filter(endpoint_id=endpoint_id),
+            filter_query=filter_query,
             agg_funcs=["last"],
         )
         if not df.empty:
@@ -843,6 +845,8 @@ class V3IOTSDBConnector(TSDBConnector):
         end: Optional[datetime] = None,
     ) -> pd.DataFrame:
         start, end = self._get_start_end(start, end)
+        filter_query = self._get_endpoint_filter(endpoint_id=endpoint_id)
+        print(f"results - filter_query: {filter_query}")
         df = self._get_records(
             table=mm_schemas.V3IOTSDBTables.APP_RESULTS,
             start=start,
@@ -850,7 +854,7 @@ class V3IOTSDBConnector(TSDBConnector):
             columns=[
                 mm_schemas.ResultData.RESULT_KIND,
             ],
-            filter_query=self._get_endpoint_filter(endpoint_id=endpoint_id),
+            filter_query=filter_query,
             agg_funcs=["last"],
         )
         if not df.empty:
