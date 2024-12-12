@@ -292,14 +292,15 @@ async def _verify_model_endpoint_read_permission(
     )
 
 
-async def _collect_metrics_by_endpoints(
+async def _collect_metrics_tasks(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
+    metrics_format = "list"
 ):
-    metrics: list[mm_endpoints.ModelEndpointMonitoringMetric] = []
     tasks: list[asyncio.Task] = []
-    print(f"_collect_metrics_by_endpoints endpoints: {endpoint_ids}")
+    task_results = []
+    print(f"_collect_metrics_task_results endpoints: {endpoint_ids}")
     if application_result_types == "results" or application_result_types == "all":
         tasks.append(
             asyncio.create_task(
@@ -308,6 +309,7 @@ async def _collect_metrics_by_endpoints(
                     endpoint_id=endpoint_ids,
                     type=mm_constants.ModelEndpointMonitoringMetricType.RESULT,
                     project=project,
+                    metrics_format = metrics_format
                 )
             )
         )
@@ -319,14 +321,12 @@ async def _collect_metrics_by_endpoints(
                     endpoint_id=endpoint_ids,
                     type=mm_constants.ModelEndpointMonitoringMetricType.METRIC,
                     project=project,
+                    metrics_format = metrics_format
                 )
             )
         )
-        metrics.append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
     await asyncio.wait(tasks)
-    for task in tasks:
-        metrics.extend(task.result())
-    return metrics
+    return tasks
 
 
 @router.get(
@@ -351,9 +351,17 @@ async def get_model_endpoint_monitoring_metrics(
     await _verify_model_endpoint_read_permission(
         project=project, name_or_uid=endpoint_id, auth_info=auth_info
     )
-    return await _collect_metrics_by_endpoints(
+    metrics: list[mm_endpoints.ModelEndpointMonitoringMetric] = []
+
+    tasks = await _collect_metrics_tasks(
         endpoint_ids=endpoint_id, project=project, application_result_types=type
     )
+    for task in tasks:
+        metrics.extend(task.result())
+    if type == "metrics" or type == "all":
+        #  TODO what to do if endpoint_id do not exist at all?
+        metrics.append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
+    return metrics
 
 
 @router.get(
@@ -376,23 +384,32 @@ async def get_model_endpoints_monitoring_metrics(
     :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
     :returns:           A list of the application metrics or/and results for these model endpoints.
     """
+    metrics_dict = {}
+
     print(
         f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}, type:{type}"
     )
-    if isinstance(endpoint_ids, list):
-        # todo improve, can it be done with single request?
-        for endpoint_id in endpoint_ids:
-            await _verify_model_endpoint_read_permission(
-                project=project, name_or_uid=endpoint_id, auth_info=auth_info
-            )
-    else:
+    if isinstance(endpoint_ids, str):
+        endpoint_ids = [endpoint_ids]
+
+    # todo improve, can it be done with single request?
+    for endpoint_id in endpoint_ids:
         await _verify_model_endpoint_read_permission(
-            project=project, name_or_uid=endpoint_ids, auth_info=auth_info
+            project=project, name_or_uid=endpoint_id, auth_info=auth_info
         )
+        metrics_dict[endpoint_id] = []
+
     print("pass permissions check in get_model_endpoints_monitoring_metrics")
-    return await _collect_metrics_by_endpoints(
-        endpoint_ids=endpoint_ids, project=project, application_result_types=type
+    tasks = await _collect_metrics_tasks(
+        endpoint_ids=endpoint_ids, project=project, application_result_types=type, metrics_format="dict"
     )
+    task_results = [task.result() for task in tasks]
+    for endpoint_id in endpoint_ids:
+        for task_result in task_results:
+            metrics_dict[endpoint_id] += task_result.get(endpoint_id, [])
+        if type == "metrics" or type == "all":
+            #  TODO what to do if endpoint_id do not exist at all?
+            metrics_dict[endpoint_id].append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
 
 
 @router.get(
