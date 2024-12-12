@@ -611,15 +611,19 @@ class ModelEndpoints:
         project: str,
         endpoint_id: typing.Union[str, list[str]],
         type: str,
-    ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+        metrics_format: str = "list",
+    ) -> typing.Union[
+        list[mm_endpoints.ModelEndpointMonitoringMetric],
+        dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]],
+    ]:
         """
         Get the metrics for a given model endpoint.
 
-        :param project:     The name of the project.
-        :param endpoint_id: The unique id of the model endpoint, Can be a single id or a list of ids.
-        :param type:        metric or result.
-
-        :return: A dictionary of metrics.
+        :param project:         The name of the project.
+        :param endpoint_id:     The unique id of the model endpoint, Can be a single id or a list of ids.
+        :param type:            metric or result.
+        :param metrics_format:  Determines the format of the result. Can be either 'list' or 'dict'.
+        :return: metrics in the chosen format.
         """
         try:
             tsdb_connector = mlrun.model_monitoring.get_tsdb_connector(
@@ -645,7 +649,12 @@ class ModelEndpoints:
                 "Type must be either 'metric' or 'result'"
             )
         print(f"df: {df}")
-        return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
+        if metrics_format == "list":
+            return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
+        else:
+            return tsdb_connector.df_to_metrics_grouped_dict(
+                df=df, type=type, project=project
+            )
 
     @staticmethod
     def _delete_model_monitoring_stream_resources(
