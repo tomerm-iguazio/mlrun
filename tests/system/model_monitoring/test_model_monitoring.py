@@ -125,7 +125,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         )
         print(income_events)
         income_events_total = self._run_db.get_model_endpoints_monitoring_metrics(
-            project=self.project.name, endpoint_ids=[mep_uid, mep_uid]
+            project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
         )
         print(income_events_total)
 
