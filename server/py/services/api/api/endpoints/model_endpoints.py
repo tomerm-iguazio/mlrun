@@ -357,14 +357,14 @@ async def get_model_endpoint_monitoring_metrics(
 
 
 # Dependency to parse the "ids" parameter
-def _parse_endpoint_ids(ids: Union[str, List[str]] = Query(None)) -> List[str]:
+def _parse_endpoint_ids(endpoint_ids: Union[str, List[str]] = Query(None)) -> List[str]:
     """
     Ensures 'ids' is always returned as a list.
     If it's a single string, wraps it in a list.
     """
-    if isinstance(ids, str):
-        return [ids]  # Wrap a single string in a list
-    return ids or []  # Return the list or an empty list if None
+    if isinstance(endpoint_ids, str):
+        return [endpoint_ids]  # Wrap a single string in a list
+    return endpoint_ids or []  # Return the list or an empty list if None
 
 @router.get(
     "/my_metrics",
