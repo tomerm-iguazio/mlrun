@@ -364,7 +364,8 @@ async def get_model_endpoints_monitoring_metrics(
     project: ProjectAnnotation,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
-    endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
+    #endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
+    endpoint_ids: str = None,
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
     """
     :param project:     The name of the project.
