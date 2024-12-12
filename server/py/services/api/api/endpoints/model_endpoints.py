@@ -376,7 +376,7 @@ async def get_model_endpoints_monitoring_metrics(
     type: Literal["results", "metrics", "all"] = "all",
     #endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
     #endpoint_ids: Union[list[str], str] = None,
-    endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
+    endpoint_ids: Union[str, list[str]] = Query(None, alias="endpoint_ids"),
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
     """
     :param project:     The name of the project.
