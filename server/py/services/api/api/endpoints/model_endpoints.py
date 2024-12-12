@@ -18,7 +18,7 @@ from collections.abc import Coroutine
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http import HTTPStatus
-from typing import Annotated, Literal, Optional, Union
+from typing import Annotated, Literal, Optional, Union, List
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.concurrency import run_in_threadpool
@@ -356,6 +356,16 @@ async def get_model_endpoint_monitoring_metrics(
     )
 
 
+# Dependency to parse the "ids" parameter
+def _parse_endpoint_ids(ids: Union[str, List[str]] = Query(None)) -> List[str]:
+    """
+    Ensures 'ids' is always returned as a list.
+    If it's a single string, wraps it in a list.
+    """
+    if isinstance(ids, str):
+        return [ids]  # Wrap a single string in a list
+    return ids or []  # Return the list or an empty list if None
+
 @router.get(
     "/my_metrics",
     response_model=list[mm_endpoints.ModelEndpointMonitoringMetric],
@@ -366,7 +376,7 @@ async def get_model_endpoints_monitoring_metrics(
     type: Literal["results", "metrics", "all"] = "all",
     #endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
     #endpoint_ids: Union[list[str], str] = None,
-    endpoint_ids: list[str] = None,
+    endpoint_ids: list[str] = Depends(_parse_endpoint_ids),
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
     """
     :param project:     The name of the project.
