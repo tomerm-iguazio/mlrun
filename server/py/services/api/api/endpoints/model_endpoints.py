@@ -361,17 +361,17 @@ async def get_model_endpoint_monitoring_metrics(
 )
 async def get_model_endpoints_monitoring_metrics(
     project: ProjectAnnotation,
-    endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
+    endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
     """
     :param project:     The name of the project.
-    :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
+
     :param auth_info:   The auth info of the request.
     :param type:        The type of the metrics to return. "all" means "results"
                         and "metrics".
-
+    :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
     :returns:           A list of the application metrics or/and results for these model endpoints.
     """
     print(f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}")
