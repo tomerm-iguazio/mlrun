@@ -120,14 +120,37 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         tsdb_client.write_application_event(
             self._generate_event(endpoint_id=mep2_uid, result_name="result3")
         )
-        income_events = self._run_db.get_model_endpoint_monitoring_metrics(
-            project=self.project.name, endpoint_id=mep_uid
-        )
-        print(income_events)
+        # income_events = self._run_db.get_model_endpoint_monitoring_metrics(
+        #     project=self.project.name, endpoint_id=mep_uid
+        # )
+        # print(income_events)
         income_events_total = self._run_db.get_model_endpoints_monitoring_metrics(
             project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
         )
         print(income_events_total)
+
+    def test_df_to_metrics_grouped_dict(self):
+        tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
+            project=self.project_name,
+            tsdb_connection_string="v3io",
+        )
+        data = {
+            "result_kind": [0, 0, 0],
+            "application_name": ["my_app", "my_app", "my_app"],
+            "endpoint_id": ["mep_uid1", "mep_uid1", "mep_uid2"],
+            "result_name": ["result1", "result2", "result3"],
+        }
+
+        df = pd.DataFrame(data)
+        metrics_by_endpoint = tsdb_client.df_to_metrics_grouped_dict(
+            df=df, type="result", project="my_project"
+        )
+        assert ["result1", "result2"] == sorted(
+            [result.name for result in metrics_by_endpoint["mep_uid1"]]
+        )
+        assert ["result3"] == sorted(
+            [result.name for result in metrics_by_endpoint["mep_uid2"]]
+        )
 
     def test_clear_endpoint(self):
         """Validates the process of create and delete a basic model endpoint"""

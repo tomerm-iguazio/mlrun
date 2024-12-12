@@ -18,7 +18,7 @@ from collections.abc import Coroutine
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 from http import HTTPStatus
-from typing import Annotated, Literal, Optional, Union, List
+from typing import Annotated, Literal, Optional, Union
 
 from fastapi import APIRouter, Depends, Path, Query
 from fastapi.concurrency import run_in_threadpool
@@ -364,7 +364,7 @@ async def get_model_endpoints_monitoring_metrics(
     project: ProjectAnnotation,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
-    #endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
+    # endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
     endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
     """
@@ -376,7 +376,9 @@ async def get_model_endpoints_monitoring_metrics(
     :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
     :returns:           A list of the application metrics or/and results for these model endpoints.
     """
-    print(f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}, type:{type}")
+    print(
+        f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}, type:{type}"
+    )
     if isinstance(endpoint_ids, list):
         # todo improve, can it be done with single request?
         for endpoint_id in endpoint_ids:

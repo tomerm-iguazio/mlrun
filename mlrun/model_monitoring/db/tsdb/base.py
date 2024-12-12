@@ -482,6 +482,54 @@ class TSDBConnector(ABC):
         )
 
     @staticmethod
+    def df_to_metrics_grouped_dict(
+        *,
+        df: pd.DataFrame,
+        project: str,
+        type: str,
+    ) -> dict[str, list[mm_schemas.ModelEndpointMonitoringMetric]]:
+        """
+        Parse a DataFrame of metrics from the TSDB into a grouped mm metrics objects by endpoint_id.
+
+        :param df:      The DataFrame to parse.
+        :param project: The project name.
+        :param type:    The type of the metrics (either "result" or "metric").
+
+        :return:        A list of mm metrics objects.
+        """
+
+        name_column = (
+            mm_schemas.ResultData.RESULT_NAME
+            if mm_schemas.ResultData.RESULT_NAME in df.columns
+            else mm_schemas.MetricData.METRIC_NAME
+        )
+        grouped_dict = (
+            df.groupby("endpoint_id")
+            .apply(
+                lambda group: list(
+                    map(
+                        lambda record: mm_schemas.ModelEndpointMonitoringMetric(
+                            project=project,
+                            type=type,
+                            app=record.get(mm_schemas.WriterEvent.APPLICATION_NAME),
+                            name=record.get(name_column),
+                            kind=record.get(mm_schemas.ResultData.RESULT_KIND),
+                        ),
+                        group[
+                            [
+                                mm_schemas.WriterEvent.APPLICATION_NAME,
+                                name_column,
+                                mm_schemas.ResultData.RESULT_KIND,
+                            ]
+                        ].to_dict(orient="records"),
+                    )
+                )
+            )
+            .to_dict()
+        )
+        return grouped_dict
+
+    @staticmethod
     def _get_start_end(
         start: typing.Union[datetime, None],
         end: typing.Union[datetime, None],
