@@ -299,6 +299,7 @@ async def _collect_metrics_by_endpoints(
 ):
     metrics: list[mm_endpoints.ModelEndpointMonitoringMetric] = []
     tasks: list[asyncio.Task] = []
+    print(f"_collect_metrics_by_endpoints endpoints: {endpoint_ids}")
     if application_result_types == "results" or application_result_types == "all":
         tasks.append(
             asyncio.create_task(

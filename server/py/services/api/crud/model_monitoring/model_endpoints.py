@@ -635,7 +635,7 @@ class ModelEndpoints:
                 error=mlrun.errors.err_to_str(e),
             )
             return []
-
+        print(f"get_model_endpoints_metrics endpoint_id: {endpoint_id}")
         if type == "metric":
             df = tsdb_connector.get_metrics_metadata(endpoint_id=endpoint_id)
         elif type == "result":
