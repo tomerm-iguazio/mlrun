@@ -578,7 +578,7 @@ class V3IOTSDBConnector(TSDBConnector):
             return f"endpoint_id IN({str(endpoint_id)[1:-1]}) "
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
-                "Invalid 'endpoint_id' filter: must be a string or a list."
+                f"Invalid 'endpoint_id' filter: must be a string or a list, endpoint_id: {endpoint_id}"
             )
 
     def read_metrics_data(
