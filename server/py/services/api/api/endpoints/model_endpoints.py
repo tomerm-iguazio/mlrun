@@ -375,7 +375,7 @@ async def get_model_endpoints_monitoring_metrics(
     :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
     :returns:           A list of the application metrics or/and results for these model endpoints.
     """
-    print(f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}")
+    print(f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}, type:{type}")
     if isinstance(endpoint_ids, list):
         # todo improve, can it be done with single request?
         for endpoint_id in endpoint_ids:
