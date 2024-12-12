@@ -367,7 +367,7 @@ async def get_model_endpoint_monitoring_metrics(
 #     return endpoint_ids or []  # Return the list or an empty list if None
 
 @router.get(
-    "/my_metrics",
+    "/metrics",
     response_model=list[mm_endpoints.ModelEndpointMonitoringMetric],
 )
 async def get_model_endpoints_monitoring_metrics(
@@ -375,8 +375,7 @@ async def get_model_endpoints_monitoring_metrics(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
     #endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
-    #endpoint_ids: Union[list[str], str] = None,
-    endpoint_ids: Union[str, list[str]] = Query(None, alias="endpoint_ids"),
+    endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
 ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
     """
     :param project:     The name of the project.
