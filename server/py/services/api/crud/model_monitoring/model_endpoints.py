@@ -644,7 +644,7 @@ class ModelEndpoints:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Type must be either 'metric' or 'result'"
             )
-        print(df)
+        print(f"df: {df}")
         return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
 
     @staticmethod
