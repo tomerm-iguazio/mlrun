@@ -503,6 +503,7 @@ class TSDBConnector(ABC):
             if mm_schemas.ResultData.RESULT_NAME in df.columns
             else mm_schemas.MetricData.METRIC_NAME
         )
+        print(f"df columns: {df.columns.tolist()}")
         grouped_dict = (
             df.groupby("endpoint_id")
             .apply(
