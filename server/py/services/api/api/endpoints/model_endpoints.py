@@ -375,16 +375,21 @@ async def get_model_endpoints_monitoring_metrics(
     :returns:           A list of the application metrics or/and results for these model endpoints.
     """
     metrics_dict = {}
+    permissions_tasks = []
 
     if isinstance(endpoint_ids, str):
         endpoint_ids = [endpoint_ids]
 
     # todo improve, can it be done with single request?
     for endpoint_id in endpoint_ids:
-        await _verify_model_endpoint_read_permission(
-            project=project, name_or_uid=endpoint_id, auth_info=auth_info
+        permissions_tasks.append(
+            _verify_model_endpoint_read_permission(
+                project=project, name_or_uid=endpoint_id, auth_info=auth_info
+            )
         )
         metrics_dict[endpoint_id] = []
+
+    await asyncio.gather(*permissions_tasks)
 
     tasks = await _collect_metrics_tasks(
         endpoint_ids=endpoint_ids,
