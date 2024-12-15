@@ -351,7 +351,6 @@ async def get_model_endpoint_monitoring_metrics(
     for task in tasks:
         metrics.extend(task.result())
     if type == "metrics" or type == "all":
-        #  TODO what to do if endpoint_id do not exist at all?
         metrics.append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
     return metrics
 
@@ -364,7 +363,6 @@ async def get_model_endpoints_monitoring_metrics(
     project: ProjectAnnotation,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
-    # endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
     endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
 ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
     """
@@ -399,7 +397,6 @@ async def get_model_endpoints_monitoring_metrics(
         for task_result in task_results:
             metrics_dict[endpoint_id] += task_result.get(endpoint_id, [])
         if type == "metrics" or type == "all":
-            #  TODO what to do if endpoint_id do not exist at all?
             metrics_dict[endpoint_id].append(
                 mlrun.model_monitoring.helpers.get_invocations_metric(project)
             )
