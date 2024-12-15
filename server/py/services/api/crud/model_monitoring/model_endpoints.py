@@ -639,7 +639,6 @@ class ModelEndpoints:
                 error=mlrun.errors.err_to_str(e),
             )
             return []
-        print(f"get_model_endpoints_metrics endpoint_id: {endpoint_id}")
         if type == "metric":
             df = tsdb_connector.get_metrics_metadata(endpoint_id=endpoint_id)
         elif type == "result":
@@ -648,7 +647,6 @@ class ModelEndpoints:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Type must be either 'metric' or 'result'"
             )
-        print(f"df: {df}")
         if metrics_format == "list":
             return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
         elif metrics_format == "dict":

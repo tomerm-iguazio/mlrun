@@ -95,7 +95,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         }
         return data
 
-    def test_get_metrics(self):
+    def test_get_model_endpoint_metrics(self):
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
             project=self.project_name,
             tsdb_connection_string="v3io",
@@ -120,18 +120,21 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         tsdb_client.write_application_event(
             self._generate_event(endpoint_id=mep2_uid, result_name="result3")
         )
-        # income_events = self._run_db.get_model_endpoint_monitoring_metrics(
-        #     project=self.project.name, endpoint_id=mep_uid
-        # )
-        # print(income_events)
-        income_events_total = self._run_db.get_model_endpoints_monitoring_metrics(
+        expected_for_mep1 = ["invocations", "result1", "result2"]
+        expected_for_mep2 = ["invocations", "result3"]
+
+        income_events_mep1 = self._run_db.get_model_endpoint_monitoring_metrics(
+            project=self.project.name, endpoint_id=mep_uid
+        )
+        assert expected_for_mep1 == sorted([event.name for event in income_events_mep1])
+        income_events_by_endpoint = self._run_db.get_model_endpoints_monitoring_metrics(
             project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
         )
-        expected_for_mep1 = ["invocations", "result1", "result2"]
-        result_for_mep1 = [event.name for event in income_events_total[mep_uid]]
+
+        result_for_mep1 = [event.name for event in income_events_by_endpoint[mep_uid]]
         assert expected_for_mep1 == sorted(result_for_mep1)
-        expected_for_mep2 = ["invocations", "result3"]
-        result_for_mep2 = [event.name for event in income_events_total[mep2_uid]]
+
+        result_for_mep2 = [event.name for event in income_events_by_endpoint[mep2_uid]]
         assert expected_for_mep2 == sorted(result_for_mep2)
 
     def test_df_to_metrics_grouped_dict(self):
