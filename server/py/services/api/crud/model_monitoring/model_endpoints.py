@@ -651,9 +651,13 @@ class ModelEndpoints:
         print(f"df: {df}")
         if metrics_format == "list":
             return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
-        else:
+        elif metrics_format == "dict":
             return tsdb_connector.df_to_metrics_grouped_dict(
                 df=df, type=type, project=project
+            )
+        else:
+            raise mlrun.errors.MLRunInvalidArgumentError(
+                "Invalid metrics_format. It must be either 'dict' or 'list'."
             )
 
     @staticmethod

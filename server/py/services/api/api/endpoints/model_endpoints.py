@@ -296,10 +296,9 @@ async def _collect_metrics_tasks(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
-    metrics_format = "list"
-):
+    metrics_format="list",
+) -> list[asyncio.Task]:
     tasks: list[asyncio.Task] = []
-    task_results = []
     print(f"_collect_metrics_task_results endpoints: {endpoint_ids}")
     if application_result_types == "results" or application_result_types == "all":
         tasks.append(
@@ -309,7 +308,7 @@ async def _collect_metrics_tasks(
                     endpoint_id=endpoint_ids,
                     type=mm_constants.ModelEndpointMonitoringMetricType.RESULT,
                     project=project,
-                    metrics_format = metrics_format
+                    metrics_format=metrics_format,
                 )
             )
         )
@@ -321,7 +320,7 @@ async def _collect_metrics_tasks(
                     endpoint_id=endpoint_ids,
                     type=mm_constants.ModelEndpointMonitoringMetricType.METRIC,
                     project=project,
-                    metrics_format = metrics_format
+                    metrics_format=metrics_format,
                 )
             )
         )
@@ -374,7 +373,7 @@ async def get_model_endpoints_monitoring_metrics(
     type: Literal["results", "metrics", "all"] = "all",
     # endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation] = None,
     endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
-) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
     """
     :param project:     The name of the project.
 
@@ -401,7 +400,10 @@ async def get_model_endpoints_monitoring_metrics(
 
     print("pass permissions check in get_model_endpoints_monitoring_metrics")
     tasks = await _collect_metrics_tasks(
-        endpoint_ids=endpoint_ids, project=project, application_result_types=type, metrics_format="dict"
+        endpoint_ids=endpoint_ids,
+        project=project,
+        application_result_types=type,
+        metrics_format="dict",
     )
     task_results = [task.result() for task in tasks]
     for endpoint_id in endpoint_ids:
@@ -409,7 +411,10 @@ async def get_model_endpoints_monitoring_metrics(
             metrics_dict[endpoint_id] += task_result.get(endpoint_id, [])
         if type == "metrics" or type == "all":
             #  TODO what to do if endpoint_id do not exist at all?
-            metrics_dict[endpoint_id].append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
+            metrics_dict[endpoint_id].append(
+                mlrun.model_monitoring.helpers.get_invocations_metric(project)
+            )
+    return metrics_dict
 
 
 @router.get(
