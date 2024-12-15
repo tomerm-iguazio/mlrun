@@ -504,6 +504,8 @@ class TSDBConnector(ABC):
             else mm_schemas.MetricData.METRIC_NAME
         )
         print(f"df columns: {df.columns.tolist()}")
+        endpoint_id_column = "endpoint_id"
+        print(f"isin: {endpoint_id_column in df.columns}")
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
             lambda group: list(
