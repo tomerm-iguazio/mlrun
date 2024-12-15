@@ -823,7 +823,6 @@ class V3IOTSDBConnector(TSDBConnector):
     ) -> pd.DataFrame:
         start, end = self._get_start_end(start, end)
         filter_query = self._get_endpoint_filter(endpoint_id=endpoint_id)
-        print(f"results - filter_query: {filter_query}")
         df = self._get_records(
             table=mm_schemas.V3IOTSDBTables.METRICS,
             start=start,
@@ -846,7 +845,6 @@ class V3IOTSDBConnector(TSDBConnector):
     ) -> pd.DataFrame:
         start, end = self._get_start_end(start, end)
         filter_query = self._get_endpoint_filter(endpoint_id=endpoint_id)
-        print(f"results - filter_query: {filter_query}")
         df = self._get_records(
             table=mm_schemas.V3IOTSDBTables.APP_RESULTS,
             start=start,

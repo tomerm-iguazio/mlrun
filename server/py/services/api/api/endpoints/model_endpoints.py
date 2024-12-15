@@ -56,7 +56,6 @@ async def create_model_endpoint(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> schemas.ModelEndpoint:
-    print("in create_model_endpoint")
     """
     Create a new model endpoint record in the DB.
     :param model_endpoint:  The model endpoint object.
@@ -106,7 +105,6 @@ async def patch_model_endpoint(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> schemas.ModelEndpoint:
-    print("in patch_model_endpoint")
     """
     Patch the model endpoint record in the DB.
     :param project:         The name of the project.
@@ -165,7 +163,6 @@ async def delete_model_endpoint(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> None:
-    print("in delete_model_endpoint")
     """
     Delete a model endpoint record from the DB.
     :param project:         The name of the project.
@@ -238,7 +235,6 @@ async def list_model_endpoints(
     :param db_session:      A session that manages the current dialog with the database.
     :return:                A list of model endpoints.
     """
-    print("in get_model_endpoints_monitoring_metrics")
     await framework.utils.auth.verifier.AuthVerifier().query_project_permissions(
         project_name=project,
         action=schemas.AuthorizationAction.read,
@@ -297,7 +293,6 @@ async def _collect_metrics_tasks(
     metrics_format="list",
 ) -> list[asyncio.Task]:
     tasks: list[asyncio.Task] = []
-    print(f"_collect_metrics_task_results endpoints: {endpoint_ids}")
     if application_result_types == "results" or application_result_types == "all":
         tasks.append(
             asyncio.create_task(
@@ -383,9 +378,6 @@ async def get_model_endpoints_monitoring_metrics(
     """
     metrics_dict = {}
 
-    print(
-        f"inside get_model_endpoints_monitoring_metrics, endpoints: {endpoint_ids}, type:{type}"
-    )
     if isinstance(endpoint_ids, str):
         endpoint_ids = [endpoint_ids]
 
@@ -396,7 +388,6 @@ async def get_model_endpoints_monitoring_metrics(
         )
         metrics_dict[endpoint_id] = []
 
-    print("pass permissions check in get_model_endpoints_monitoring_metrics")
     tasks = await _collect_metrics_tasks(
         endpoint_ids=endpoint_ids,
         project=project,

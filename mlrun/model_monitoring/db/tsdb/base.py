@@ -498,21 +498,15 @@ class TSDBConnector(ABC):
         :return:        A list of mm metrics objects.
         """
 
+        if df.empty:
+            return {}
+
         name_column = (
             mm_schemas.ResultData.RESULT_NAME
             if mm_schemas.ResultData.RESULT_NAME in df.columns
             else mm_schemas.MetricData.METRIC_NAME
         )
-        print(f"df columns: {df.columns.tolist()}")
-        endpoint_id_column = "endpoint_id"
 
-        print(f"head:\n {df.head()}")  # Inspect the DataFrame
-        print(f"info:\n {df.info()}")  # Check for column existence and data types
-
-        print(f"isin: {endpoint_id_column in df.columns}")
-        if df.empty:
-            print("empty check: df is empty")
-            return {}
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
             lambda group: list(
