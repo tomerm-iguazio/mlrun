@@ -68,10 +68,10 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         )
 
     def _generate_event(
-            self,
-            endpoint_id,
-            result_name,
-            app_name="my_app",
+        self,
+        endpoint_id,
+        result_name,
+        app_name="my_app",
     ):
         result_kind = 0
         start_infer_time = datetime.isoformat(datetime(2024, 1, 1, tzinfo=timezone.utc))
