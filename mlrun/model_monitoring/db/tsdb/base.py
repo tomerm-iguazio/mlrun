@@ -504,30 +504,27 @@ class TSDBConnector(ABC):
             else mm_schemas.MetricData.METRIC_NAME
         )
         print(f"df columns: {df.columns.tolist()}")
-        grouped_dict = (
-            df.groupby("endpoint_id")
-            .apply(
-                lambda group: list(
-                    map(
-                        lambda record: mm_schemas.ModelEndpointMonitoringMetric(
-                            project=project,
-                            type=type,
-                            app=record.get(mm_schemas.WriterEvent.APPLICATION_NAME),
-                            name=record.get(name_column),
-                            kind=record.get(mm_schemas.ResultData.RESULT_KIND),
-                        ),
-                        group[
-                            [
-                                mm_schemas.WriterEvent.APPLICATION_NAME,
-                                name_column,
-                                mm_schemas.ResultData.RESULT_KIND,
-                            ]
-                        ].to_dict(orient="records"),
-                    )
+        grouped_by_df = df.groupby("endpoint_id")
+        grouped_dict = grouped_by_df.apply(
+            lambda group: list(
+                map(
+                    lambda record: mm_schemas.ModelEndpointMonitoringMetric(
+                        project=project,
+                        type=type,
+                        app=record.get(mm_schemas.WriterEvent.APPLICATION_NAME),
+                        name=record.get(name_column),
+                        kind=record.get(mm_schemas.ResultData.RESULT_KIND),
+                    ),
+                    group[
+                        [
+                            mm_schemas.WriterEvent.APPLICATION_NAME,
+                            name_column,
+                            mm_schemas.ResultData.RESULT_KIND,
+                        ]
+                    ].to_dict(orient="records"),
                 )
             )
-            .to_dict()
-        )
+        ).to_dict()
         return grouped_dict
 
     @staticmethod
