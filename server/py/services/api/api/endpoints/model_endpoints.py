@@ -365,7 +365,7 @@ async def get_model_endpoint_monitoring_metrics(
 
 @router.get(
     "/metrics",
-    response_model=list[mm_endpoints.ModelEndpointMonitoringMetric],
+    response_model=dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]],
 )
 async def get_model_endpoints_monitoring_metrics(
     project: ProjectAnnotation,
