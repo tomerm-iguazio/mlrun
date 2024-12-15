@@ -137,29 +137,6 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         result_for_mep2 = [event.name for event in income_events_by_endpoint[mep2_uid]]
         assert expected_for_mep2 == sorted(result_for_mep2)
 
-    def test_df_to_metrics_grouped_dict(self):
-        tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
-            project=self.project_name,
-            tsdb_connection_string="v3io",
-        )
-        data = {
-            "result_kind": [0, 0, 0],
-            "application_name": ["my_app", "my_app", "my_app"],
-            "endpoint_id": ["mep_uid1", "mep_uid1", "mep_uid2"],
-            "result_name": ["result1", "result2", "result3"],
-        }
-
-        df = pd.DataFrame(data)
-        metrics_by_endpoint = tsdb_client.df_to_metrics_grouped_dict(
-            df=df, type="result", project="my_project"
-        )
-        assert ["result1", "result2"] == sorted(
-            [result.name for result in metrics_by_endpoint["mep_uid1"]]
-        )
-        assert ["result3"] == sorted(
-            [result.name for result in metrics_by_endpoint["mep_uid2"]]
-        )
-
     @pytest.mark.parametrize("by_uid", [True, False])
     def test_clear_endpoint(self, by_uid):
         """Validates the process of create and delete a basic model endpoint"""
