@@ -127,7 +127,12 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         income_events_total = self._run_db.get_model_endpoints_monitoring_metrics(
             project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
         )
-        print(income_events_total)
+        expected_for_mep1 = ["invocations", "result1", "result2"]
+        result_for_mep1 = [event.name for event in income_events_total[mep_uid]]
+        assert expected_for_mep1 == sorted(result_for_mep1)
+        expected_for_mep2 = ["invocations", "result3"]
+        result_for_mep2 = [event.name for event in income_events_total[mep2_uid]]
+        assert expected_for_mep2 == sorted(result_for_mep2)
 
     def test_df_to_metrics_grouped_dict(self):
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(

@@ -3517,10 +3517,13 @@ class HTTPRunDB(RunDBInterface):
             error_message,
             params=params,
         )
-        monitoring_metrics = response.json()
-        return parse_obj_as(
-            list[mm_endpoints.ModelEndpointMonitoringMetric], monitoring_metrics
-        )
+        monitoring_metrics_by_endpoint = response.json()
+        parsed_metrics_by_endpoint = {}
+        for endpoint, metrics in monitoring_metrics_by_endpoint.items():
+            parsed_metrics_by_endpoint[endpoint] = parse_obj_as(
+                list[mm_endpoints.ModelEndpointMonitoringMetric], metrics
+            )
+        return parsed_metrics_by_endpoint
 
     def create_user_secrets(
         self,
