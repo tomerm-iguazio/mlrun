@@ -505,7 +505,12 @@ class TSDBConnector(ABC):
         )
         print(f"df columns: {df.columns.tolist()}")
         endpoint_id_column = "endpoint_id"
+
+        print(f"head: {df.head()}")  # Inspect the DataFrame
+        print(f"info: {df.info()}")  # Check for column existence and data types
+
         print(f"isin: {endpoint_id_column in df.columns}")
+        df = df.reset_index()
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
             lambda group: list(
