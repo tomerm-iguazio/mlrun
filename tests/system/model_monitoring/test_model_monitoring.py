@@ -68,7 +68,6 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         self.project.set_model_monitoring_credentials(
             stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
-
         )
 
     def _generate_event(
@@ -121,45 +120,56 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             project=self.project_name,
             tsdb_connection_string=tsdb_connection_string,
         )
-        self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
-            tsdb_connection=tsdb_connection_string,
-        )
-        db = mlrun.get_run_db()
-        model_endpoint = self._mock_random_endpoint("testing")
-        model_endpoint = db.create_model_endpoint(model_endpoint)
+        try:
+            self.project.set_model_monitoring_credentials(
+                stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+                tsdb_connection=tsdb_connection_string,
+            )
+            db = mlrun.get_run_db()
+            model_endpoint = self._mock_random_endpoint("testing")
+            model_endpoint = db.create_model_endpoint(model_endpoint)
 
-        model_endpoint2 = self._mock_random_endpoint("testing2")
-        model_endpoint2 = db.create_model_endpoint(model_endpoint2)
+            model_endpoint2 = self._mock_random_endpoint("testing2")
+            model_endpoint2 = db.create_model_endpoint(model_endpoint2)
 
-        mep_uid = model_endpoint.metadata.uid
-        mep2_uid = model_endpoint2.metadata.uid
-        tsdb_client.create_tables()
-        tsdb_client.write_application_event(
-            self._generate_event(endpoint_id=mep_uid, result_name="result1")
-        )
-        tsdb_client.write_application_event(
-            self._generate_event(endpoint_id=mep_uid, result_name="result2")
-        )
-        tsdb_client.write_application_event(
-            self._generate_event(endpoint_id=mep2_uid, result_name="result3")
-        )
-        expected_for_mep1 = ["invocations", "result1", "result2"]
-        expected_for_mep2 = ["invocations", "result3"]
+            mep_uid = model_endpoint.metadata.uid
+            mep2_uid = model_endpoint2.metadata.uid
+            tsdb_client.create_tables()
+            tsdb_client.write_application_event(
+                self._generate_event(endpoint_id=mep_uid, result_name="result1")
+            )
+            tsdb_client.write_application_event(
+                self._generate_event(endpoint_id=mep_uid, result_name="result2")
+            )
+            tsdb_client.write_application_event(
+                self._generate_event(endpoint_id=mep2_uid, result_name="result3")
+            )
+            expected_for_mep1 = ["invocations", "result1", "result2"]
+            expected_for_mep2 = ["invocations", "result3"]
 
-        income_events_mep1 = self._run_db.get_model_endpoint_monitoring_metrics(
-            project=self.project.name, endpoint_id=mep_uid
-        )
-        assert expected_for_mep1 == sorted([event.name for event in income_events_mep1])
-        income_events_by_endpoint = self._run_db.get_model_endpoints_monitoring_metrics(
-            project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
-        )
+            income_events_mep1 = self._run_db.get_model_endpoint_monitoring_metrics(
+                project=self.project.name, endpoint_id=mep_uid
+            )
+            assert expected_for_mep1 == sorted(
+                [event.name for event in income_events_mep1]
+            )
+            income_events_by_endpoint = (
+                self._run_db.get_model_endpoints_monitoring_metrics(
+                    project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
+                )
+            )
 
-        result_for_mep1 = [event.name for event in income_events_by_endpoint[mep_uid]]
-        assert expected_for_mep1 == sorted(result_for_mep1)
+            result_for_mep1 = [
+                event.name for event in income_events_by_endpoint[mep_uid]
+            ]
+            assert expected_for_mep1 == sorted(result_for_mep1)
 
-        result_for_mep2 = [event.name for event in income_events_by_endpoint[mep2_uid]]
-        assert expected_for_mep2 == sorted(result_for_mep2)
+            result_for_mep2 = [
+                event.name for event in income_events_by_endpoint[mep2_uid]
+            ]
+            assert expected_for_mep2 == sorted(result_for_mep2)
+        finally:
+            tsdb_client.delete_tsdb_resources()
 
     @pytest.mark.parametrize("by_uid", [True, False])
     def test_clear_endpoint(self, by_uid):
