@@ -68,7 +68,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         self.project.set_model_monitoring_credentials(
             stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
-            replace_creds=True,
+
         )
 
     def _generate_event(
@@ -112,6 +112,11 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             tsdb_connection_string = os.environ[
                 "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
             ]
+            if not tsdb_connection_string.startswith("taosws://"):
+                pytest.skip(
+                    "taosws:// is not set as MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION, skipping."
+                )
+
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
             project=self.project_name,
             tsdb_connection_string=tsdb_connection_string,
@@ -119,7 +124,6 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         self.project.set_model_monitoring_credentials(
             stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
             tsdb_connection=tsdb_connection_string,
-            replace_creds=True,
         )
         db = mlrun.get_run_db()
         model_endpoint = self._mock_random_endpoint("testing")
