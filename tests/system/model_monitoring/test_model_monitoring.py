@@ -74,6 +74,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         self,
         endpoint_id,
         result_name,
+        event_kind="result",
         app_name="my_app",
     ):
         result_kind = 0
@@ -89,6 +90,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             "application_name": app_name,
             "result_name": result_name,
             "result_kind": result_kind,
+            "event_kind": event_kind,
             "start_infer_time": start_infer_time,
             "end_infer_time": end_infer_time,
             "result_status": result_status,
@@ -142,9 +144,14 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 self._generate_event(endpoint_id=mep_uid, result_name="result2")
             )
             tsdb_client.write_application_event(
+                self._generate_event(
+                    endpoint_id=mep_uid, result_name="metric1", event_kind="metric"
+                )
+            )
+            tsdb_client.write_application_event(
                 self._generate_event(endpoint_id=mep2_uid, result_name="result3")
             )
-            expected_for_mep1 = ["invocations", "result1", "result2"]
+            expected_for_mep1 = ["invocations", "metric1", "result1", "result2"]
             expected_for_mep2 = ["invocations", "result3"]
 
             income_events_mep1 = self._run_db.get_model_endpoint_monitoring_metrics(
