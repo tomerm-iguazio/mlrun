@@ -239,6 +239,12 @@ class ProjectSecretKeys:
         ]
 
 
+class GetMetricsFormat(MonitoringStrEnum):
+    SINGLE = "single"
+    SEPARATION = "separation"
+    INTERSECTION = "intersection"
+
+
 class ModelEndpointTargetSchemas(MonitoringStrEnum):
     V3IO = "v3io"
     MYSQL = "mysql"

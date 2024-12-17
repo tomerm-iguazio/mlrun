@@ -290,7 +290,7 @@ async def _collect_get_metrics_tasks_results(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
-    metrics_format="list",
+    metrics_format=mm_constants.GetMetricsFormat.SINGLE,
 ) -> list:
     tasks: list[asyncio.Task] = []
     if application_result_types == "results" or application_result_types == "all":
@@ -394,7 +394,7 @@ async def get_metrics_by_multiple_endpoints(
         endpoint_ids=endpoint_ids,
         project=project,
         application_result_types=type,
-        metrics_format="dict",
+        metrics_format=mm_constants.GetMetricsFormat.SEPARATION,
     )
     for endpoint_id in endpoint_ids:
         for task_result in task_results:

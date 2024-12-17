@@ -24,6 +24,7 @@ import mlrun.artifacts
 import mlrun.common.helpers
 import mlrun.common.model_monitoring.helpers
 import mlrun.common.schemas.model_monitoring
+import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.common.schemas.model_monitoring.model_endpoints as mm_endpoints
 import mlrun.datastore
 import mlrun.feature_store
@@ -639,7 +640,7 @@ class ModelEndpoints:
         project: str,
         endpoint_id: typing.Union[str, list[str]],
         type: str,
-        metrics_format: str = "list",
+        metrics_format: str = mm_constants.GetMetricsFormat.SINGLE,
     ) -> typing.Union[
         list[mm_endpoints.ModelEndpointMonitoringMetric],
         dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]],
@@ -675,15 +676,16 @@ class ModelEndpoints:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Type must be either 'metric' or 'result'"
             )
-        if metrics_format == "list":
+        if metrics_format == mm_constants.GetMetricsFormat.SINGLE:
             return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
-        elif metrics_format == "dict":
+        elif metrics_format == mm_constants.GetMetricsFormat.SEPARATION:
             return tsdb_connector.df_to_metrics_grouped_dict(
                 df=df, type=type, project=project
             )
+        #  TODO create INTERSECTION options
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
-                "Invalid metrics_format. It must be either 'dict' or 'list'."
+                "Invalid metrics_format. It must be one of GetMetricsFormat options."
             )
 
     @staticmethod
