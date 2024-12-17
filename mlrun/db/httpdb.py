@@ -3582,11 +3582,17 @@ class HTTPRunDB(RunDBInterface):
     def create_model_endpoint(
         self,
         model_endpoint: mlrun.common.schemas.ModelEndpoint,
+        creation_strategy: mlrun.common.schemas.ModelEndpointCreationStrategy = "inplace",
     ) -> mlrun.common.schemas.ModelEndpoint:
         """
         Creates a DB record with the given model_endpoint record.
 
         :param model_endpoint: An object representing the model endpoint.
+        :param creation_strategy: model endpoint creation strategy :
+                            * overwrite - Create a new model endpoint and delete the last old one if it exists.
+                            * inplace - Use the existing model endpoint if it already exists (default).
+                            * archive - Preserve the old model endpoint and create a new one,
+                            tagging it as the latest.
 
         :return: The created model endpoint object.
         """
@@ -3596,6 +3602,9 @@ class HTTPRunDB(RunDBInterface):
             method=mlrun.common.types.HTTPMethod.POST,
             path=path,
             body=model_endpoint.json(),
+            params={
+                "creation_strategy": creation_strategy,
+            },
         )
         return mlrun.common.schemas.ModelEndpoint(**response.json())
 
@@ -3637,6 +3646,7 @@ class HTTPRunDB(RunDBInterface):
         function_name: Optional[str] = None,
         function_tag: Optional[str] = None,
         model_name: Optional[str] = None,
+        model_tag: Optional[str] = None,
         labels: Optional[Union[str, dict[str, Optional[str]], list[str]]] = None,
         start: Optional[datetime] = None,
         end: Optional[datetime] = None,
@@ -3653,6 +3663,7 @@ class HTTPRunDB(RunDBInterface):
         :param function_name:   The name of the function
         :param function_tag:    The tag of the function
         :param model_name:      The name of the model
+        :param model_tag:       The tag of the model
         :param labels:          A list of labels to filter by. (see mlrun.common.schemas.LabelsModel)
         :param start:           The start time to filter by.Corresponding to the `created` field.
         :param end:             The end time to filter by. Corresponding to the `created` field.
@@ -3671,6 +3682,7 @@ class HTTPRunDB(RunDBInterface):
             params={
                 "name": name,
                 "model_name": model_name,
+                "model_tag": model_tag,
                 "function_name": function_name,
                 "function_tag": function_tag,
                 "label": labels,

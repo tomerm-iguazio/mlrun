@@ -53,6 +53,7 @@ EndpointIDAnnotation = Annotated[
 async def create_model_endpoint(
     model_endpoint: schemas.ModelEndpoint,
     project: ProjectAnnotation,
+    creation_strategy: mm_constants.ModelEndpointCreationStrategy,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> schemas.ModelEndpoint:
@@ -60,6 +61,11 @@ async def create_model_endpoint(
     Create a new model endpoint record in the DB.
     :param model_endpoint:  The model endpoint object.
     :param project:         The name of the project.
+    :param creation_strategy: model endpoint creation strategy :
+                            * overwrite - Create a new model endpoint and delete the last old one if it exists.
+                            * inplace - Use the existing model endpoint if it already exists.
+                            * archive - Preserve the old model endpoint and create a new one,
+                            tagging it as the latest.
     :param auth_info:       The auth info of the request.
     :param db_session:      A session that manages the current dialog with the database.
 
@@ -68,6 +74,7 @@ async def create_model_endpoint(
     logger.info(
         "Creating Model Endpoint record",
         model_endpoint_metadata=model_endpoint.metadata,
+        creation_strategy=creation_strategy,
     )
     if project != model_endpoint.metadata.project:
         raise MLRunInvalidArgumentError(
@@ -91,6 +98,7 @@ async def create_model_endpoint(
         services.api.crud.ModelEndpoints().create_model_endpoint,
         db_session=db_session,
         model_endpoint=model_endpoint,
+        creation_strategy=creation_strategy,
     )
 
 
@@ -204,6 +212,7 @@ async def list_model_endpoints(
     project: ProjectAnnotation,
     name: Optional[str] = None,
     model_name: Optional[str] = None,
+    model_tag: Optional[str] = None,
     function_name: Optional[str] = None,
     function_tag: Optional[str] = None,
     labels: list[str] = Query([], alias="label"),
@@ -247,6 +256,7 @@ async def list_model_endpoints(
         project=project,
         name=name,
         model_name=model_name,
+        model_tag=model_tag,
         function_name=function_name,
         function_tag=function_tag,
         labels=labels,

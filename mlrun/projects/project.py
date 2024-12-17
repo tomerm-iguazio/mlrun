@@ -3550,6 +3550,7 @@ class MlrunProject(ModelObj):
         self,
         name: Optional[str] = None,
         model_name: Optional[str] = None,
+        model_tag: Optional[str] = None,
         function_name: Optional[str] = None,
         function_tag: Optional[str] = None,
         labels: Optional[list[str]] = None,
@@ -3564,12 +3565,13 @@ class MlrunProject(ModelObj):
         model endpoint. This functions supports filtering by the following parameters:
         1) name
         2) model_name
-        3) function_name
-        4) function_tag
-        5) labels
-        6) top level
-        7) uids
-        8) start and end time, corresponding to the `created` field.
+        3) model_tag
+        4) function_name
+        5) function_tag
+        6) labels
+        7) top level
+        8) uids
+        9) start and end time, corresponding to the `created` field.
         By default, when no filters are applied, all available endpoints for the given project will be listed.
 
         In addition, this functions provides a facade for listing endpoint related metrics. This facade is time-based
@@ -3598,6 +3600,7 @@ class MlrunProject(ModelObj):
             project=self.name,
             name=name,
             model_name=model_name,
+            model_tag=model_tag,
             function_name=function_name,
             function_tag=function_tag,
             labels=labels,

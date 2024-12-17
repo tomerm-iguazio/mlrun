@@ -575,6 +575,7 @@ class NopDB(RunDBInterface):
     def create_model_endpoint(
         self,
         model_endpoint: mlrun.common.schemas.ModelEndpoint,
+        creation_strategy: mlrun.common.schemas.ModelEndpointCreationStrategy = "inplace",
     ) -> mlrun.common.schemas.ModelEndpoint:
         pass
 
@@ -595,6 +596,7 @@ class NopDB(RunDBInterface):
         function_name: Optional[str] = None,
         function_tag: Optional[str] = None,
         model_name: Optional[str] = None,
+        model_tag: Optional[str] = None,
         labels: Optional[Union[str, dict[str, Optional[str]], list[str]]] = None,
         start: Optional[datetime.datetime] = None,
         end: Optional[datetime.datetime] = None,
