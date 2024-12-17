@@ -682,7 +682,9 @@ class ModelEndpoints:
             return tsdb_connector.df_to_metrics_grouped_dict(
                 df=df, type=type, project=project
             )
-        #  TODO create INTERSECTION options
+        elif metrics_format == mm_constants.GetMetricsFormat.INTERSECTION:
+            pass
+            #  TODO create INTERSECTION options
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Invalid metrics_format. It must be one of GetMetricsFormat options."
