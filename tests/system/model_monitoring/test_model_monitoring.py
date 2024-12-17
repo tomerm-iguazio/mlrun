@@ -166,6 +166,17 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 event.name for event in income_events_by_endpoint[mep2_uid]
             ]
             assert expected_for_mep2 == sorted(result_for_mep2)
+
+            #  asserts for non-exist mep_ids
+            result_for_non_exist = self._run_db.get_metrics_by_multiple_endpoints(
+                project=self.project.name, endpoint_ids=["not_exist"], type="results"
+            )
+            assert not result_for_non_exist["not_exist"]
+
+            result_for_non_exist = self._run_db.get_model_endpoint_monitoring_metrics(
+                project=self.project.name, endpoint_id="not_exist", type="results"
+            )
+            assert not result_for_non_exist
         finally:
             tsdb_client.delete_tsdb_resources()
 
