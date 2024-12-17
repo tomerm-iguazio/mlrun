@@ -286,7 +286,7 @@ async def _verify_model_endpoint_read_permission(
     )
 
 
-async def _collect_metrics_tasks(
+async def _collect_get_metrics_tasks(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
@@ -345,7 +345,7 @@ async def get_model_endpoint_monitoring_metrics(
     )
     metrics: list[mm_endpoints.ModelEndpointMonitoringMetric] = []
 
-    tasks = await _collect_metrics_tasks(
+    tasks = await _collect_get_metrics_tasks(
         endpoint_ids=endpoint_id, project=project, application_result_types=type
     )
     for task in tasks:
@@ -359,20 +359,21 @@ async def get_model_endpoint_monitoring_metrics(
     "/metrics",
     response_model=dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]],
 )
-async def get_model_endpoints_monitoring_metrics(
+async def get_metrics_by_multiple_endpoints(
     project: ProjectAnnotation,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
     endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
 ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
     """
-    :param project:     The name of the project.
-
-    :param auth_info:   The auth info of the request.
-    :param type:        The type of the metrics to return. "all" means "results"
-                        and "metrics".
+    :param project:      The name of the project.
+    :param auth_info:    The auth info of the request.
+    :param type:         The type of the metrics to return. "all" means "results"
+                         and "metrics".
     :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
-    :returns:           A list of the application metrics or/and results for these model endpoints.
+
+    :returns:            A dictionary of application metrics and/or results for the model endpoints,
+                         keyed by endpoint IDs.
     """
     metrics_dict = {}
     permissions_tasks = []
@@ -380,7 +381,6 @@ async def get_model_endpoints_monitoring_metrics(
     if isinstance(endpoint_ids, str):
         endpoint_ids = [endpoint_ids]
 
-    # todo improve, can it be done with single request?
     for endpoint_id in endpoint_ids:
         permissions_tasks.append(
             _verify_model_endpoint_read_permission(
@@ -391,7 +391,7 @@ async def get_model_endpoints_monitoring_metrics(
 
     await asyncio.gather(*permissions_tasks)
 
-    tasks = await _collect_metrics_tasks(
+    tasks = await _collect_get_metrics_tasks(
         endpoint_ids=endpoint_ids,
         project=project,
         application_result_types=type,
@@ -400,7 +400,7 @@ async def get_model_endpoints_monitoring_metrics(
     task_results = [task.result() for task in tasks]
     for endpoint_id in endpoint_ids:
         for task_result in task_results:
-            metrics_dict[endpoint_id] += task_result.get(endpoint_id, [])
+            metrics_dict[endpoint_id].extend(task_result.get(endpoint_id, []))
         if type == "metrics" or type == "all":
             metrics_dict[endpoint_id].append(
                 mlrun.model_monitoring.helpers.get_invocations_metric(project)

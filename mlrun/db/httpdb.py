@@ -49,6 +49,7 @@ from mlrun_pipelines.utils import compile_pipeline
 
 from ..artifacts import Artifact
 from ..common.schemas import AlertActivations
+from ..common.schemas.model_monitoring import ModelEndpointMonitoringMetric
 from ..config import config
 from ..datastore.datastore_profile import DatastoreProfile2Json
 from ..feature_store import FeatureSet, FeatureVector
@@ -3493,19 +3494,19 @@ class HTTPRunDB(RunDBInterface):
             list[mm_endpoints.ModelEndpointMonitoringMetric], monitoring_metrics
         )
 
-    def get_model_endpoints_monitoring_metrics(
+    def get_metrics_by_multiple_endpoints(
         self,
         project: str,
         endpoint_ids: Union[str, list[str]],
         type: Literal["results", "metrics", "all"] = "all",
-    ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+    ) -> dict[str, list[ModelEndpointMonitoringMetric]]:
         """Get application metrics/results by endpoint id and project.
 
         :param project: The name of the project.
         :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
         :param type: The type of the metrics to return. "all" means "results" and "metrics".
 
-        :return: A list of the application metrics or/and results for these model endpoints.
+        :return: A dictionary of application metrics and/or results for the model endpoints, keyed by endpoint IDs.
         """
         path = f"projects/{project}/model-endpoints/metrics"
         params = {"type": type, "endpoint_ids": endpoint_ids}

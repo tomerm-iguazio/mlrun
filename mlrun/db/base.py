@@ -327,12 +327,12 @@ class RunDBInterface(ABC):
     ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
         pass
 
-    def get_model_endpoints_monitoring_metrics(
+    def get_metrics_by_multiple_endpoints(
         self,
         project: str,
         endpoint_ids: Union[str, list[str]],
         type: Literal["results", "metrics", "all"] = "all",
-    ) -> list[mm_endpoints.ModelEndpointMonitoringMetric]:
+    ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
         pass
 
     @abstractmethod

@@ -153,10 +153,8 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             assert expected_for_mep1 == sorted(
                 [event.name for event in income_events_mep1]
             )
-            income_events_by_endpoint = (
-                self._run_db.get_model_endpoints_monitoring_metrics(
-                    project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
-                )
+            income_events_by_endpoint = self._run_db.get_metrics_by_multiple_endpoints(
+                project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
             )
 
             result_for_mep1 = [
