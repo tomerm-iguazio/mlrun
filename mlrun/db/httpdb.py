@@ -49,7 +49,6 @@ from mlrun_pipelines.utils import compile_pipeline
 
 from ..artifacts import Artifact
 from ..common.schemas import AlertActivations
-from ..common.schemas.model_monitoring import ModelEndpointMonitoringMetric
 from ..config import config
 from ..datastore.datastore_profile import DatastoreProfile2Json
 from ..feature_store import FeatureSet, FeatureVector
@@ -3499,7 +3498,7 @@ class HTTPRunDB(RunDBInterface):
         project: str,
         endpoint_ids: Union[str, list[str]],
         type: Literal["results", "metrics", "all"] = "all",
-    ) -> dict[str, list[ModelEndpointMonitoringMetric]]:
+    ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
         """Get application metrics/results by endpoint id and project.
 
         :param project: The name of the project.
