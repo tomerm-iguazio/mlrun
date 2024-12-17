@@ -286,12 +286,12 @@ async def _verify_model_endpoint_read_permission(
     )
 
 
-async def _collect_get_metrics_tasks(
+async def _collect_get_metrics_tasks_results(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
     metrics_format="list",
-) -> list[asyncio.Task]:
+) -> list:
     tasks: list[asyncio.Task] = []
     if application_result_types == "results" or application_result_types == "all":
         tasks.append(
@@ -317,8 +317,7 @@ async def _collect_get_metrics_tasks(
                 )
             )
         )
-    await asyncio.wait(tasks)
-    return tasks
+    return await asyncio.gather(*tasks)
 
 
 @router.get(
@@ -345,11 +344,11 @@ async def get_model_endpoint_monitoring_metrics(
     )
     metrics: list[mm_endpoints.ModelEndpointMonitoringMetric] = []
 
-    tasks = await _collect_get_metrics_tasks(
+    task_results = await _collect_get_metrics_tasks_results(
         endpoint_ids=endpoint_id, project=project, application_result_types=type
     )
-    for task in tasks:
-        metrics.extend(task.result())
+    for task_result in task_results:
+        metrics.extend(task_result)
     if type == "metrics" or type == "all":
         metrics.append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
     return metrics
@@ -391,13 +390,12 @@ async def get_metrics_by_multiple_endpoints(
 
     await asyncio.gather(*permissions_tasks)
 
-    tasks = await _collect_get_metrics_tasks(
+    task_results = await _collect_get_metrics_tasks_results(
         endpoint_ids=endpoint_ids,
         project=project,
         application_result_types=type,
         metrics_format="dict",
     )
-    task_results = [task.result() for task in tasks]
     for endpoint_id in endpoint_ids:
         for task_result in task_results:
             metrics_dict[endpoint_id].extend(task_result.get(endpoint_id, []))
