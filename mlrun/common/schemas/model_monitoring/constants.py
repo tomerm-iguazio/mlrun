@@ -445,3 +445,8 @@ FQN_REGEX = re.compile(FQN_PATTERN)
 PROJECT_PATTERN = r"^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$"
 
 MODEL_ENDPOINT_ID_PATTERN = r"^[a-zA-Z0-9_-]+$"
+
+INTERSECT_DICT_NAME = {
+    ModelEndpointMonitoringMetricType.METRIC: "intersect_metrics",
+    ModelEndpointMonitoringMetricType.RESULT: "intersect_results",
+}

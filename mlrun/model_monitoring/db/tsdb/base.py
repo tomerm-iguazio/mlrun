@@ -341,7 +341,7 @@ class TSDBConnector(ABC):
             logger.debug("No metrics", missing_metrics=metrics_without_data.keys())
             grouped = []
         for (app_name, name), sub_df in grouped:
-            full_name = mlrun.model_monitoring.helpers._compose_full_name(
+            full_name = mm_schemas.model_endpoints.compose_full_name(
                 project=project,
                 app=app_name,
                 name=name,
@@ -410,7 +410,7 @@ class TSDBConnector(ABC):
             result_kind = mlrun.model_monitoring.db.tsdb.helpers._get_result_kind(
                 sub_df
             )
-            full_name = mlrun.model_monitoring.helpers._compose_full_name(
+            full_name = mm_schemas.model_endpoints.compose_full_name(
                 project=project, app=app_name, name=name
             )
             try:
@@ -529,6 +529,30 @@ class TSDBConnector(ABC):
             )
         ).to_dict()
         return grouped_dict
+
+    @staticmethod
+    def df_to_intersection_dict(
+        *,
+        df: pd.DataFrame,
+        project: str,
+        type: mm_schemas.ModelEndpointMonitoringMetricType,
+    ) -> dict[str, list[mm_schemas.ModelEndpointMonitoringMetric]]:
+        name_column = (
+            mm_schemas.ResultData.RESULT_NAME
+            if mm_schemas.ResultData.RESULT_NAME in df.columns
+            else mm_schemas.MetricData.METRIC_NAME
+        )
+        df["full_name"] = mm_schemas.model_endpoints.compose_full_name(
+            project=project,
+            app=df["application_name"],
+            name=df[name_column],
+            type=type,
+        )
+        meps_with_full_name = df.groupby("endpoint_id")["full_name"].apply(set)
+        common_combinations = set.intersection(*meps_with_full_name)
+        return {
+            mm_schemas.INTERSECT_DICT_NAME[type]: list(common_combinations)
+        }
 
     @staticmethod
     def _get_start_end(
