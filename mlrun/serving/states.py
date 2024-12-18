@@ -755,11 +755,17 @@ class RouterStep(TaskStep):
         :param class_args: class init arguments
         :param handler:    class handler to invoke on run/event
         :param function:   function this step should run in
-        :param creation_strategy: model endpoint creation strategy :
-                            * overwrite - Create a new model endpoint and delete the last old one if it exists.
-                            * inplace - Use the existing model endpoint if it already exists (default).
-                            * archive - Preserve the old model endpoint and create a new one,
-                            tagging it as the latest.
+        :param creation_strategy: Strategy for creating or updating the model endpoint:
+            * **overwrite**:
+            1. If model endpoints with the same name exist, delete the `latest` one.
+            2. Create a new model endpoint entry and set it as `latest`.
+            * **inplace** (default):
+            1. If model endpoints with the same name exist, update the `latest` entry.
+            2. Otherwise, create a new entry.
+            * **archive**:
+            1. If model endpoints with the same name exist, preserve them.
+            2. Create a new model endpoint with the same name and set it to `latest`.
+
         """
 
         if not route and not class_name and not handler:

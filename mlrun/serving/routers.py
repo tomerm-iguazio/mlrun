@@ -1004,7 +1004,7 @@ class VotingEnsemble(ParallelRun):
 def _init_endpoint_record(
     graph_server: GraphServer,
     voting_ensemble: VotingEnsemble,
-    creation_strategy: str,
+    creation_strategy: mlrun.common.schemas.ModelEndpointCreationStrategy,
     endpoint_type: mlrun.common.schemas.EndpointType,
 ) -> Union[str, None]:
     """
@@ -1015,11 +1015,17 @@ def _init_endpoint_record(
     :param graph_server:    A GraphServer object which will be used for getting the function uri.
     :param voting_ensemble: Voting ensemble serving class. It contains important details for the model endpoint record
                             such as model name, model path, model version, and the ids of the children model endpoints.
-    :param creation_strategy: model endpoint creation strategy :
-                                * overwrite - Create a new model endpoint and delete the last old one if it exists.
-                                * inplace - Use the existing model endpoint if it already exists (default).
-                                * archive - Preserve the old model endpoint and create a new one,
-                                    tagging it as the latest.
+    :param creation_strategy: Strategy for creating or updating the model endpoint:
+        * **overwrite**:
+        1. If model endpoints with the same name exist, delete the `latest` one.
+        2. Create a new model endpoint entry and set it as `latest`.
+        * **inplace** (default):
+        1. If model endpoints with the same name exist, update the `latest` entry.
+        2. Otherwise, create a new entry.
+        * **archive**:
+        1. If model endpoints with the same name exist, preserve them.
+        2. Create a new model endpoint with the same name and set it to `latest`.
+
     :param endpoint_type:    model endpoint type
     :return: Model endpoint unique ID.
     """

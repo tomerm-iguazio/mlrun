@@ -35,6 +35,7 @@ import mlrun.common.constants
 import mlrun.common.formatters
 import mlrun.common.runtimes
 import mlrun.common.schemas
+import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.common.schemas.model_monitoring.model_endpoints as mm_endpoints
 import mlrun.common.types
 import mlrun.platforms
@@ -3582,18 +3583,24 @@ class HTTPRunDB(RunDBInterface):
     def create_model_endpoint(
         self,
         model_endpoint: mlrun.common.schemas.ModelEndpoint,
-        creation_strategy: mlrun.common.schemas.ModelEndpointCreationStrategy = "inplace",
+        creation_strategy: Optional[
+            mm_constants.ModelEndpointCreationStrategy
+        ] = mm_constants.ModelEndpointCreationStrategy.INPLACE,
     ) -> mlrun.common.schemas.ModelEndpoint:
         """
         Creates a DB record with the given model_endpoint record.
 
         :param model_endpoint: An object representing the model endpoint.
-        :param creation_strategy: model endpoint creation strategy :
-                            * overwrite - Create a new model endpoint and delete the last old one if it exists.
-                            * inplace - Use the existing model endpoint if it already exists (default).
-                            * archive - Preserve the old model endpoint and create a new one,
-                            tagging it as the latest.
-
+        :param creation_strategy: Strategy for creating or updating the model endpoint:
+            * **overwrite**:
+            1. If model endpoints with the same name exist, delete the `latest` one.
+            2. Create a new model endpoint entry and set it as `latest`.
+            * **inplace** (default):
+            1. If model endpoints with the same name exist, update the `latest` entry.
+            2. Otherwise, create a new entry.
+            * **archive**:
+            1. If model endpoints with the same name exist, preserve them.
+            2. Create a new model endpoint with the same name and set it to `latest`.
         :return: The created model endpoint object.
         """
 
