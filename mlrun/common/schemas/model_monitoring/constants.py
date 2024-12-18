@@ -239,7 +239,7 @@ class ProjectSecretKeys:
         ]
 
 
-class GetMetricsFormat(MonitoringStrEnum):
+class GetEventsFormat(MonitoringStrEnum):
     SINGLE = "single"
     SEPARATION = "separation"
     INTERSECTION = "intersection"

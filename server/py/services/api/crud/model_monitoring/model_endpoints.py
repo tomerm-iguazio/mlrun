@@ -640,7 +640,7 @@ class ModelEndpoints:
         project: str,
         endpoint_id: typing.Union[str, list[str]],
         type: str,
-        metrics_format: str = mm_constants.GetMetricsFormat.SINGLE,
+        metrics_format: str = mm_constants.GetEventsFormat.SINGLE,
     ) -> typing.Union[
         list[mm_endpoints.ModelEndpointMonitoringMetric],
         dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]],
@@ -676,18 +676,19 @@ class ModelEndpoints:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Type must be either 'metric' or 'result'"
             )
-        if metrics_format == mm_constants.GetMetricsFormat.SINGLE:
+        if metrics_format == mm_constants.GetEventsFormat.SINGLE:
             return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
-        elif metrics_format == mm_constants.GetMetricsFormat.SEPARATION:
+        elif metrics_format == mm_constants.GetEventsFormat.SEPARATION:
             return tsdb_connector.df_to_metrics_grouped_dict(
                 df=df, type=type, project=project
             )
-        elif metrics_format == mm_constants.GetMetricsFormat.INTERSECTION:
-            pass
-            #  TODO create INTERSECTION options
+        elif metrics_format == mm_constants.GetEventsFormat.INTERSECTION:
+            return tsdb_connector.df_to_intersection_dict(
+                df=df, type=type, project=project
+            )
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
-                "Invalid metrics_format. It must be one of GetMetricsFormat options."
+                "Invalid metrics_format. It must be one of GetEventsFormat options."
             )
 
     @staticmethod

@@ -495,7 +495,7 @@ class TSDBConnector(ABC):
         :param project: The project name.
         :param type:    The type of the metrics (either "result" or "metric").
 
-        :return:        A list of mm metrics objects.
+        :return:        A grouped dict of mm metrics objects.
         """
 
         if df.empty:
@@ -535,8 +535,21 @@ class TSDBConnector(ABC):
         *,
         df: pd.DataFrame,
         project: str,
-        type: mm_schemas.ModelEndpointMonitoringMetricType,
+        type: typing.Union[str, mm_schemas.ModelEndpointMonitoringMetricType],
     ) -> dict[str, list[mm_schemas.ModelEndpointMonitoringMetric]]:
+        """
+        Parse a DataFrame of metrics from the TSDB into a dict of intersection metrics/results by full_name.
+
+        :param df:      The DataFrame to parse.
+        :param project: The project name.
+        :param type:    The type of the metrics (either "result" or "metric").
+
+        :return:        A grouped dict of mm metrics objects.
+        """
+        dict_key = mm_schemas.INTERSECT_DICT_NAME[type]
+        if df.empty:
+            return {dict_key: []}
+
         name_column = (
             mm_schemas.ResultData.RESULT_NAME
             if mm_schemas.ResultData.RESULT_NAME in df.columns
@@ -550,9 +563,7 @@ class TSDBConnector(ABC):
         )
         meps_with_full_name = df.groupby("endpoint_id")["full_name"].apply(set)
         common_combinations = set.intersection(*meps_with_full_name)
-        return {
-            mm_schemas.INTERSECT_DICT_NAME[type]: list(common_combinations)
-        }
+        return {dict_key: list(common_combinations)}
 
     @staticmethod
     def _get_start_end(

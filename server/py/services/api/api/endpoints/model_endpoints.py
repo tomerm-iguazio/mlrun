@@ -290,7 +290,7 @@ async def _collect_get_metrics_tasks_results(
     endpoint_ids: Union[list[EndpointIDAnnotation], EndpointIDAnnotation],
     project: str,
     application_result_types: str,
-    metrics_format=mm_constants.GetMetricsFormat.SINGLE,
+    metrics_format=mm_constants.GetEventsFormat.SINGLE,
 ) -> list:
     tasks: list[asyncio.Task] = []
     if application_result_types == "results" or application_result_types == "all":
@@ -363,6 +363,7 @@ async def get_metrics_by_multiple_endpoints(
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
     endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
+    events_format: mm_constants.GetEventsFormat = mm_constants.GetEventsFormat.SEPARATION,
 ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
     """
     :param project:      The name of the project.
@@ -370,13 +371,13 @@ async def get_metrics_by_multiple_endpoints(
     :param type:         The type of the metrics to return. "all" means "results"
                          and "metrics".
     :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
-
+        :param format:
     :returns:            A dictionary of application metrics and/or results for the model endpoints,
                          keyed by endpoint IDs.
     """
-    metrics_dict = {}
+    events = {}
     permissions_tasks = []
-
+    is_metrics_supported = type == "metrics" or type == "all"
     if isinstance(endpoint_ids, str):
         endpoint_ids = [endpoint_ids]
 
@@ -386,7 +387,6 @@ async def get_metrics_by_multiple_endpoints(
                 project=project, name_or_uid=endpoint_id, auth_info=auth_info
             )
         )
-        metrics_dict[endpoint_id] = []
 
     await asyncio.gather(*permissions_tasks)
 
@@ -394,16 +394,27 @@ async def get_metrics_by_multiple_endpoints(
         endpoint_ids=endpoint_ids,
         project=project,
         application_result_types=type,
-        metrics_format=mm_constants.GetMetricsFormat.SEPARATION,
+        metrics_format=mm_constants.GetEventsFormat.SEPARATION,
     )
-    for endpoint_id in endpoint_ids:
+    if events_format == mm_constants.GetEventsFormat.SEPARATION:
+        for endpoint_id in endpoint_ids:
+            events[endpoint_id] = []
+            for task_result in task_results:
+                if mm_constants.GetEventsFormat.SEPARATION:
+                    events[endpoint_id].extend(task_result.get(endpoint_id, []))
+            if is_metrics_supported:
+                events[endpoint_id].append(
+                    mlrun.model_monitoring.helpers.get_invocations_metric(project)
+                )
+
+    elif events_format == mm_constants.GetEventsFormat.INTERSECTION:
         for task_result in task_results:
-            metrics_dict[endpoint_id].extend(task_result.get(endpoint_id, []))
-        if type == "metrics" or type == "all":
-            metrics_dict[endpoint_id].append(
+            events.update(task_result)
+        if is_metrics_supported:
+            events[mm_constants.INTERSECT_DICT_NAME[type]].append(
                 mlrun.model_monitoring.helpers.get_invocations_metric(project)
             )
-    return metrics_dict
+    return events
 
 
 @router.get(
