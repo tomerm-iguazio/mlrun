@@ -500,7 +500,6 @@ class TSDBConnector(ABC):
 
         if df.empty:
             return {}
-
         name_column = (
             mm_schemas.ResultData.RESULT_NAME
             if mm_schemas.ResultData.RESULT_NAME in df.columns
@@ -531,7 +530,7 @@ class TSDBConnector(ABC):
         return grouped_dict
 
     @staticmethod
-    def df_to_intersection_dict(
+    def df_to_events_intersection_dict(
         *,
         df: pd.DataFrame,
         project: str,
@@ -546,7 +545,8 @@ class TSDBConnector(ABC):
 
         :return:        A grouped dict of mm metrics objects.
         """
-        dict_key = mm_schemas.INTERSECT_DICT_NAME[type]
+        dict_key = mm_schemas.INTERSECT_DICT_KEYS[type]
+        metrics = []
         if df.empty:
             return {dict_key: []}
 
@@ -555,15 +555,27 @@ class TSDBConnector(ABC):
             if mm_schemas.ResultData.RESULT_NAME in df.columns
             else mm_schemas.MetricData.METRIC_NAME
         )
-        df["full_name"] = mm_schemas.model_endpoints.compose_full_name(
-            project=project,
-            app=df["application_name"],
-            name=df[name_column],
-            type=type,
+        df["event_values"] = list(
+            zip(
+                df[mm_schemas.WriterEvent.APPLICATION_NAME],
+                df[name_column],
+                df[mm_schemas.ResultData.RESULT_KIND],
+            )
         )
-        meps_with_full_name = df.groupby("endpoint_id")["full_name"].apply(set)
-        common_combinations = set.intersection(*meps_with_full_name)
-        return {dict_key: list(common_combinations)}
+        grouped_by_event_values = df.groupby("endpoint_id")["event_values"].apply(set)
+        common_event_values_combinations = set.intersection(*grouped_by_event_values)
+        for data in common_event_values_combinations:
+            application_name, event_name, result_kind = data
+            metrics.append(
+                mm_schemas.ModelEndpointMonitoringMetric(
+                    project=project,
+                    type=type,
+                    app=application_name,
+                    name=event_name,
+                    kind=result_kind,
+                )
+            )
+            return {dict_key: metrics}
 
     @staticmethod
     def _get_start_end(

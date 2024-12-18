@@ -683,7 +683,7 @@ class ModelEndpoints:
                 df=df, type=type, project=project
             )
         elif metrics_format == mm_constants.GetEventsFormat.INTERSECTION:
-            return tsdb_connector.df_to_intersection_dict(
+            return tsdb_connector.df_to_events_intersection_dict(
                 df=df, type=type, project=project
             )
         else:

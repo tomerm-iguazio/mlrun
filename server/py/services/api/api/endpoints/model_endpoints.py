@@ -411,7 +411,7 @@ async def get_metrics_by_multiple_endpoints(
         for task_result in task_results:
             events.update(task_result)
         if is_metrics_supported:
-            events[mm_constants.INTERSECT_DICT_NAME[type]].append(
+            events[mm_constants.INTERSECT_DICT_KEYS[type]].append(
                 mlrun.model_monitoring.helpers.get_invocations_metric(project)
             )
     return events
