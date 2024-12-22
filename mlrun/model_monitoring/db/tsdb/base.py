@@ -467,6 +467,8 @@ class TSDBConnector(ABC):
 
         :return:        A list of mm metrics objects.
         """
+
+        print(f"df list: \n {df}")
         return list(
             map(
                 lambda record: mm_schemas.ModelEndpointMonitoringMetric(
