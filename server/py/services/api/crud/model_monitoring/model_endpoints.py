@@ -688,7 +688,7 @@ class ModelEndpoints:
             )
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
-                "Invalid metrics_format. It must be one of GetEventsFormat options."
+                f"Invalid metrics_format. It must be one of: {', '.join(mm_constants.GetMetricsFormat)}."
             )
 
     @staticmethod

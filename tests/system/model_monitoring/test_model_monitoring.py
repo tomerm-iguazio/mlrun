@@ -186,7 +186,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             ]
             assert expected_for_mep2 == sorted(result_for_mep2)
 
-            #  asserts for non-exist mep_ids
+            # get nonexistent MEP IDs
             result_for_non_exist = self._run_db.get_metrics_by_multiple_endpoints(
                 project=self.project.name, endpoint_ids=["not_exist"], type="results"
             )
