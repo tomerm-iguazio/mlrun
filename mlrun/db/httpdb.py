@@ -35,6 +35,7 @@ import mlrun.common.constants
 import mlrun.common.formatters
 import mlrun.common.runtimes
 import mlrun.common.schemas
+import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.common.schemas.model_monitoring.model_endpoints as mm_endpoints
 import mlrun.common.types
 import mlrun.platforms
@@ -3498,6 +3499,7 @@ class HTTPRunDB(RunDBInterface):
         project: str,
         endpoint_ids: Union[str, list[str]],
         type: Literal["results", "metrics", "all"] = "all",
+        events_format: mm_constants.GetEventsFormat = mm_constants.GetEventsFormat.SEPARATION,
     ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
         """Get application metrics/results by endpoint id and project.
 
@@ -3508,7 +3510,11 @@ class HTTPRunDB(RunDBInterface):
         :return: A dictionary of application metrics and/or results for the model endpoints, keyed by endpoint IDs.
         """
         path = f"projects/{project}/model-endpoints/metrics"
-        params = {"type": type, "endpoint_ids": endpoint_ids}
+        params = {
+            "type": type,
+            "endpoint_ids": endpoint_ids,
+            "events_format": events_format,
+        }
         error_message = (
             f"Failed to get model monitoring metrics,"
             f" endpoint_ids: {endpoint_ids}, project: {project}"

@@ -144,6 +144,9 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 self._generate_event(endpoint_id=mep_uid, result_name="result2")
             )
             tsdb_client.write_application_event(
+                self._generate_event(endpoint_id=mep_uid, result_name="result3")
+            )
+            tsdb_client.write_application_event(
                 self._generate_event(
                     endpoint_id=mep_uid, result_name="metric1", event_kind="metric"
                 )
@@ -151,8 +154,17 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             tsdb_client.write_application_event(
                 self._generate_event(endpoint_id=mep2_uid, result_name="result3")
             )
-            expected_for_mep1 = ["invocations", "metric1", "result1", "result2"]
-            expected_for_mep2 = ["invocations", "result3"]
+            tsdb_client.write_application_event(
+                self._generate_event(endpoint_id=mep2_uid, result_name="result4")
+            )
+            expected_for_mep1 = [
+                "invocations",
+                "metric1",
+                "result1",
+                "result2",
+                "result3",
+            ]
+            expected_for_mep2 = ["invocations", "result3", "result4"]
 
             income_events_mep1 = self._run_db.get_model_endpoint_monitoring_metrics(
                 project=self.project.name, endpoint_id=mep_uid
@@ -184,6 +196,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 project=self.project.name, endpoint_id="not_exist", type="results"
             )
             assert not result_for_non_exist
+
         finally:
             tsdb_client.delete_tsdb_resources()
 
