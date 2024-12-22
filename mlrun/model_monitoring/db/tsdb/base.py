@@ -500,6 +500,7 @@ class TSDBConnector(ABC):
 
         if df.empty:
             return {}
+        print(f"df in df_to_metrics_grouped_dict: \n {df}")
         name_column = (
             mm_schemas.ResultData.RESULT_NAME
             if mm_schemas.ResultData.RESULT_NAME in df.columns
