@@ -468,7 +468,6 @@ class TSDBConnector(ABC):
         :return:        A list of mm metrics objects.
         """
 
-        print(f"df list: \n {df}")
         return list(
             map(
                 lambda record: mm_schemas.ModelEndpointMonitoringMetric(
@@ -502,7 +501,6 @@ class TSDBConnector(ABC):
 
         if df.empty:
             return {}
-        print(f"df in df_to_metrics_grouped_dict: \n {df}")
         name_column = (
             mm_schemas.ResultData.RESULT_NAME
             if mm_schemas.ResultData.RESULT_NAME in df.columns
