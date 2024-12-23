@@ -546,6 +546,7 @@ class TSDBConnector(ABC):
 
         :return:        A grouped dict of mm metrics objects.
         """
+        print(f"df in df_to_events_intersection_dict: \n {df}")
         dict_key = mm_schemas.INTERSECT_DICT_KEYS[type]
         metrics = []
         if df.empty:
