@@ -3933,8 +3933,8 @@ class HTTPRunDB(RunDBInterface):
         :param image:   The image on which the application will run.
         """
         self.api_call(
-            method=mlrun.common.types.HTTPMethod.POST,
-            path=f"projects/{project}/model-monitoring/deploy-histogram-data-drift-app",
+            method=mlrun.common.types.HTTPMethod.PUT,
+            path=f"projects/{project}/model-monitoring/histogram-data-drift-app",
             params={"image": image},
         )
 

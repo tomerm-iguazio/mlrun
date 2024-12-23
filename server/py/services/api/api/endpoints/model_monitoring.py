@@ -252,8 +252,34 @@ async def update_model_monitoring_controller_v2(
     )
 
 
-@router.post("/deploy-histogram-data-drift-app")
+# TODO: remove /projects/{project}/model-monitoring/deploy-histogram-data-drift-app in 1.10.0
+@router.post(
+    "/deploy-histogram-data-drift-app",
+    deprecated=True,
+    description="/projects/{project}/model-monitoring/deploy-histogram-data-drift-app "
+    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "use PUT /projects/{project}/model-monitoring/histogram-data-drift-app instead",
+)
 def deploy_histogram_data_drift_app(
+    commons: Annotated[_CommonParams, Depends(_common_parameters)],
+    image: str = "mlrun/mlrun",
+) -> None:
+    """
+    Deploy the histogram data drift app on the go.
+
+    :param commons: The common parameters of the request.
+    :param image:   The image of the application, defaults to "mlrun/mlrun".
+    """
+    MonitoringDeployment(
+        project=commons.project,
+        auth_info=commons.auth_info,
+        db_session=commons.db_session,
+        model_monitoring_access_key=commons.model_monitoring_access_key,
+    ).deploy_histogram_data_drift_app(image=image)
+
+
+@router.put("/histogram-data-drift-app")
+def deploy_histogram_data_drift_app_v2(
     commons: Annotated[_CommonParams, Depends(_common_parameters)],
     image: str = "mlrun/mlrun",
 ) -> None:
