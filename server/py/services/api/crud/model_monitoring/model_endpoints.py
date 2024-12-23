@@ -915,6 +915,7 @@ class ModelEndpoints:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Type must be either 'metric' or 'result'"
             )
+
         if metrics_format == mm_constants.GetEventsFormat.SINGLE:
             return tsdb_connector.df_to_metrics_list(df=df, type=type, project=project)
         elif metrics_format == mm_constants.GetEventsFormat.SEPARATION:
