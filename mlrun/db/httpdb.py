@@ -3850,7 +3850,7 @@ class HTTPRunDB(RunDBInterface):
         """
         response = self.api_call(
             method=mlrun.common.types.HTTPMethod.DELETE,
-            path=f"projects/{project}/model-monitoring/disable-model-monitoring",
+            path=f"projects/{project}/model-monitoring/",
             params={
                 "delete_resources": delete_resources,
                 "delete_stream_function": delete_stream_function,
