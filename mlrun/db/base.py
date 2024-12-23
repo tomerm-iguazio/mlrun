@@ -342,6 +342,7 @@ class RunDBInterface(ABC):
         project: str,
         endpoint_ids: Union[str, list[str]],
         type: Literal["results", "metrics", "all"] = "all",
+        events_format: mm_constants.GetEventsFormat = mm_constants.GetEventsFormat.SEPARATION,
     ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
         pass
 
