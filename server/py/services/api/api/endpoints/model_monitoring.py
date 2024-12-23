@@ -107,7 +107,14 @@ async def _common_parameters(
     )
 
 
-@router.post("/enable-model-monitoring")
+# TODO: remove /projects/{project}/model-monitoring/enable-model-monitoring in 1.10.0
+@router.post(
+    "/enable-model-monitoring",
+    deprecated=True,
+    description="/projects/{project}/model-monitoring/enable-model-monitoring "
+    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "use PUT /projects/{project}/model-monitoring/ instead",
+)
 async def enable_model_monitoring(
     commons: Annotated[_CommonParams, Depends(_common_parameters)],
     base_period: int = 10,
@@ -351,4 +358,47 @@ def set_model_monitoring_credentials(
         stream_path=stream_path,
         tsdb_connection=tsdb_connection,
         replace_creds=replace_creds,
+    )
+
+
+@router.put("/")
+async def enable_model_monitoring_v2(
+    commons: Annotated[_CommonParams, Depends(_common_parameters)],
+    base_period: int = 10,
+    image: str = "mlrun/mlrun",
+    deploy_histogram_data_drift_app: bool = True,
+    rebuild_images: bool = False,
+    fetch_credentials_from_sys_config: bool = False,
+):
+    """
+    Deploy model monitoring application controller, writer and stream functions.
+    While the main goal of the controller function is to handle the monitoring processing and triggering
+    applications, the goal of the model monitoring writer function is to write all the monitoring
+    application results to the databases.
+    And the stream function goal is to monitor the log of the data stream. It is triggered when a new log entry
+    is detected. It processes the new events into statistics that are then written to statistics databases.
+
+    :param commons:                           The common parameters of the request.
+    :param base_period:                       The time period in minutes in which the model monitoring controller
+                                              function triggers. By default, the base period is 10 minutes.
+    :param image:                             The image of the model monitoring controller, writer & monitoring
+                                              stream functions, which are real time nuclio functions.
+                                              By default, the image is mlrun/mlrun.
+    :param deploy_histogram_data_drift_app:   If true, deploy the default histogram-based data drift application.
+    :param rebuild_images:                    If true, force rebuild of model monitoring infrastructure images
+                                              (controller, writer & stream).
+    :param fetch_credentials_from_sys_config: If true, fetch the credentials from the system configuration.
+
+    """
+    MonitoringDeployment(
+        project=commons.project,
+        auth_info=commons.auth_info,
+        db_session=commons.db_session,
+        model_monitoring_access_key=commons.model_monitoring_access_key,
+    ).deploy_monitoring_functions(
+        image=image,
+        base_period=base_period,
+        deploy_histogram_data_drift_app=deploy_histogram_data_drift_app,
+        rebuild_images=rebuild_images,
+        fetch_credentials_from_sys_config=fetch_credentials_from_sys_config,
     )

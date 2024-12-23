@@ -3805,8 +3805,8 @@ class HTTPRunDB(RunDBInterface):
 
         """
         self.api_call(
-            method=mlrun.common.types.HTTPMethod.POST,
-            path=f"projects/{project}/model-monitoring/enable-model-monitoring",
+            method=mlrun.common.types.HTTPMethod.PUT,
+            path=f"projects/{project}/model-monitoring/",
             params={
                 "base_period": base_period,
                 "image": image,
