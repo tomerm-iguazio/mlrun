@@ -157,8 +157,59 @@ async def enable_model_monitoring(
     )
 
 
-@router.patch("/model-monitoring-controller")
+# TODO: remove /projects/{project}/model-monitoring/model-monitoring-controller in 1.10.0
+@router.patch(
+    "/model-monitoring-controller",
+    deprecated=True,
+    description="/projects/{project}/model-monitoring/model-monitoring-controller "
+    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "use /projects/{project}/model-monitoring/controller instead",
+)
 async def update_model_monitoring_controller(
+    commons: Annotated[_CommonParams, Depends(_common_parameters)],
+    base_period: int = 10,
+    image: str = "mlrun/mlrun",
+):
+    """
+    Redeploy model monitoring application controller function.
+    The main goal of the controller function is to handle the monitoring processing and triggering applications.
+
+    :param commons:     The common parameters of the request.
+    :param base_period: The time period in minutes in which the model monitoring controller function
+                        triggers. By default, the base period is 10 minutes.
+    :param image:       The default image of the model monitoring controller job. Note that the writer
+                        function, which is a real time nuclio functino, will be deployed with the same
+                        image. By default, the image is mlrun/mlrun.
+    """
+    try:
+        # validate that the model monitoring stream has not yet been deployed
+        mlrun.runtimes.nuclio.function.get_nuclio_deploy_status(
+            name=mlrun.common.schemas.model_monitoring.MonitoringFunctionNames.APPLICATION_CONTROLLER,
+            project=commons.project,
+            tag="",
+            auth_info=commons.auth_info,
+        )
+
+    except mlrun.errors.MLRunNotFoundError:
+        raise mlrun.errors.MLRunNotFoundError(
+            f"{mlrun.common.schemas.model_monitoring.MonitoringFunctionNames.APPLICATION_CONTROLLER} does not exist. "
+            f"Run `project.enable_model_monitoring()` first."
+        )
+
+    return MonitoringDeployment(
+        project=commons.project,
+        auth_info=commons.auth_info,
+        db_session=commons.db_session,
+        model_monitoring_access_key=commons.model_monitoring_access_key,
+    ).deploy_model_monitoring_controller(
+        controller_image=image,
+        base_period=base_period,
+        overwrite=True,
+    )
+
+
+@router.patch("/controller")
+async def update_model_monitoring_controller_v2(
     commons: Annotated[_CommonParams, Depends(_common_parameters)],
     base_period: int = 10,
     image: str = "mlrun/mlrun",

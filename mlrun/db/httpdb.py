@@ -3769,7 +3769,7 @@ class HTTPRunDB(RunDBInterface):
         """
         self.api_call(
             method=mlrun.common.types.HTTPMethod.PATCH,
-            path=f"projects/{project}/model-monitoring/model-monitoring-controller",
+            path=f"projects/{project}/model-monitoring/controller",
             params={
                 "base_period": base_period,
                 "image": image,
