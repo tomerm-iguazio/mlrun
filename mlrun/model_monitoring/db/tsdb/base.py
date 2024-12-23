@@ -501,11 +501,15 @@ class TSDBConnector(ABC):
 
         if df.empty:
             return {}
-        name_column = (
-            mm_schemas.ResultData.RESULT_NAME
-            if mm_schemas.ResultData.RESULT_NAME in df.columns
-            else mm_schemas.MetricData.METRIC_NAME
-        )
+
+        grouped_by_fields = [mm_schemas.WriterEvent.APPLICATION_NAME]
+        if type == "result":
+            name_column = mm_schemas.ResultData.RESULT_NAME
+            grouped_by_fields.append(name_column)
+            grouped_by_fields.append(mm_schemas.ResultData.RESULT_KIND)
+        else:
+            name_column = mm_schemas.MetricData.METRIC_NAME
+            grouped_by_fields.append(name_column)
 
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
@@ -516,15 +520,11 @@ class TSDBConnector(ABC):
                         type=type,
                         app=record.get(mm_schemas.WriterEvent.APPLICATION_NAME),
                         name=record.get(name_column),
-                        kind=record.get(mm_schemas.ResultData.RESULT_KIND),
+                        **{"kind": record.get(mm_schemas.ResultData.RESULT_KIND)}
+                        if type == "result"
+                        else {},
                     ),
-                    group[
-                        [
-                            mm_schemas.WriterEvent.APPLICATION_NAME,
-                            name_column,
-                            mm_schemas.ResultData.RESULT_KIND,
-                        ]
-                    ].to_dict(orient="records"),
+                    group[grouped_by_fields].to_dict(orient="records"),
                 )
             )
         ).to_dict()
@@ -552,6 +552,7 @@ class TSDBConnector(ABC):
         if df.empty:
             return {dict_key: []}
 
+        # TODO fix it to support metrics too (without RESULT_KIND field...)
         name_column = (
             mm_schemas.ResultData.RESULT_NAME
             if mm_schemas.ResultData.RESULT_NAME in df.columns

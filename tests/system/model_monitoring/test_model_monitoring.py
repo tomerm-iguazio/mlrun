@@ -19,6 +19,7 @@ from datetime import datetime, timedelta, timezone
 from random import choice, randint, uniform
 from time import monotonic, sleep
 from typing import Optional, Union
+
 import fsspec
 import numpy as np
 import pandas as pd
@@ -76,27 +77,30 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         event_kind="result",
         app_name="my_app",
     ):
-        result_kind = 0
         start_infer_time = datetime.isoformat(datetime(2024, 1, 1, tzinfo=timezone.utc))
         end_infer_time = datetime.isoformat(
             datetime(2024, 1, 1, second=1, tzinfo=timezone.utc)
         )
-        result_status = 0
         event_value = 123
         event_name_key = f"{event_kind}_name"
         event_value_key = f"{event_kind}_value"
+        if event_kind == "result":
+            extra_kwargs = {
+                "result_kind": 0,
+                "result_status": 0,
+                "result_extra_data": """{}""",
+            }
+        else:
+            extra_kwargs = {}
         data = {
             "endpoint_id": endpoint_id,
             "application_name": app_name,
             event_name_key: event_name,
-            "result_kind": result_kind,
             "event_kind": event_kind,
             "start_infer_time": start_infer_time,
             "end_infer_time": end_infer_time,
-            "result_status": result_status,
-            # make sure we can write apostrophes (ML-7535)
-            "result_extra_data": """{}""",
             event_value_key: event_value,
+            **extra_kwargs,
         }
         return data
 
@@ -149,7 +153,8 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             tsdb_client.write_application_event(
                 self._generate_event(
                     endpoint_id=mep_uid, event_name="metric1", event_kind="metric"
-                ),kind = mm_constants.WriterEventKind.METRIC
+                ),
+                kind=mm_constants.WriterEventKind.METRIC,
             )
             tsdb_client.write_application_event(
                 self._generate_event(endpoint_id=mep2_uid, event_name="result3")
