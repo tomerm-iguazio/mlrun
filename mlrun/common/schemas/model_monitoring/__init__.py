@@ -27,6 +27,7 @@ from .constants import (
     FileTargetKind,
     FunctionURI,
     MetricData,
+    ModelEndpointCreationStrategy,
     ModelEndpointMonitoringMetricType,
     ModelEndpointSchema,
     ModelEndpointTarget,
