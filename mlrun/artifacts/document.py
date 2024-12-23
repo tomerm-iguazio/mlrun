@@ -39,8 +39,6 @@ class DocumentLoaderSpec(ModelObj):
         src_name (str): The name of the source attribute to pass to the loader class.
         kwargs (Optional[dict]): Additional keyword arguments to pass to the loader class.
 
-    Methods:
-        make_loader(src_path): Creates an instance of the loader class with the specified source path.
     """
 
     _dict_fields = ["loader_class_name", "src_name", "kwargs"]
@@ -58,6 +56,19 @@ class DocumentLoaderSpec(ModelObj):
             loader_class_name (str): The name of the loader class to use.
             src_name (str): The source name for the document.
             kwargs (Optional[dict]): Additional keyword arguments to pass to the loader class.
+
+        Example:
+            >>> # Create a loader specification for PDF documents
+            >>> loader_spec = DocumentLoaderSpec(
+            ...     loader_class_name="langchain_community.document_loaders.PDFLoader",
+            ...     src_name="file_path",
+            ...     kwargs={"extract_images": True},
+            ... )
+            >>> # Create a loader instance for a specific PDF file
+            >>> pdf_loader = loader_spec.make_loader("/path/to/document.pdf")
+            >>> # Load the documents
+            >>> documents = pdf_loader.load()
+
         """
         self.loader_class_name = loader_class_name
         self.src_name = src_name
@@ -78,15 +89,59 @@ class MLRunLoader:
     A factory class for creating instances of a dynamically defined document loader.
 
     Args:
-        artifact_key (str): The key for the artifact to be logged.It can include '%%' which will be replaced
-        by a hex-encoded version of the source path.
+        artifact_key (str, optional): The key for the artifact to be logged. Special characters and symbols
+            not valid in artifact names will be encoded as their hexadecimal representation. The '%%' pattern
+            in the key will be replaced by the hex-encoded version of the source path. Defaults to "doc%%".
         local_path (str): The source path of the document to be loaded.
         loader_spec (DocumentLoaderSpec): Specification for the document loader.
-        producer (Optional[Union[MlrunProject, str, MLClientCtx]], optional): The producer of the document
+        producer (Optional[Union[MlrunProject, str, MLClientCtx]], optional): The producer of the document.
+                                If not specified, will try to get the current MLRun context or project.
+                                Defaults to None.
         upload (bool, optional): Flag indicating whether to upload the document.
+        labels (Optional[Dict[str, str]], optional): Key-value labels to attach to the artifact. Defaults to None.
+        tag (str, optional): Version tag for the artifact. Defaults to "".
 
     Returns:
         DynamicDocumentLoader: An instance of a dynamically defined subclass of BaseLoader.
+
+    Example:
+        >>> # Create a document loader specification
+        >>> loader_spec = DocumentLoaderSpec(
+        ...     loader_class_name="langchain_community.document_loaders.TextLoader",
+        ...     src_name="file_path",
+        ... )
+        >>> # Create a basic loader for a single file
+        >>> loader = MLRunLoader(
+        ...     source_path="/path/to/document.txt",
+        ...     loader_spec=loader_spec,
+        ...     artifact_key="my_doc",
+        ...     producer=project,
+        ...     upload=True,
+        ... )
+        >>> documents = loader.load()
+        >>> # Create a loader with auto-generated keys
+        >>> loader = MLRunLoader(
+        ...     source_path="/path/to/document.txt",
+        ...     loader_spec=loader_spec,
+        ...     artifact_key="doc%%",  # %% will be replaced with encoded path
+        ...     producer=project,
+        ... )
+        >>> documents = loader.load()
+        >>> # Use with DirectoryLoader
+        >>> from langchain_community.document_loaders import DirectoryLoader
+        >>> dir_loader = DirectoryLoader(
+        ...     "/path/to/directory",
+        ...     glob="**/*.txt",
+        ...     loader_cls=MLRunLoader,
+        ...     loader_kwargs={
+        ...         "loader_spec": loader_spec,
+        ...         "artifact_key": "doc%%",
+        ...         "producer": project,
+        ...         "upload": True,
+        ...     },
+        ... )
+        >>> documents = dir_loader.load()
+
     """
 
     def __new__(
@@ -96,6 +151,8 @@ class MLRunLoader:
         artifact_key="doc%%",
         producer: Optional[Union["MlrunProject", str, "MLClientCtx"]] = None,  # noqa: F821
         upload: bool = False,
+        tag: str = "",
+        labels: Optional[dict[str, str]] = None,
     ):
         # Dynamically import BaseLoader
         from langchain_community.document_loaders.base import BaseLoader
@@ -108,6 +165,8 @@ class MLRunLoader:
                 artifact_key,
                 producer,
                 upload,
+                tag,
+                labels,
             ):
                 self.producer = producer
                 self.artifact_key = (
@@ -118,6 +177,8 @@ class MLRunLoader:
                 self.loader_spec = loader_spec
                 self.local_path = local_path
                 self.upload = upload
+                self.tag = tag
+                self.labels = labels
 
                 # Resolve the producer
                 if not self.producer:
@@ -131,9 +192,11 @@ class MLRunLoader:
                     document_loader_spec=self.loader_spec,
                     local_path=self.local_path,
                     upload=self.upload,
+                    labels=self.labels,
+                    tag=self.tag,
                 )
                 res = artifact.to_langchain_documents()
-                yield res[0]
+                return res
 
         # Return an instance of the dynamically defined subclass
         instance = DynamicDocumentLoader(
@@ -142,6 +205,8 @@ class MLRunLoader:
             loader_spec=loader_spec,
             producer=producer,
             upload=upload,
+            tag=tag,
+            labels=labels,
         )
         return instance
 
@@ -178,11 +243,6 @@ class MLRunLoader:
 class DocumentArtifact(Artifact):
     """
     A specific artifact class inheriting from generic artifact, used to maintain Document meta-data.
-
-    Methods:
-        to_langchain_documents(splitter): Create LC documents from the artifact.
-        collection_add(collection_id): Add a collection ID to the artifact.
-        collection_remove(collection_id): Remove a collection ID from the artifact.
     """
 
     class DocumentArtifactSpec(ArtifactSpec):
@@ -205,10 +265,6 @@ class DocumentArtifact(Artifact):
             self.collections = collections if collections is not None else {}
             self.original_source = original_source
 
-    """
-    A specific artifact class inheriting from generic artifact, used to maintain Document meta-data.
-    """
-
     kind = "document"
 
     METADATA_SOURCE_KEY = "source"
@@ -216,6 +272,9 @@ class DocumentArtifact(Artifact):
     METADATA_CHUNK_KEY = "mlrun_chunk"
     METADATA_ARTIFACT_URI_KEY = "mlrun_object_uri"
     METADATA_ARTIFACT_TARGET_PATH_KEY = "mlrun_target_path"
+    METADATA_ARTIFACT_TAG = "mlrun_tag"
+    METADATA_ARTIFACT_KEY = "mlrun_key"
+    METADATA_ARTIFACT_PROJECT = "mlrun_project"
 
     def __init__(
         self,
@@ -242,6 +301,7 @@ class DocumentArtifact(Artifact):
         )
 
     def get_source(self):
+        """Get the source URI for this artifact."""
         return generate_artifact_uri(self.metadata.project, self.spec.db_key)
 
     def to_langchain_documents(
@@ -277,6 +337,7 @@ class DocumentArtifact(Artifact):
             )
 
         results = []
+        idx = 0
         for document in documents:
             if splitter:
                 texts = splitter.split_text(document.page_content)
@@ -288,21 +349,26 @@ class DocumentArtifact(Artifact):
             metadata[self.METADATA_ORIGINAL_SOURCE_KEY] = self.spec.original_source
             metadata[self.METADATA_SOURCE_KEY] = self.get_source()
             metadata[self.METADATA_ARTIFACT_URI_KEY] = self.uri
+            metadata[self.METADATA_ARTIFACT_TAG] = self.tag or "latest"
+            metadata[self.METADATA_ARTIFACT_KEY] = self.key
+            metadata[self.METADATA_ARTIFACT_PROJECT] = self.metadata.project
+
             if self.get_target_path():
                 metadata[self.METADATA_ARTIFACT_TARGET_PATH_KEY] = (
                     self.get_target_path()
                 )
 
-            for idx, text in enumerate(texts):
+            for text in texts:
                 metadata[self.METADATA_CHUNK_KEY] = str(idx)
                 doc = Document(
                     page_content=text,
                     metadata=metadata.copy(),
                 )
                 results.append(doc)
+                idx = idx + 1
         return results
 
-    def collection_add(self, collection_id: str) -> None:
+    def collection_add(self, collection_id: str) -> bool:
         """
         Add a collection ID to the artifact's collection list.
 
@@ -317,8 +383,10 @@ class DocumentArtifact(Artifact):
         """
         if collection_id not in self.spec.collections:
             self.spec.collections[collection_id] = "1"
+            return True
+        return False
 
-    def collection_remove(self, collection_id: str) -> None:
+    def collection_remove(self, collection_id: str) -> bool:
         """
         Remove a collection ID from the artifact's collection list.
 
@@ -332,3 +400,5 @@ class DocumentArtifact(Artifact):
         """
         if collection_id in self.spec.collections:
             self.spec.collections.pop(collection_id)
+            return True
+        return False

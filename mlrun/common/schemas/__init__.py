@@ -14,6 +14,7 @@
 
 from .alert import (
     AlertActivation,
+    AlertActivations,
     AlertActiveState,
     AlertConfig,
     AlertNotification,
@@ -145,8 +146,10 @@ from .model_monitoring import (
     GrafanaTable,
     GrafanaTimeSeriesTarget,
     ModelEndpoint,
+    ModelEndpointCreationStrategy,
     ModelEndpointList,
     ModelEndpointMetadata,
+    ModelEndpointSchema,
     ModelEndpointSpec,
     ModelEndpointStatus,
     ModelMonitoringMode,

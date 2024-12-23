@@ -44,6 +44,7 @@ class ModelEndpointSchema(MonitoringStrEnum):
     FUNCTION_TAG = "function_tag"
     FUNCTION_UID = "function_uid"
     MODEL_NAME = "model_name"
+    MODEL_DB_KEY = "model_db_key"
     MODEL_TAG = "model_tag"
     MODEL_CLASS = "model_class"
     MODEL_UID = "model_uid"
@@ -68,6 +69,12 @@ class ModelEndpointSchema(MonitoringStrEnum):
     ERROR_COUNT = "error_count"
     CURRENT_STATS = "current_stats"
     DRIFT_MEASURES = "drift_measures"
+
+
+class ModelEndpointCreationStrategy(MonitoringStrEnum):
+    INPLACE = "inplace"
+    ARCHIVE = "archive"
+    OVERWRITE = "overwrite"
 
 
 class EventFieldType:

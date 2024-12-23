@@ -136,7 +136,7 @@ default_config = {
         },
     },
     "object_retentions": {
-        "alert_activation": 14 * 7,  # days
+        "alert_activations": 14 * 7,  # days
     },
     # A safety margin to account for delays
     # This ensures that extra partitions are available beyond the specified retention period
@@ -160,6 +160,7 @@ default_config = {
         # migration from artifacts to artifacts_v2 is done in batches, and requires a state file to keep track of the
         # migration progress.
         "artifact_migration_batch_size": 200,
+        "artifact_migration_v9_batch_size": 30000,
         "artifact_migration_state_file_path": "./db/_artifact_migration_state.json",
         "datasets": {
             "max_preview_columns": 100,
@@ -232,6 +233,7 @@ default_config = {
                 "delete_function": "900",
             },
             "runtimes": {"dask": "600"},
+            "push_notifications": "60",
         },
     },
     "function": {
@@ -643,7 +645,7 @@ default_config = {
             "auto_add_project_secrets": True,
             "project_secret_name": "mlrun-project-secrets-{project}",
             "auth_secret_name": "mlrun-auth-secrets.{hashed_access_key}",
-            "env_variable_prefix": "MLRUN_K8S_SECRET__",
+            "env_variable_prefix": "",
             "global_function_env_secret_name": None,
         },
     },
@@ -823,6 +825,7 @@ default_config = {
             "refresh_interval": "30",
         }
     },
+    "system_id": "",
 }
 _is_running_as_api = None
 

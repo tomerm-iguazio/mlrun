@@ -35,6 +35,7 @@ from sqlalchemy import (
     case,
     delete,
     distinct,
+    exists,
     func,
     or_,
     select,
@@ -43,6 +44,7 @@ from sqlalchemy import (
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.inspection import inspect
 from sqlalchemy.orm import Session, aliased
+from sqlalchemy.orm.attributes import flag_modified
 
 import mlrun
 import mlrun.common.constants as mlrun_constants
@@ -78,6 +80,7 @@ from mlrun.utils import (
     validate_tag_name,
 )
 
+import framework.constants
 import framework.db.session
 import framework.utils.helpers
 from framework.db.base import DBInterface
@@ -115,6 +118,7 @@ from framework.db.sqldb.models import (
     ProjectSummary,
     Run,
     Schedule,
+    SystemMetadata,
     TimeWindowTracker,
     _labeled,
     _tagged,
@@ -588,7 +592,7 @@ class SQLDB(DBInterface):
         always_overwrite=False,
     ) -> str:
         project = project or config.default_project
-        tag = tag or "latest"
+        tag = tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
 
         # handle link artifacts separately
         if artifact.get("kind") == mlrun.common.schemas.ArtifactCategories.link.value:
@@ -731,8 +735,13 @@ class SQLDB(DBInterface):
             )
 
         # we want to tag the artifact also as "latest" if it's the first time we store it
-        if tag != "latest":
-            self.tag_artifacts(session, "latest", [db_artifact], project)
+        if tag != mlrun.common.constants.RESERVED_TAG_NAME_LATEST:
+            self.tag_artifacts(
+                session,
+                mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+                [db_artifact],
+                project,
+            )
 
         return uid
 
@@ -819,14 +828,14 @@ class SQLDB(DBInterface):
         session,
         producer_id: str,
         project: typing.Optional[str] = None,
-        key_tag_iteration_pairs: list[tuple] = "",
+        artifact_identifiers: list[tuple] = "",
     ) -> ArtifactList:
         project = project or mlrun.mlconf.default_project
         artifact_records = self._find_artifacts_for_producer_id(
             session,
             producer_id=producer_id,
             project=project,
-            key_tag_iteration_pairs=key_tag_iteration_pairs,
+            artifact_identifiers=artifact_identifiers,
         )
 
         artifacts = ArtifactList()
@@ -857,13 +866,15 @@ class SQLDB(DBInterface):
         if producer_id:
             query = query.filter(ArtifactV2.producer_id == producer_id)
 
-        if tag == "latest" and uid:
+        if tag == mlrun.common.constants.RESERVED_TAG_NAME_LATEST and uid:
             # Make a best-effort attempt to find the "latest" tag. It will be present in the response if the
             # latest tag exists, otherwise, it will not be included.
             # This is due to 'latest' being a special case and is enriched in the client side
             latest_query = query.join(
                 ArtifactV2.Tag, ArtifactV2.Tag.obj_id == ArtifactV2.id
-            ).filter(ArtifactV2.Tag.name == "latest")
+            ).filter(
+                ArtifactV2.Tag.name == mlrun.common.constants.RESERVED_TAG_NAME_LATEST
+            )
             if latest_query.one_or_none():
                 enrich_tag = True
         elif tag:
@@ -897,7 +908,7 @@ class SQLDB(DBInterface):
 
             if fail:
                 if raise_on_not_found:
-                    artifact_uri = generate_artifact_uri(project, key, tag, iter)
+                    artifact_uri = generate_artifact_uri(project, key, tag, iter, uid)
                     raise mlrun.errors.MLRunNotFoundError(
                         f"Artifact {artifact_uri} not found"
                     )
@@ -1390,9 +1401,11 @@ class SQLDB(DBInterface):
         commit: bool = True,
     ):
         artifacts_ids = [artifact.id for artifact in artifacts]
+        # Delete all tags except the "latest" tag, or filter by specific tags if provided
         query = session.query(ArtifactV2.Tag).filter(
             ArtifactV2.Tag.project == project,
             ArtifactV2.Tag.obj_id.in_(artifacts_ids),
+            ArtifactV2.Tag.name != mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
         )
         if tags:
             query = query.filter(ArtifactV2.Tag.name.in_(tags))
@@ -1587,14 +1600,14 @@ class SQLDB(DBInterface):
         session: Session,
         producer_id: str,
         project: str,
-        key_tag_iteration_pairs: list[tuple] = "",
+        artifact_identifiers: list[tuple] = "",
     ) -> list[tuple[ArtifactV2, str]]:
         """
-        Find a producer's artifacts matching the given (key, tag, iteration) tuples.
+        Find a producer's artifacts matching the given (key, tag, iteration, uid) tuples.
         :param session:                 DB session
         :param producer_id:             The artifact producer ID to filter by
         :param project:                 Project name to filter by
-        :param key_tag_iteration_pairs: List of tuples of (key, tag, iteration)
+        :param artifact_identifiers: List of tuples of (key, tag, iteration, uid)
         :return: A list of tuples of (ArtifactV2, tag_name)
         """
         query = session.query(ArtifactV2, ArtifactV2.Tag.name)
@@ -1606,14 +1619,18 @@ class SQLDB(DBInterface):
         query = query.join(ArtifactV2.Tag, ArtifactV2.Tag.obj_id == ArtifactV2.id)
 
         tuples_filter = []
-        for key, tag, iteration in key_tag_iteration_pairs:
+        for key, tag, iteration, uid in artifact_identifiers:
             iteration = iteration or 0
-            tag = tag or "latest"
-            tuples_filter.append(
+            tag = tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
+            base_filter = (
                 (ArtifactV2.key == key)
                 & (ArtifactV2.Tag.name == tag)
                 & (ArtifactV2.iteration == iteration)
             )
+            # Add UID filter only if UID is not None
+            if uid is not None:
+                base_filter = base_filter & (ArtifactV2.uid == uid)
+            tuples_filter.append(base_filter)
 
         query = query.filter(or_(*tuples_filter))
         return query.all()
@@ -1721,7 +1738,7 @@ class SQLDB(DBInterface):
         art.struct = artifact
         self._upsert(session, [art])
         if tag_artifact:
-            tag = tag or "latest"
+            tag = tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
 
             # we want to ensure that the tag is valid before storing,
             # if it isn't, MLRunInvalidArgumentError will be raised
@@ -1731,8 +1748,13 @@ class SQLDB(DBInterface):
             # updates we are doing to the metadata of the artifact (like updating the labels) and we don't want those
             # changes to be reflected in the "latest" tag, as this in not actual the "latest" version of the artifact
             # which was produced by the user
-            if not existed and tag != "latest":
-                self._tag_artifacts_v1(session, [art], project, "latest")
+            if not existed and tag != mlrun.common.constants.RESERVED_TAG_NAME_LATEST:
+                self._tag_artifacts_v1(
+                    session,
+                    [art],
+                    project,
+                    mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+                )
 
     def read_artifact_v1(self, session, key, tag="", iter=None, project=""):
         """
@@ -1860,6 +1882,105 @@ class SQLDB(DBInterface):
         artifact.pop("tag", None)
         return updated, key, labels
 
+    def _update_artifact_latest_tag_on_deletion(self, session, object_record):
+        """Update the 'latest' tag for an ArtifactV2 object, moving it to the most recent artifact if necessary."""
+
+        # Step 1: Find the "latest" tag
+        latest_tag = self._find_artifact_latest_tag(session, object_record)
+
+        if not latest_tag:
+            logger.debug(
+                "No 'latest' tag found for artifact",
+                artifact_uid=object_record.uid,
+            )
+            return
+
+        # Check if we should check for other 'latest' tags (only when iteration != 0) for hyperparameters
+        if object_record.iteration != 0:
+            # Step 2: Check if there are other "latest" tags in the other iterations
+            other_latest = self._has_latest_tag_in_different_iterations(
+                session, object_record
+            )
+
+            if other_latest:
+                logger.debug(
+                    "'latest' tag exists in other iterations for the same producer_id. "
+                    "Not moving the 'latest' tag",
+                    artifact_uid=object_record.uid,
+                    producer_id=object_record.producer_id,
+                )
+                return
+
+        # Step 3: Move the "latest" tag to the most recently updated artifact with the same key
+        most_recent_artifact_id = self._find_previous_most_recent_artifact_id(
+            session, object_record
+        )
+
+        if most_recent_artifact_id:
+            logger.debug(
+                "Moving 'latest' tag to the most recent artifact",
+                artifact_id=most_recent_artifact_id,
+            )
+            latest_tag.obj_id = most_recent_artifact_id
+            session.add(latest_tag)
+        else:
+            logger.warning(
+                "No recent artifact found to move 'latest' tag",
+                artifact_uid=object_record.uid,
+            )
+
+    @staticmethod
+    def _find_artifact_latest_tag(session, object_record):
+        """Find the 'latest' tag for an artifact object."""
+        return (
+            session.query(ArtifactV2.Tag)
+            .filter(
+                ArtifactV2.Tag.obj_id == object_record.id,
+                ArtifactV2.Tag.name == mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+                ArtifactV2.Tag.project == object_record.project,
+            )
+            .one_or_none()
+        )
+
+    @staticmethod
+    def _has_latest_tag_in_different_iterations(session, object_record):
+        """Check if other iterations for the same producer_id have the 'latest' tag."""
+        return (
+            session.query(
+                exists().where(
+                    ArtifactV2.Tag.obj_id != object_record.id,
+                    ArtifactV2.Tag.name
+                    == mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+                    ArtifactV2.Tag.project == object_record.project,
+                    ArtifactV2.Tag.obj_name == object_record.key,
+                    ArtifactV2.Tag.obj_id.in_(
+                        session.query(ArtifactV2.id).filter(
+                            ArtifactV2.producer_id == object_record.producer_id,
+                            ArtifactV2.iteration != object_record.iteration,
+                            ArtifactV2.project == object_record.project,
+                            ArtifactV2.key == object_record.key,
+                        )
+                    ),
+                )
+            ).scalar()  # Returns True if exists, False otherwise
+        )
+
+    @staticmethod
+    def _find_previous_most_recent_artifact_id(session, object_record):
+        """Find the most recent artifact id based on the update timestamp, excluding the current artifact."""
+        query = session.query(ArtifactV2.id).filter(
+            ArtifactV2.id != object_record.id,
+            ArtifactV2.project == object_record.project,
+            ArtifactV2.key == object_record.key,
+            ArtifactV2.best_iteration,
+        )
+
+        # Return the ID of the most recent artifact based on the update timestamp.
+        # Since `.first()` returns a tuple when selecting specific columns (e.g., artifact ID),
+        # we access the first element of the tuple to retrieve the ID.
+        result = query.order_by(ArtifactV2.updated.desc()).first()
+        return result[0] if result else None
+
     # ---- Functions ----
     @retry_on_conflict
     def store_function(
@@ -1881,7 +2002,11 @@ class SQLDB(DBInterface):
         )
         function = deepcopy(function)
         project = project or config.default_project
-        tag = tag or get_in(function, "metadata.tag") or "latest"
+        tag = (
+            tag
+            or get_in(function, "metadata.tag")
+            or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
+        )
         hash_key = fill_function_hash(function, tag)
 
         # clear tag from object in case another function will "take" that tag
@@ -2054,10 +2179,11 @@ class SQLDB(DBInterface):
             struct = function.struct
             for key, val in updates.items():
                 update_in(struct, key, val)
-            function.kind = struct.pop("kind", None)
+            function.kind = (
+                struct.pop("kind", None) if not function.kind else function.kind
+            )
             function.struct = struct
             self._upsert(session, [function])
-            return function.struct
 
     def update_function_external_invocation_url(
         self,
@@ -2080,7 +2206,7 @@ class SQLDB(DBInterface):
             session,
             normalized_function_name,
             project,
-            tag=tag or "latest",
+            tag=tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
             hash_key=hash_key,
         )
         if not function:
@@ -2139,7 +2265,7 @@ class SQLDB(DBInterface):
         format_: str = mlrun.common.formatters.FunctionFormat.full,
     ):
         project = project or config.default_project
-        computed_tag = tag or "latest"
+        computed_tag = tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
 
         obj, uid = self._get_function_db_object(session, name, project, tag, hash_key)
         tag_function_uid = None if not tag and hash_key else uid
@@ -2178,7 +2304,7 @@ class SQLDB(DBInterface):
     def _get_function_uid(
         self, session, name: str, tag: str, hash_key: str, project: str
     ):
-        computed_tag = tag or "latest"
+        computed_tag = tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
         if not tag and hash_key:
             return hash_key
         else:
@@ -2942,7 +3068,11 @@ class SQLDB(DBInterface):
 
     async def get_project_resources_counters(
         self,
+        projects_with_creation_time: list[tuple[str, datetime]],
     ) -> tuple[
+        dict[str, int],
+        dict[str, int],
+        dict[str, int],
         dict[str, int],
         dict[str, int],
         dict[str, int],
@@ -2974,6 +3104,11 @@ class SQLDB(DBInterface):
                 framework.db.session.run_function_with_new_db_session,
                 self._calculate_runs_counters,
             ),
+            fastapi.concurrency.run_in_threadpool(
+                framework.db.session.run_function_with_new_db_session,
+                self._calculate_alert_activations_counters,
+                projects_with_creation_time,
+            ),
         )
         (
             project_to_files_count,
@@ -2989,6 +3124,11 @@ class SQLDB(DBInterface):
                 project_to_recent_failed_runs_count,
                 project_to_running_runs_count,
             ),
+            (
+                project_to_endpoint_alerts_count,
+                project_to_job_alerts_count,
+                project_to_other_alerts_count,
+            ),
         ) = results
         return (
             project_to_files_count,
@@ -3000,6 +3140,9 @@ class SQLDB(DBInterface):
             project_to_recent_completed_runs_count,
             project_to_recent_failed_runs_count,
             project_to_running_runs_count,
+            project_to_endpoint_alerts_count,
+            project_to_job_alerts_count,
+            project_to_other_alerts_count,
         )
 
     @staticmethod
@@ -3185,6 +3328,92 @@ class SQLDB(DBInterface):
             project_to_running_runs_count,
         )
 
+    def _calculate_alert_activations_counters(
+        self,
+        session,
+        projects_with_creation_time: list[tuple[str, datetime]],
+    ) -> tuple[
+        dict[str, int],
+        dict[str, int],
+        dict[str, int],
+    ]:
+        project_to_endpoint_alerts_count = collections.defaultdict(int)
+        project_to_job_alerts_count = collections.defaultdict(int)
+        project_to_other_alerts_count = collections.defaultdict(int)
+
+        last_day = mlrun.utils.datetime_now() - timedelta(hours=24)
+
+        # construct a base query to count different types of alert activations, labels are added to improve readability
+        query = session.query(
+            AlertActivation.project,
+            func.count(
+                case(
+                    (
+                        AlertActivation.entity_kind
+                        == mlrun.common.schemas.alert.EventEntityKind.MODEL_ENDPOINT_RESULT,
+                        1,
+                    )
+                )
+            ).label("model_endpoint_alerts_count"),
+            func.count(
+                case(
+                    (
+                        AlertActivation.entity_kind
+                        == mlrun.common.schemas.alert.EventEntityKind.JOB,
+                        1,
+                    )
+                )
+            ).label("job_alerts_count"),
+            func.count(
+                case(
+                    (
+                        AlertActivation.entity_kind.not_in(
+                            [
+                                mlrun.common.schemas.alert.EventEntityKind.MODEL_ENDPOINT_RESULT,
+                                mlrun.common.schemas.alert.EventEntityKind.JOB,
+                            ]
+                        ),
+                        1,
+                    )
+                )
+            ).label("other_alerts_count"),
+        )
+
+        # filter by project, creation time, and activations within the last 24 hours
+        query_results = (
+            self._apply_alert_activation_project_filters(
+                query, projects_with_creation_time
+            )
+            .filter(AlertActivation.activation_time > last_day)
+            .group_by(AlertActivation.project)
+            .all()
+        )
+
+        for project, endpoint_counter, job_counter, other_counter in query_results:
+            project_to_endpoint_alerts_count[project] = endpoint_counter
+            project_to_job_alerts_count[project] = job_counter
+            project_to_other_alerts_count[project] = other_counter
+
+        return (
+            project_to_endpoint_alerts_count,
+            project_to_job_alerts_count,
+            project_to_other_alerts_count,
+        )
+
+    @staticmethod
+    def _apply_alert_activation_project_filters(
+        query: sqlalchemy.orm.query.Query,
+        projects_with_creation_time: list[tuple[str, datetime]],
+    ) -> sqlalchemy.orm.query.Query:
+        project_filter_conditions = [
+            and_(
+                AlertActivation.project == project,
+                AlertActivation.activation_time > created,
+            )
+            for project, created in projects_with_creation_time
+        ]
+        return query.filter(or_(*project_filter_conditions))
+
     def _update_project_record_from_project(
         self,
         session: Session,
@@ -3326,7 +3555,7 @@ class SQLDB(DBInterface):
     ):
         kwargs = {obj_name_attribute: name, "project": project}
         query = self._query(session, cls, **kwargs)
-        computed_tag = tag or "latest"
+        computed_tag = tag or mlrun.common.constants.RESERVED_TAG_NAME_LATEST
         object_tag_uid = None
         if tag or not uid:
             object_tag_uid = self._resolve_class_tag_uid(
@@ -3448,21 +3677,30 @@ class SQLDB(DBInterface):
         session,
         project: str,
         name: str,
-        function_name: str,
+        function_name: typing.Optional[str] = None,
+        function_tag: typing.Optional[str] = None,
         uid: typing.Optional[str] = None,
     ) -> typing.Union[ModelEndpoint, None]:
+        self._check_model_endpoint_params(uid, function_name, function_tag)
         if uid:
             mep_record = self._get_class_instance_by_uid(
                 session, ModelEndpoint, name, project, uid
             )
         else:
             mep_record = self._get_mep_latest_instance(
-                session, ModelEndpoint, name, function_name, project
+                session, ModelEndpoint, name, function_name, project, function_tag
             )
         if mep_record:
             return mep_record
         else:
             return None
+
+    @staticmethod
+    def _check_model_endpoint_params(uid: str, function_name: str, function_tag: str):
+        if not uid and (not function_name or not function_tag):
+            raise mlrun.errors.MLRunNotFoundError(
+                "Either uid or function_name and function_tag must be provided"
+            )
 
     def _get_records_to_tags_map(self, session, cls, project, tag, name=None):
         # Find object IDs by tag, project and object-name (which is a like query)
@@ -4604,11 +4842,13 @@ class SQLDB(DBInterface):
             # get the object id from the object record
             object_id = object_record.id
 
+            if cls == ArtifactV2 and commit:
+                # TODO: Handle the case when commit=False (e.g., deleting multiple artifact keys)
+                self._update_artifact_latest_tag_on_deletion(session, object_record)
+
         if object_id:
             if not commit:
                 return "id", object_id
-            # deleting tags, because in sqlite the relationships aren't necessarily cascading
-            self._delete(session, cls.Tag, obj_id=object_id)
             self._delete(session, cls, id=object_id)
         else:
             if not commit:
@@ -4616,9 +4856,7 @@ class SQLDB(DBInterface):
                     return "name", obj_name
                 return "key", obj_name
             # If we got here, neither tag nor uid were provided - delete all references by name.
-            # deleting tags, because in sqlite the relationships aren't necessarily cascading
             identifier = {"name": obj_name} if name else {"key": obj_name}
-            self._delete(session, cls.Tag, project=project, obj_name=obj_name)
             self._delete(session, cls, project=project, **identifier)
 
     def _resolve_class_tag_uid(self, session, cls, project, obj_name, tag_name):
@@ -4686,7 +4924,9 @@ class SQLDB(DBInterface):
         )
         return query.one_or_none()
 
-    def _get_mep_latest_instance(self, session, cls, name, function_name, project):
+    def _get_mep_latest_instance(
+        self, session, cls, name, function_name, project, function_tag
+    ):
         query = (
             session.query(cls)
             .join(cls.Tag)
@@ -4694,7 +4934,8 @@ class SQLDB(DBInterface):
                 cls.project == project,
                 cls.name == name,
                 cls.function_name == function_name,
-                cls.Tag.name == "latest",
+                cls.function_tag == function_tag,
+                cls.Tag.name == mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
             )
         )
 
@@ -4920,7 +5161,9 @@ class SQLDB(DBInterface):
         project: str,
         name: str,
         function_name: str,
+        function_tag: str,
         model_name: str,
+        model_tag: str,
         top_level: bool,
         labels: list[str],
         start: datetime,
@@ -4967,6 +5210,13 @@ class SQLDB(DBInterface):
                 key_filter=ModelEndpointSchema.FUNCTION_NAME,
                 filtered_values=[function_name],
             )
+        if function_tag:
+            query = self._filter_values(
+                query=query,
+                cls=model_endpoints_table,
+                key_filter=ModelEndpointSchema.FUNCTION_TAG,
+                filtered_values=[function_tag],
+            )
 
         if uids:
             query = self._filter_values(
@@ -4992,6 +5242,15 @@ class SQLDB(DBInterface):
                 cls=model_endpoints_table,
                 key_filter=ModelEndpointSchema.MODEL_NAME,
                 filtered_values=[model_name],
+                combined=False,
+            )
+
+        if model_tag:
+            query = self._filter_values(
+                query=query,
+                cls=model_endpoints_table,
+                key_filter=ModelEndpointSchema.MODEL_TAG,
+                filtered_values=[model_tag],
                 combined=False,
             )
 
@@ -5191,6 +5450,9 @@ class SQLDB(DBInterface):
             model_endpoint_record.created
         )
         model_endpoint_full_dict[ModelEndpointSchema.UID] = model_endpoint_record.uid
+        model_endpoint_full_dict[ModelEndpointSchema.FUNCTION_TAG] = (
+            model_endpoint_record.function_tag
+        )
         model_endpoint_full_dict = self._fill_model_endpoint_with_function_data(
             model_endpoint_record, model_endpoint_full_dict
         )
@@ -5225,12 +5487,6 @@ class SQLDB(DBInterface):
                     hash_key=function_full_dict.get("metadata", {}).get("hash"),
                 )
             )
-            curr_tag = model_endpoint_full_dict[ModelEndpointSchema.FUNCTION_TAG]
-            model_endpoint_full_dict[ModelEndpointSchema.FUNCTION_TAG] = (
-                curr_tag
-                if curr_tag in [tag.name for tag in model_endpoint_record.function.tags]
-                else None
-            )
         return model_endpoint_full_dict
 
     @staticmethod
@@ -5238,15 +5494,6 @@ class SQLDB(DBInterface):
         model_endpoint_record: ModelEndpoint, model_endpoint_full_dict: dict
     ) -> dict:
         if model_endpoint_record.model:
-            model_endpoint_full_dict[ModelEndpointSchema.MODEL_NAME] = (
-                model_endpoint_record.model.key
-            )
-            curr_tag = model_endpoint_full_dict[ModelEndpointSchema.MODEL_TAG]
-            model_endpoint_full_dict[ModelEndpointSchema.MODEL_TAG] = (
-                curr_tag
-                if curr_tag in [tag.name for tag in model_endpoint_record.model.tags]
-                else None
-            )
             model_artifact_uri = mlrun.datastore.get_store_uri(
                 kind=mlrun.utils.helpers.StorePrefix.Model,
                 uri=generate_artifact_uri(
@@ -5748,6 +5995,12 @@ class SQLDB(DBInterface):
         if not new_partitions:
             return
 
+        logger.info(
+            "Creating new partitions for table",
+            table_name=table_name,
+            new_partitions=new_partitions,
+        )
+
         alter_table_template = f"""
             ALTER TABLE {table_name}
             ADD PARTITION (
@@ -5827,6 +6080,29 @@ class SQLDB(DBInterface):
             ),
             {"table_name": table_name},
         ).scalar()
+
+    @staticmethod
+    def table_exist(
+        session: Session,
+        table_name: str,
+    ) -> bool:
+        """
+        Checks if a table exists in the current database schema.
+
+        :param session: SQLAlchemy session.
+        :param table_name: Name of the table to check.
+
+        :return: True if the table exists, False otherwise.
+        """
+        result = session.execute(
+            text(
+                "SELECT COUNT(*) "
+                "FROM information_schema.tables "
+                "WHERE TABLE_NAME = :table_name "
+            ),
+            {"table_name": table_name},
+        ).scalar()
+        return result > 0
 
     @staticmethod
     def _transform_alert_template_schema_to_record(
@@ -5947,13 +6223,9 @@ class SQLDB(DBInterface):
         session,
         alert_data: mlrun.common.schemas.AlertConfig,
         event_data: mlrun.common.schemas.Event,
-        notifications_states: list[mlrun.common.schemas.NotificationState],
-    ) -> Optional[str]:
+    ) -> int:
         extra_data = {
-            "notifications": [
-                notification.dict() for notification in notifications_states
-            ],
-            "criteria": alert_data.criteria.dict() if alert_data.criteria else None,
+            "criteria": alert_data.criteria.dict(),
         }
 
         # For JOB entities, construct entity_id as "name.uid" format
@@ -5976,17 +6248,18 @@ class SQLDB(DBInterface):
             data=extra_data,
         )
 
-        # if reset_policy is MANUAL, we need to keep id to be able to update number_of_events
-        # when the alert is reset
-        if alert_data.reset_policy == mlrun.common.schemas.alert.ResetPolicy.MANUAL:
-            return self._upsert_object_and_flush_to_get_field(
-                session, alert_activation_record, "id"
-            )
-        else:
-            # for auto reset policy reset_time is the same as the activation time
-            # for manual reset policy, we keep it empty until the alert is reset
+        # for auto reset policy reset_time is the same as the activation time
+        # for manual reset policy, we keep it empty until the alert is reset
+        if alert_data.reset_policy == mlrun.common.schemas.alert.ResetPolicy.AUTO:
             alert_activation_record.reset_time = alert_activation_record.activation_time
-            self._upsert(session, [alert_activation_record])
+
+        # we need to keep id to be able to update number_of_events for manual reset policy
+        # and to update notification state when notification is sent
+        # NOTE: activation time is truncated to milliseconds when being saved to the database as we use mysql.DATETIME
+        # example: 2024-12-18T16:06:09.083606+00:00 will be saved as 2024-12-18T16:06:09.084000+00:00
+        return self._upsert_object_and_flush_to_get_field(
+            session, alert_activation_record, "id"
+        )
 
     def update_alert_activation(
         self,
@@ -5994,18 +6267,37 @@ class SQLDB(DBInterface):
         activation_id: int,
         activation_time: datetime,
         number_of_events: Optional[int] = None,
+        notifications_states: Optional[
+            list[mlrun.common.schemas.NotificationState]
+        ] = None,
+        update_reset_time: bool = False,
     ):
         query = self._query(
             session, AlertActivation, id=activation_id, activation_time=activation_time
         )
         activation = query.one_or_none()
         if not activation:
-            raise mlrun.errors.MLRunNotFoundError(
-                f"Alert activation not found for id: {activation_id}"
-            )
+            # if the activation is not found, we try to find it again by id only
+            # (in case something happened with activation time)
+            # usually it won't really happen, but just stay in safe side
+            query = self._query(session, AlertActivation, id=activation_id)
+            activation = query.one_or_none()
+            if not activation:
+                raise mlrun.errors.MLRunNotFoundError(
+                    f"Alert activation not found for id: {activation_id}"
+                )
         if number_of_events:
             activation.number_of_events = number_of_events
-        activation.reset_time = mlrun.utils.now_date()
+        if update_reset_time:
+            activation.reset_time = mlrun.utils.now_date()
+        if notifications_states:
+            data = activation.data or {}
+            data["notifications"] = [
+                notification.dict() for notification in notifications_states
+            ]
+            activation.data = data
+            # is needed for proper update of JSON field
+            flag_modified(activation, "data")
         self._upsert(session, [activation])
 
     def list_alert_activations(
@@ -6031,15 +6323,9 @@ class SQLDB(DBInterface):
         # Filter alert activations for the project created after the project creation date,
         # excluding activations linked to any previous instances of the project.
         # TODO: reconsider this approach when we move alerts out of main MLRun db
-        project_filter_conditions = [
-            and_(
-                AlertActivation.project == project,
-                AlertActivation.activation_time > created,
-            )
-            for project, created in projects_with_creation_time
-        ]
-
-        query = query.filter(or_(*project_filter_conditions))
+        query = self._apply_alert_activation_project_filters(
+            query, projects_with_creation_time
+        )
 
         if name:
             query = query.filter(
@@ -6710,42 +6996,27 @@ class SQLDB(DBInterface):
         self,
         session,
         model_endpoint: mlrun.common.schemas.ModelEndpoint,
-        name: str,
-        function_name: str,
-        project: str,
     ) -> mlrun.common.schemas.ModelEndpoint:
+        if not model_endpoint.metadata.name or not model_endpoint.metadata.project:
+            raise mlrun.errors.MLRunInvalidArgumentError(
+                "Model endpoint name and project must be provided"
+            )
         logger.debug(
             "Storing Model Endpoint to DB",
-            name=name,
-            project=project,
             metadata=model_endpoint.metadata,
         )
-        body_name = model_endpoint.metadata.name
-        if body_name != name:
-            raise mlrun.errors.MLRunInvalidArgumentError(
-                f"Conflict between requested name and name in MEP body, MEP name is {name} while body_name is"
-                f" {body_name}"
-            )
-        body_project = model_endpoint.metadata.project
-        if body_project != project:
-            raise mlrun.errors.MLRunInvalidArgumentError(
-                f"Conflict between requested project and project in MEP body, MEP project is {project} "
-                f"while body_project is {body_project}"
-            )
-        body_function = model_endpoint.spec.function_name
-        if body_function != function_name:
-            raise mlrun.errors.MLRunInvalidArgumentError(
-                f"Conflict between requested function and function in MEP body, MEP function is {function_name} "
-                f"while body_function is {body_function}"
-            )
         current_time = datetime.now(timezone.utc)
         mep = ModelEndpoint(
-            name=name,
-            project=project,
+            name=model_endpoint.metadata.name,
+            project=model_endpoint.metadata.project,
             function_name=model_endpoint.spec.function_name,
             function_uid=model_endpoint.spec.function_uid,
+            function_tag=model_endpoint.spec.function_tag
+            or mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
             model_uid=model_endpoint.spec.model_uid,
             model_name=model_endpoint.spec.model_name,
+            model_tag=model_endpoint.spec.model_tag,
+            model_db_key=model_endpoint.spec.model_db_key,
             endpoint_type=model_endpoint.metadata.endpoint_type.value,
             created=current_time,
             updated=current_time,
@@ -6757,11 +7028,18 @@ class SQLDB(DBInterface):
         self.tag_objects_v2(
             session,
             [mep],
-            project,
-            "latest",
-            obj_name_attribute=["name", "function_name"],
+            model_endpoint.metadata.project,
+            mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+            obj_name_attribute=["name", "function_name", "function_tag"],
         )
-        mep_record = self._get_model_endpoint(session, project, name, function_name)
+        mep_record = self._get_model_endpoint(
+            session,
+            model_endpoint.metadata.project,
+            model_endpoint.metadata.name,
+            function_name=model_endpoint.spec.function_name,
+            function_tag=model_endpoint.spec.function_tag
+            or mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+        )
         return self._transform_model_endpoint_model_to_schema(mep_record)
 
     def get_model_endpoint(
@@ -6769,11 +7047,12 @@ class SQLDB(DBInterface):
         session,
         project: str,
         name: str,
-        function_name: str,
+        function_name: Optional[str] = None,
+        function_tag: typing.Optional[str] = None,
         uid: typing.Optional[str] = None,
     ) -> mlrun.common.schemas.ModelEndpoint:
         mep_record = self._get_model_endpoint(
-            session, project, name, function_name, uid
+            session, project, name, function_name, function_tag, uid
         )
         if not mep_record:
             raise mlrun.errors.MLRunNotFoundError(
@@ -6786,12 +7065,13 @@ class SQLDB(DBInterface):
         session,
         project: str,
         name: str,
-        function_name: str,
         attributes: dict,
+        function_name: Optional[str] = None,
+        function_tag: typing.Optional[str] = None,
         uid: typing.Optional[str] = None,
     ) -> mlrun.common.schemas.ModelEndpoint:
         mep_record = self._get_model_endpoint(
-            session, project, name, function_name, uid
+            session, project, name, function_name, function_tag, uid
         )
         updated = datetime.now(timezone.utc)
         attributes, schema_attr, labels = self._split_mep_update_attr(attributes)
@@ -6829,7 +7109,9 @@ class SQLDB(DBInterface):
         project: str,
         name: typing.Optional[str] = None,
         function_name: typing.Optional[str] = None,
+        function_tag: typing.Optional[str] = None,
         model_name: typing.Optional[str] = None,
+        model_tag: typing.Optional[str] = None,
         top_level: typing.Optional[bool] = None,
         labels: typing.Optional[list[str]] = None,
         start: typing.Optional[datetime] = None,
@@ -6838,7 +7120,7 @@ class SQLDB(DBInterface):
         latest_only: bool = False,
         offset: typing.Optional[int] = None,
         limit: typing.Optional[int] = None,
-    ) -> list[mlrun.common.schemas.ModelEndpoint]:
+    ) -> mlrun.common.schemas.ModelEndpointList:
         model_endpoints: list[mlrun.common.schemas.ModelEndpoint] = []
         for mep_record in self._find_model_endpoints(
             session=session,
@@ -6846,7 +7128,9 @@ class SQLDB(DBInterface):
             project=project,
             labels=labels,
             function_name=function_name,
+            function_tag=function_tag,
             model_name=model_name,
+            model_tag=model_tag,
             top_level=top_level,
             start=start,
             end=end,
@@ -6865,19 +7149,21 @@ class SQLDB(DBInterface):
         session,
         project: str,
         name: str,
-        function_name: str,
-        uid: str,
+        function_name: Optional[str] = None,
+        function_tag: typing.Optional[str] = None,
+        uid: typing.Optional[str] = None,
     ) -> None:
+        self._check_model_endpoint_params(uid, function_name, function_tag)
         logger.debug(
             "Removing model endpoint from db", project=project, name=name, uid=uid
         )
+
         if uid != "*":
             self._delete(
                 session,
                 ModelEndpoint,
                 project=project,
                 name=name,
-                function_name=function_name,
                 uid=uid,
             )
         else:
@@ -6887,24 +7173,41 @@ class SQLDB(DBInterface):
                 project=project,
                 name=name,
                 function_name=function_name,
+                function_tag=function_tag,
             )
 
     def delete_model_endpoints(
         self,
         session: Session,
         project: str,
-        names: typing.Optional[typing.Union[str, list[str]]] = None,
+        uids: typing.Optional[list[str]] = None,
     ) -> None:
-        logger.debug("Removing model endpoints from db", project=project, name=names)
+        logger.debug("Removing model endpoints from db", project=project)
 
         self._delete_multi_objects(
             session=session,
             main_table=ModelEndpoint,
             related_tables=[ModelEndpoint.Tag, ModelEndpoint.Label],
             project=project,
-            main_table_identifier=ModelEndpoint.name if names else None,
-            main_table_identifier_values=names,
+            main_table_identifier=ModelEndpoint.uid if uids else None,
+            main_table_identifier_values=uids,
         )
+
+    def get_system_id(self, session: Session) -> typing.Optional[str]:
+        system_id_record = (
+            self._query(session, SystemMetadata)
+            .filter(SystemMetadata.key == framework.constants.SYSTEM_ID_KEY)
+            .one_or_none()
+        )
+        return system_id_record.value if system_id_record else None
+
+    def store_system_id(self, session: Session, system_id: str):
+        logger.debug("Storing a new system id in DB", system_id=system_id)
+
+        system_id_record = SystemMetadata(
+            key=framework.constants.SYSTEM_ID_KEY, value=system_id
+        )
+        self._upsert(session, [system_id_record])
 
     # ---- Utils ----
     def delete_table_records(

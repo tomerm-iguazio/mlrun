@@ -53,6 +53,7 @@ EndpointIDAnnotation = Annotated[
 async def create_model_endpoint(
     model_endpoint: schemas.ModelEndpoint,
     project: ProjectAnnotation,
+    creation_strategy: mm_constants.ModelEndpointCreationStrategy,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
 ) -> schemas.ModelEndpoint:
@@ -60,6 +61,16 @@ async def create_model_endpoint(
     Create a new model endpoint record in the DB.
     :param model_endpoint:  The model endpoint object.
     :param project:         The name of the project.
+    :param creation_strategy: Strategy for creating or updating the model endpoint:
+        * **overwrite**:
+        1. If model endpoints with the same name exist, delete the `latest` one.
+        2. Create a new model endpoint entry and set it as `latest`.
+        * **inplace** (default):
+        1. If model endpoints with the same name exist, update the `latest` entry.
+        2. Otherwise, create a new entry.
+        * **archive**:
+        1. If model endpoints with the same name exist, preserve them.
+        2. Create a new model endpoint with the same name and set it to `latest`.
     :param auth_info:       The auth info of the request.
     :param db_session:      A session that manages the current dialog with the database.
 
@@ -68,6 +79,7 @@ async def create_model_endpoint(
     logger.info(
         "Creating Model Endpoint record",
         model_endpoint_metadata=model_endpoint.metadata,
+        creation_strategy=creation_strategy,
     )
     if project != model_endpoint.metadata.project:
         raise MLRunInvalidArgumentError(
@@ -91,6 +103,7 @@ async def create_model_endpoint(
         services.api.crud.ModelEndpoints().create_model_endpoint,
         db_session=db_session,
         model_endpoint=model_endpoint,
+        creation_strategy=creation_strategy,
     )
 
 
@@ -127,15 +140,6 @@ async def patch_model_endpoint(
             f"'{model_endpoint.metadata.project}'. User is not allowed to patch model endpoint in a different project."
         )
 
-    if (
-        not model_endpoint.metadata.project
-        or not model_endpoint.metadata.name
-        or (not model_endpoint.metadata.uid and not model_endpoint.spec.function_name)
-    ):
-        raise MLRunInvalidArgumentError(
-            "In order to patch Model endpoint, it must have project, name and either uid or function"
-        )
-
     await (
         framework.utils.auth.verifier.AuthVerifier().query_project_resource_permissions(
             resource_type=schemas.AuthorizationResourceTypes.model_endpoint,
@@ -152,6 +156,7 @@ async def patch_model_endpoint(
         name=model_endpoint.metadata.name,
         project=project,
         function_name=model_endpoint.spec.function_name,
+        function_tag=model_endpoint.spec.function_tag,
         endpoint_id=model_endpoint.metadata.uid,
         attributes=attributes,
         db_session=db_session,
@@ -166,6 +171,7 @@ async def delete_model_endpoint(
     project: ProjectAnnotation,
     name: str,
     function_name: Optional[str] = None,
+    function_tag: Optional[str] = None,
     endpoint_id: typing.Optional[EndpointIDAnnotation] = "*",
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     db_session: Session = Depends(framework.api.deps.get_db_session),
@@ -175,6 +181,7 @@ async def delete_model_endpoint(
     :param project:         The name of the project.
     :param name:            The model endpoint name.
     :param function_name:   The name of the function.
+    :param function_tag:    The tag of the function.
     :param endpoint_id:     The unique id of the model endpoint.
     :param auth_info:       The auth info of the request.
     :param db_session:      A session that manages the current dialog with the database.
@@ -195,6 +202,7 @@ async def delete_model_endpoint(
         project=project,
         name=name,
         function_name=function_name,
+        function_tag=function_tag,
         db_session=db_session,
         endpoint_id=endpoint_id,
     )
@@ -209,7 +217,9 @@ async def list_model_endpoints(
     project: ProjectAnnotation,
     name: Optional[str] = None,
     model_name: Optional[str] = None,
+    model_tag: Optional[str] = None,
     function_name: Optional[str] = None,
+    function_tag: Optional[str] = None,
     labels: list[str] = Query([], alias="label"),
     start: Optional[datetime] = None,
     end: Optional[datetime] = None,
@@ -227,6 +237,7 @@ async def list_model_endpoints(
     :param name:            The model endpoint name.
     :param model_name:      The model name.
     :param function_name:   The function name.
+    :param function_tag:    The function tag.
     :param labels:          The labels of the model endpoint.
     :param start:           The start time to filter by.Corresponding to the `created` field.
     :param end:             The end time to filter by. Corresponding to the `created` field.
@@ -250,7 +261,9 @@ async def list_model_endpoints(
         project=project,
         name=name,
         model_name=model_name,
+        model_tag=model_tag,
         function_name=function_name,
+        function_tag=function_tag,
         labels=labels,
         start=start,
         end=end,
@@ -298,6 +311,7 @@ async def get_model_endpoint(
     name: str,
     project: ProjectAnnotation,
     function_name: Optional[str] = None,
+    function_tag: Optional[str] = None,
     endpoint_id: Optional[EndpointIDAnnotation] = None,
     tsdb_metrics: bool = True,
     feature_analysis: bool = False,
@@ -310,6 +324,7 @@ async def get_model_endpoint(
     :param name:                The model endpoint name.
     :param project:             The name of the project.
     :param function_name:       The name of the function.
+    :param function_tag:        The tag of the function.
     :param endpoint_id:         The unique id of the model endpoint.
     :param tsdb_metrics:        Whether to include metrics from the time series DB.
     :param feature_analysis:    Whether to include feature analysis.
@@ -326,6 +341,7 @@ async def get_model_endpoint(
         name=name,
         project=project,
         function_name=function_name,
+        function_tag=function_tag,
         endpoint_id=endpoint_id,
         feature_analysis=feature_analysis,
         tsdb_metrics=tsdb_metrics,

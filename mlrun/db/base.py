@@ -23,6 +23,7 @@ import mlrun.common
 import mlrun.common.formatters
 import mlrun.common.runtimes.constants
 import mlrun.common.schemas
+import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.common.schemas.model_monitoring.model_endpoints as mm_endpoints
 import mlrun.model_monitoring
 
@@ -56,6 +57,15 @@ class RunDBInterface(ABC):
 
     @abstractmethod
     def abort_run(self, uid, project="", iter=0, timeout=45, status_text=""):
+        pass
+
+    @abstractmethod
+    def push_run_notifications(
+        self,
+        uid,
+        project="",
+        timeout=45,
+    ):
         pass
 
     @abstractmethod
@@ -370,7 +380,9 @@ class RunDBInterface(ABC):
         pass
 
     @abstractmethod
-    def get_project(self, name: str) -> mlrun.common.schemas.Project:
+    def get_project(
+        self, name: str
+    ) -> Union[mlrun.common.schemas.Project, "mlrun.MlrunProject"]:
         pass
 
     @abstractmethod
@@ -664,6 +676,9 @@ class RunDBInterface(ABC):
     def create_model_endpoint(
         self,
         model_endpoint: mlrun.common.schemas.ModelEndpoint,
+        creation_strategy: Optional[
+            mm_constants.ModelEndpointCreationStrategy
+        ] = mm_constants.ModelEndpointCreationStrategy.INPLACE,
     ) -> mlrun.common.schemas.ModelEndpoint:
         pass
 
@@ -672,8 +687,9 @@ class RunDBInterface(ABC):
         self,
         name: str,
         project: str,
-        function_name: str,
-        endpoint_id: str,
+        function_name: Optional[str] = None,
+        function_tag: Optional[str] = None,
+        endpoint_id: Optional[str] = None,
     ):
         pass
 
@@ -683,7 +699,9 @@ class RunDBInterface(ABC):
         project: str,
         name: Optional[str] = None,
         function_name: Optional[str] = None,
+        function_tag: Optional[str] = None,
         model_name: Optional[str] = None,
+        model_tag: Optional[str] = None,
         labels: Optional[Union[str, dict[str, Optional[str]], list[str]]] = None,
         start: Optional[datetime.datetime] = None,
         end: Optional[datetime.datetime] = None,
@@ -700,6 +718,7 @@ class RunDBInterface(ABC):
         name: str,
         project: str,
         function_name: Optional[str] = None,
+        function_tag: Optional[str] = None,
         endpoint_id: Optional[str] = None,
         tsdb_metrics: bool = True,
         feature_analysis: bool = False,
@@ -713,6 +732,7 @@ class RunDBInterface(ABC):
         project: str,
         attributes: dict,
         function_name: Optional[str] = None,
+        function_tag: Optional[str] = None,
         endpoint_id: Optional[str] = None,
     ) -> mlrun.common.schemas.ModelEndpoint:
         pass
@@ -888,6 +908,14 @@ class RunDBInterface(ABC):
     ):
         pass
 
+    def update_alert_activation(
+        self,
+        activation_id: int,
+        activation_time: datetime.datetime,
+        notifications_states,
+    ):
+        pass
+
     @abstractmethod
     def get_builder_status(
         self,
@@ -1054,4 +1082,8 @@ class RunDBInterface(ABC):
         credentials: dict[str, str],
         replace_creds: bool,
     ) -> None:
+        pass
+
+    @abstractmethod
+    def get_project_summary(self, project: str) -> mlrun.common.schemas.ProjectSummary:
         pass

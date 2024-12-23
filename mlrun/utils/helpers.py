@@ -26,7 +26,7 @@ import sys
 import typing
 import uuid
 import warnings
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from importlib import import_module, reload
 from os import path
 from types import ModuleType
@@ -111,15 +111,21 @@ def get_artifact_target(item: dict, project=None):
     project_str = project or item["metadata"].get("project")
     tree = item["metadata"].get("tree")
     tag = item["metadata"].get("tag")
+    iter = item["metadata"].get("iter")
     kind = item.get("kind")
+    uid = item["metadata"].get("uid")
 
     if kind in {"dataset", "model", "artifact"} and db_key:
         target = (
             f"{DB_SCHEMA}://{StorePrefix.kind_to_prefix(kind)}/{project_str}/{db_key}"
         )
+        if iter:
+            target = f"{target}#{iter}"
         target += f":{tag}" if tag else ":latest"
         if tree:
             target += f"@{tree}"
+        if uid:
+            target += f"^{uid}"
         return target
 
     return item["spec"].get("target_path")
@@ -399,6 +405,28 @@ def now_date(tz: timezone = timezone.utc) -> datetime:
     return datetime.now(tz=tz)
 
 
+def datetime_to_mysql_ts(datetime_object: datetime) -> datetime:
+    """
+    Convert a Python datetime object to a MySQL-compatible timestamp string,
+    rounded to the nearest millisecond.
+    Example: 2024-12-18T16:36:05.235687+00:00 -> 2024-12-18T16:36:05.236000
+
+    :param datetime_object: A Python datetime object.
+
+    :return: A MySQL-compatible timestamp string with millisecond precision.
+    """
+    if not datetime_object.tzinfo:
+        datetime_object = datetime_object.replace(tzinfo=timezone.utc)
+
+    # Round to the nearest millisecond
+    ms = round(datetime_object.microsecond / 1000) * 1000
+    if ms == 1000000:
+        datetime_object += timedelta(seconds=1)
+        ms = 0
+
+    return datetime_object.replace(microsecond=ms)
+
+
 def datetime_min(tz: timezone = timezone.utc) -> datetime:
     return datetime(1970, 1, 1, tzinfo=tz)
 
@@ -670,8 +698,8 @@ def dict_to_json(struct):
 
 def parse_artifact_uri(uri, default_project=""):
     """
-    Parse artifact URI into project, key, tag, iter, tree
-    URI format: [<project>/]<key>[#<iter>][:<tag>][@<tree>]
+    Parse artifact URI into project, key, tag, iter, tree, uid
+    URI format: [<project>/]<key>[#<iter>][:<tag>][@<tree>][^<uid>]
 
     :param uri:            uri to parse
     :param default_project: default project name if not in URI
@@ -681,6 +709,7 @@ def parse_artifact_uri(uri, default_project=""):
         [2] = iteration
         [3] = tag
         [4] = tree
+        [5] = uid
     """
     uri_pattern = mlrun.utils.regex.artifact_uri_pattern
     match = re.match(uri_pattern, uri)
@@ -705,6 +734,7 @@ def parse_artifact_uri(uri, default_project=""):
         iteration,
         group_dict["tag"],
         group_dict["tree"],
+        group_dict["uid"],
     )
 
 
@@ -719,7 +749,9 @@ def generate_object_uri(project, name, tag=None, hash_key=None):
     return uri
 
 
-def generate_artifact_uri(project, key, tag=None, iter=None, tree=None):
+def generate_artifact_uri(
+    project, key, tag=None, iter=None, tree=None, uid=None
+) -> str:
     artifact_uri = f"{project}/{key}"
     if iter is not None:
         artifact_uri = f"{artifact_uri}#{iter}"
@@ -727,6 +759,8 @@ def generate_artifact_uri(project, key, tag=None, iter=None, tree=None):
         artifact_uri = f"{artifact_uri}:{tag}"
     if tree is not None:
         artifact_uri = f"{artifact_uri}@{tree}"
+    if uid is not None:
+        artifact_uri = f"{artifact_uri}^{uid}"
     return artifact_uri
 
 
