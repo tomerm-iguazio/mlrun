@@ -400,8 +400,58 @@ async def delete_model_monitoring_function(
     return tasks
 
 
-@router.post("/set-model-monitoring-credentials")
+# TODO: remove /projects/{project}/model-monitoring/set-model-monitoring-credentials in 1.10.0
+@router.post(
+    "/set-model-monitoring-credentials",
+    deprecated=True,
+    description="/projects/{project}/model-monitoring/set-model-monitoring-credentials "
+    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "use PUT /projects/{project}/model-monitoring/credentials instead",
+)
 def set_model_monitoring_credentials(
+    commons: Annotated[_CommonParams, Depends(_common_parameters)],
+    access_key: Optional[str] = None,
+    stream_path: Optional[str] = None,
+    tsdb_connection: Optional[str] = None,
+    replace_creds: bool = False,
+) -> None:
+    """
+    Set the credentials that will be used by the project's model monitoring
+    infrastructure functions. Important to note that you have to set the credentials before deploying any
+    model monitoring or serving function.
+    :param commons:                   The common parameters of the request.
+    :param access_key:                Model Monitoring access key for managing user permissions.
+    :param stream_path:               Path to the model monitoring stream. By default, None.
+                                      Options:
+                                      1. None, will be set from the system configuration.
+                                      2. v3io - for v3io stream,
+                                         pass `v3io` and the system will generate the exact path.
+                                      3. Kafka - for Kafka stream, please provide full connection string without
+                                         custom topic, for example kafka://<some_kafka_broker>:<port>.
+    :param tsdb_connection:           Connection string to the time series database. By default, None.
+                                      Options:
+                                      1. None, will be set from the system configuration.
+                                      2. v3io - for v3io stream,
+                                         pass `v3io` and the system will generate the exact path.
+                                      3. TDEngine - for TDEngine tsdb, please provide full websocket connection URL,
+                                         for example taosws://<username>:<password>@<host>:<port>.
+    :param replace_creds:             If True, it will force the credentials update. By default, False.
+    """
+    MonitoringDeployment(
+        project=commons.project,
+        auth_info=commons.auth_info,
+        db_session=commons.db_session,
+        model_monitoring_access_key=commons.model_monitoring_access_key,
+    ).set_credentials(
+        access_key=access_key,
+        stream_path=stream_path,
+        tsdb_connection=tsdb_connection,
+        replace_creds=replace_creds,
+    )
+
+
+@router.put("/credentials")
+def set_model_monitoring_credentials_v2(
     commons: Annotated[_CommonParams, Depends(_common_parameters)],
     access_key: Optional[str] = None,
     stream_path: Optional[str] = None,

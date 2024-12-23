@@ -3952,8 +3952,8 @@ class HTTPRunDB(RunDBInterface):
         :param replace_creds:       If True, will override the existing credentials.
         """
         self.api_call(
-            method=mlrun.common.types.HTTPMethod.POST,
-            path=f"projects/{project}/model-monitoring/set-model-monitoring-credentials",
+            method=mlrun.common.types.HTTPMethod.PUT,
+            path=f"projects/{project}/model-monitoring/credentials",
             params={**credentials, "replace_creds": replace_creds},
         )
 
