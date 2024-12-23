@@ -19,7 +19,6 @@ from datetime import datetime, timedelta, timezone
 from random import choice, randint, uniform
 from time import monotonic, sleep
 from typing import Optional, Union
-
 import fsspec
 import numpy as np
 import pandas as pd
@@ -73,7 +72,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
     def _generate_event(
         self,
         endpoint_id,
-        result_name,
+        event_name,
         event_kind="result",
         app_name="my_app",
     ):
@@ -83,12 +82,13 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             datetime(2024, 1, 1, second=1, tzinfo=timezone.utc)
         )
         result_status = 0
-        result_value = 123
-
+        event_value = 123
+        event_name_key = f"{event_kind}_name"
+        event_value_key = f"{event_kind}_value"
         data = {
             "endpoint_id": endpoint_id,
             "application_name": app_name,
-            "result_name": result_name,
+            event_name_key: event_name,
             "result_kind": result_kind,
             "event_kind": event_kind,
             "start_infer_time": start_infer_time,
@@ -96,7 +96,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             "result_status": result_status,
             # make sure we can write apostrophes (ML-7535)
             "result_extra_data": """{}""",
-            "result_value": result_value,
+            event_value_key: event_value,
         }
         return data
 
@@ -138,24 +138,24 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             mep2_uid = model_endpoint2.metadata.uid
             tsdb_client.create_tables()
             tsdb_client.write_application_event(
-                self._generate_event(endpoint_id=mep_uid, result_name="result1")
+                self._generate_event(endpoint_id=mep_uid, event_name="result1")
             )
             tsdb_client.write_application_event(
-                self._generate_event(endpoint_id=mep_uid, result_name="result2")
+                self._generate_event(endpoint_id=mep_uid, event_name="result2")
             )
             tsdb_client.write_application_event(
-                self._generate_event(endpoint_id=mep_uid, result_name="result3")
+                self._generate_event(endpoint_id=mep_uid, event_name="result3")
             )
             tsdb_client.write_application_event(
                 self._generate_event(
-                    endpoint_id=mep_uid, result_name="metric1", event_kind="metric"
-                )
+                    endpoint_id=mep_uid, event_name="metric1", event_kind="metric"
+                ),kind = mm_constants.WriterEventKind.METRIC
             )
             tsdb_client.write_application_event(
-                self._generate_event(endpoint_id=mep2_uid, result_name="result3")
+                self._generate_event(endpoint_id=mep2_uid, event_name="result3")
             )
             tsdb_client.write_application_event(
-                self._generate_event(endpoint_id=mep2_uid, result_name="result4")
+                self._generate_event(endpoint_id=mep2_uid, event_name="result4")
             )
             expected_for_mep1 = [
                 "invocations",
@@ -196,6 +196,12 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 project=self.project.name, endpoint_id="not_exist", type="results"
             )
             assert not result_for_non_exist
+
+            income_events_by_endpoint = self._run_db.get_metrics_by_multiple_endpoints(
+                project=self.project.name,
+                endpoint_ids=[mep_uid, mep2_uid],
+                events_format=mm_constants.GetEventsFormat.INTERSECTION,
+            )
 
         finally:
             tsdb_client.delete_tsdb_resources()

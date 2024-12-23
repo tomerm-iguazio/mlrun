@@ -363,6 +363,7 @@ async def get_model_endpoint_monitoring_metrics(
         endpoint_ids=endpoint_id, project=project, application_result_types=type
     )
     for task_result in task_results:
+        print(f"get_model_endpoint_monitoring_metrics, task_result: {task_result}")
         metrics.extend(task_result)
     if type == "metrics" or type == "all":
         metrics.append(mlrun.model_monitoring.helpers.get_invocations_metric(project))
