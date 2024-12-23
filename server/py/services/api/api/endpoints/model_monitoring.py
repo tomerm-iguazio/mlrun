@@ -107,12 +107,12 @@ async def _common_parameters(
     )
 
 
-# TODO: remove /projects/{project}/model-monitoring/enable-model-monitoring in 1.10.0
+# TODO: remove /projects/{project}/model-monitoring/enable-model-monitoring in 1.8.0
 @router.post(
     "/enable-model-monitoring",
     deprecated=True,
     description="/projects/{project}/model-monitoring/enable-model-monitoring "
-    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "will be removed in 1.8.0, "
     "use PUT /projects/{project}/model-monitoring/ instead",
 )
 @router.put("/")
@@ -158,12 +158,12 @@ async def enable_model_monitoring(
     )
 
 
-# TODO: remove /projects/{project}/model-monitoring/model-monitoring-controller in 1.10.0
+# TODO: remove /projects/{project}/model-monitoring/model-monitoring-controller in 1.8.0
 @router.patch(
     "/model-monitoring-controller",
     deprecated=True,
     description="/projects/{project}/model-monitoring/model-monitoring-controller "
-    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "will be removed in 1.8.0, "
     "use /projects/{project}/model-monitoring/controller instead",
 )
 @router.patch("/controller")
@@ -210,12 +210,12 @@ async def update_model_monitoring_controller(
     )
 
 
-# TODO: remove /projects/{project}/model-monitoring/deploy-histogram-data-drift-app in 1.10.0
+# TODO: remove /projects/{project}/model-monitoring/deploy-histogram-data-drift-app in 1.8.0
 @router.post(
     "/deploy-histogram-data-drift-app",
     deprecated=True,
     description="/projects/{project}/model-monitoring/deploy-histogram-data-drift-app "
-    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "will be removed in 1.8.0, "
     "use PUT /projects/{project}/model-monitoring/histogram-data-drift-app instead",
 )
 @router.put("/histogram-data-drift-app")
@@ -237,7 +237,7 @@ def deploy_histogram_data_drift_app(
     ).deploy_histogram_data_drift_app(image=image)
 
 
-# TODO: remove /projects/{project}/model-monitoring/disable-model-monitoring in 1.10.0
+# TODO: remove /projects/{project}/model-monitoring/disable-model-monitoring in 1.8.0
 @router.delete(
     "/disable-model-monitoring",
     responses={
@@ -247,7 +247,7 @@ def deploy_histogram_data_drift_app(
     },
     deprecated=True,
     description="/projects/{project}/model-monitoring/disable-model-monitoring "
-    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "will be removed in 1.8.0, "
     "use DELETE /projects/{project}/model-monitoring/ instead",
 )
 @router.delete(
@@ -348,12 +348,12 @@ async def delete_model_monitoring_function(
     return tasks
 
 
-# TODO: remove /projects/{project}/model-monitoring/set-model-monitoring-credentials in 1.10.0
+# TODO: remove /projects/{project}/model-monitoring/set-model-monitoring-credentials in 1.8.0
 @router.post(
     "/set-model-monitoring-credentials",
     deprecated=True,
     description="/projects/{project}/model-monitoring/set-model-monitoring-credentials "
-    "is deprecated in 1.8.0 and will be removed in 1.10.0, "
+    "will be removed in 1.8.0, "
     "use PUT /projects/{project}/model-monitoring/credentials instead",
 )
 @router.put("/credentials")
