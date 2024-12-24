@@ -581,6 +581,7 @@ class TSDBConnector(ABC):
                     kind=result_kind,
                 )
             )
+        print(f"metrics in df_to_events_intersection_dict: {metrics}")
         return {dict_key: metrics}
 
     @staticmethod
