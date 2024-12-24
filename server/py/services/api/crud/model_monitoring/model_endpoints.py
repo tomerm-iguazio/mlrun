@@ -58,7 +58,7 @@ class ModelEndpoints:
         model_endpoint: mlrun.common.schemas.ModelEndpoint,
         creation_strategy: mlrun.common.schemas.ModelEndpointCreationStrategy,
         model_path: Optional[str] = None,
-    ) -> typing.Optional[mlrun.common.schemas.ModelEndpoint]:
+    ) -> mlrun.common.schemas.ModelEndpoint:
         """
         Creates model endpoint record in DB. The DB store target is defined either by a provided connection string
         or by the default store target that is defined in MLRun configuration.
@@ -159,13 +159,6 @@ class ModelEndpoints:
                 db_session=db_session,
                 model_endpoint=model_endpoint,
             )
-        elif (
-            creation_strategy == mlrun.common.schemas.ModelEndpointCreationStrategy.SKIP
-        ):
-            logger.info(
-                "Skipping model endpoint creation", creation_strategy=creation_strategy
-            )
-            return
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
                 f"{creation_strategy} is invalid creation strategy"

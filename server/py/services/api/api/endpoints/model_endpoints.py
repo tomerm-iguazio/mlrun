@@ -94,8 +94,7 @@ async def create_model_endpoint(
     if not model_endpoint.metadata.project or not model_endpoint.metadata.name:
         raise MLRunInvalidArgumentError("Model endpoint must have project and name")
 
-    return await run_in_threadpool(
-        services.api.crud.ModelEndpoints().create_model_endpoint,
+    return await services.api.crud.ModelEndpoints().create_model_endpoint(
         db_session=db_session,
         model_endpoint=model_endpoint,
         creation_strategy=creation_strategy,
