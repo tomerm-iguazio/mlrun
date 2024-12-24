@@ -75,6 +75,7 @@ class ModelEndpointCreationStrategy(MonitoringStrEnum):
     INPLACE = "inplace"
     ARCHIVE = "archive"
     OVERWRITE = "overwrite"
+    SKIP = "skip"
 
 
 class EventFieldType:
