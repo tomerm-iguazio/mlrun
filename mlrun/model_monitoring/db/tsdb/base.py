@@ -511,6 +511,8 @@ class TSDBConnector(ABC):
             name_column = mm_schemas.MetricData.METRIC_NAME
             grouped_by_fields.append(name_column)
 
+        print(f"grouped_by_fields: {grouped_by_fields}")
+
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
             lambda group: list(
