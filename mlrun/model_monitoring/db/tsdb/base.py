@@ -505,11 +505,11 @@ class TSDBConnector(ABC):
         grouped_by_fields = [mm_schemas.WriterEvent.APPLICATION_NAME]
         if type == "result":
             name_column = mm_schemas.ResultData.RESULT_NAME
-            grouped_by_fields.append(name_column)
             grouped_by_fields.append(mm_schemas.ResultData.RESULT_KIND)
         else:
             name_column = mm_schemas.MetricData.METRIC_NAME
-            grouped_by_fields.append(name_column)
+
+        grouped_by_fields.append(name_column)
 
         print(f"grouped_by_fields: {grouped_by_fields}")
 
@@ -554,23 +554,24 @@ class TSDBConnector(ABC):
         if df.empty:
             return {dict_key: []}
 
-        # TODO fix it to support metrics too (without RESULT_KIND field...)
-        name_column = (
-            mm_schemas.ResultData.RESULT_NAME
-            if mm_schemas.ResultData.RESULT_NAME in df.columns
-            else mm_schemas.MetricData.METRIC_NAME
-        )
-        df["event_values"] = list(
-            zip(
-                df[mm_schemas.WriterEvent.APPLICATION_NAME],
-                df[name_column],
-                df[mm_schemas.ResultData.RESULT_KIND],
-            )
-        )
+        columns_to_zip = [mm_schemas.WriterEvent.APPLICATION_NAME]
+
+        if type == "result":
+            name_column = mm_schemas.ResultData.RESULT_NAME
+            columns_to_zip.append(mm_schemas.ResultData.RESULT_KIND)
+        else:
+            name_column = mm_schemas.MetricData.METRIC_NAME
+        columns_to_zip.insert(1, name_column)
+
+        df["event_values"] = list(zip(*[df[col] for col in columns_to_zip]))
         grouped_by_event_values = df.groupby("endpoint_id")["event_values"].apply(set)
         common_event_values_combinations = set.intersection(*grouped_by_event_values)
+
+        result_kind = None
         for data in common_event_values_combinations:
-            application_name, event_name, result_kind = data
+            application_name, event_name = data[0], data[1]
+            if len(data) > 2:  # in result case
+                result_kind = data[2]
             metrics.append(
                 mm_schemas.ModelEndpointMonitoringMetric(
                     project=project,
@@ -580,7 +581,7 @@ class TSDBConnector(ABC):
                     kind=result_kind,
                 )
             )
-            return {dict_key: metrics}
+        return {dict_key: metrics}
 
     @staticmethod
     def _get_start_end(

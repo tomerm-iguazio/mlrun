@@ -21,7 +21,7 @@ from mlrun.model_monitoring.db.tsdb.base import TSDBConnector
 
 class TestTSDBConnectorStaticMethods:
     @pytest.fixture
-    def test_data(self):
+    def results_data(self):
         """Fixture to create shared test data."""
         return pd.DataFrame(
             {
@@ -32,33 +32,72 @@ class TestTSDBConnectorStaticMethods:
             }
         )
 
-    def test_df_to_metrics_grouped_dict(self, test_data):
-        metrics_by_endpoint = TSDBConnector.df_to_metrics_grouped_dict(
-            df=test_data, type="result", project="my_project"
-        )
-        assert ["result1", "result2"] == sorted(
-            [result.name for result in metrics_by_endpoint["mep_uid1"]]
-        )
-        assert ["result1", "result3"] == sorted(
-            [result.name for result in metrics_by_endpoint["mep_uid2"]]
+    @pytest.fixture
+    def metrics_data(self):
+        """Fixture to create shared test data."""
+        return pd.DataFrame(
+            {
+                "application_name": ["my_app", "my_app", "my_app", "my_app"],
+                "endpoint_id": ["mep_uid1", "mep_uid1", "mep_uid2", "mep_uid2"],
+                "metric_name": ["metric1", "metric2", "metric1", "metric3"],
+            }
         )
 
-    def test_df_to_metrics_list(self, test_data):
+    def test_df_to_metrics_grouped_dict(self, results_data, metrics_data):
+        results_by_endpoint = TSDBConnector.df_to_metrics_grouped_dict(
+            df=results_data, type="result", project="my_project"
+        )
+        assert ["result1", "result2"] == sorted(
+            [result.name for result in results_by_endpoint["mep_uid1"]]
+        )
+        assert ["result1", "result3"] == sorted(
+            [result.name for result in results_by_endpoint["mep_uid2"]]
+        )
+
+        metrics_by_endpoint = TSDBConnector.df_to_metrics_grouped_dict(
+            df=metrics_data, type="metric", project="my_project"
+        )
+        assert ["metric1", "metric2"] == sorted(
+            [metric.name for metric in metrics_by_endpoint["mep_uid1"]]
+        )
+        assert ["metric1", "metric3"] == sorted(
+            [metric.name for metric in metrics_by_endpoint["mep_uid2"]]
+        )
+
+    def test_df_to_metrics_list(self, results_data, metrics_data):
         results = TSDBConnector.df_to_metrics_list(
-            df=test_data, type="result", project="my_project"
+            df=results_data, type="result", project="my_project"
         )
         assert ["result1", "result1", "result2", "result3"] == sorted(
             [result.name for result in results]
         )
 
-    def test_df_to_events_intersection_dict(self, test_data):
-        intersection_dict = TSDBConnector.df_to_events_intersection_dict(
-            df=test_data, type="result", project="my_project"
+        metrics = TSDBConnector.df_to_metrics_list(
+            df=metrics_data, type="metric", project="my_project"
         )
-        results = intersection_dict[
+        assert ["metric1", "metric1", "metric2", "metric3"] == sorted(
+            [metric.name for metric in metrics]
+        )
+
+    def test_df_to_events_intersection_dict(self, results_data, metrics_data):
+        result_intersection_dict = TSDBConnector.df_to_events_intersection_dict(
+            df=results_data, type="result", project="my_project"
+        )
+        results = result_intersection_dict[
             mm_schemas.INTERSECT_DICT_KEYS[
                 mm_schemas.ModelEndpointMonitoringMetricType.RESULT
             ]
         ]
         assert len(results) == 1
         assert results[0].full_name == "my_project.my_app.result.result1"
+
+        metric_intersection_dict = TSDBConnector.df_to_events_intersection_dict(
+            df=metrics_data, type="metric", project="my_project"
+        )
+        metrics = metric_intersection_dict[
+            mm_schemas.INTERSECT_DICT_KEYS[
+                mm_schemas.ModelEndpointMonitoringMetricType.METRIC
+            ]
+        ]
+        assert len(metrics) == 1
+        assert metrics[0].full_name == "my_project.my_app.metric.metric1"
