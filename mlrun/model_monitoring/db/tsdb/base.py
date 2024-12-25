@@ -565,7 +565,9 @@ class TSDBConnector(ABC):
         print(f"name_column: {name_column}")
         print(f"columns_to_zip: {columns_to_zip}")
         df["event_values"] = list(zip(*[df[col] for col in columns_to_zip]))
+        print(f"df with event_values: {df}")
         grouped_by_event_values = df.groupby("endpoint_id")["event_values"].apply(set)
+        print(f"grouped_by_event_values: {grouped_by_event_values}")
         common_event_values_combinations = set.intersection(*grouped_by_event_values)
         print(f"common_event_values_combinations: {common_event_values_combinations}")
         result_kind = None
