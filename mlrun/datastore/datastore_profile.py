@@ -11,7 +11,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+
 import ast
 import base64
 import json
@@ -29,7 +29,7 @@ from ..secrets import get_secret_or_env
 
 
 class DatastoreProfile(pydantic.v1.BaseModel):
-    type: str
+    type: typing.ClassVar[str]
     name: str
     _private_attributes: list = ()
 
@@ -220,7 +220,7 @@ class DatastoreProfileKafkaSource(DatastoreProfile):
 
 
 class DatastoreProfileV3io(DatastoreProfile):
-    type: str = pydantic.v1.Field("v3io")
+    type: typing.ClassVar[str] = "v3io"
     v3io_access_key: typing.Optional[str] = None
     _private_attributes = "v3io_access_key"
 
@@ -580,7 +580,7 @@ def datastore_profile_read(url, project_name="", secrets: typing.Optional[dict] 
     )
     private_body = get_secret_or_env(project_ds_name_private, secret_provider=secrets)
     if not public_profile or not private_body:
-        raise mlrun.errors.MLRunInvalidArgumentError(
+        raise mlrun.errors.MLRunNotFoundError(
             f"Unable to retrieve the datastore profile '{url}' from either the server or local environment. "
             "Make sure the profile is registered correctly, or if running in a local environment, "
             "use register_temporary_client_datastore_profile() to provide credentials locally."
