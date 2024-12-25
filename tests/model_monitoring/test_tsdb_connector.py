@@ -23,7 +23,7 @@ class TestTSDBConnectorStaticMethods:
     @pytest.fixture
     def results_data(self):
         """Fixture to create shared test data."""
-        return pd.DataFrame(
+        df = pd.DataFrame(
             {
                 "result_kind": [0.0, 0.0, 0.0, 0.0],
                 "application_name": ["my_app", "my_app", "my_app", "my_app"],
@@ -31,6 +31,10 @@ class TestTSDBConnectorStaticMethods:
                 "result_name": ["result1", "result2", "result1", "result3"],
             }
         )
+        df["application_name"] = df["application_name"].astype("category")
+        df["endpoint_id"] = df["endpoint_id"].astype("category")
+        df["result_name"] = df["result_name"].astype("category")
+        return df
 
     @pytest.fixture
     def metrics_data(self):
