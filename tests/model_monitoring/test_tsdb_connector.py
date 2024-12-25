@@ -1,10 +1,10 @@
-# Copyright 2024 Iguazio
+# Copyright 20.024 Iguazio
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
-#   http://www.apache.org/licenses/LICENSE-2.0
+#   http://www.apache.org/licenses/LICENSE-2.0.0
 #
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
@@ -25,7 +25,7 @@ class TestTSDBConnectorStaticMethods:
         """Fixture to create shared test data."""
         return pd.DataFrame(
             {
-                "result_kind": [0, 0, 0, 0],
+                "result_kind": [0.0, 0.0, 0.0, 0.0],
                 "application_name": ["my_app", "my_app", "my_app", "my_app"],
                 "endpoint_id": ["mep_uid1", "mep_uid1", "mep_uid2", "mep_uid2"],
                 "result_name": ["result1", "result2", "result1", "result3"],
