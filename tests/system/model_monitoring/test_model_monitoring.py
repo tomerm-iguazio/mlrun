@@ -162,6 +162,12 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             tsdb_client.write_application_event(
                 self._generate_event(endpoint_id=mep2_uid, event_name="result4")
             )
+            tsdb_client.write_application_event(
+                self._generate_event(
+                    endpoint_id=mep2_uid, event_name="metric1", event_kind="metric"
+                ),
+                kind=mm_constants.WriterEventKind.METRIC,
+            )
             expected_for_mep1 = [
                 "invocations",
                 "metric1",
@@ -169,7 +175,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 "result2",
                 "result3",
             ]
-            expected_for_mep2 = ["invocations", "result3", "result4"]
+            expected_for_mep2 = ["invocations", "metric1", "result3", "result4"]
 
             income_events_mep1 = self._run_db.get_model_endpoint_monitoring_metrics(
                 project=self.project.name, endpoint_id=mep_uid
@@ -202,10 +208,24 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             )
             assert not result_for_non_exist
 
-            income_events_by_endpoint = self._run_db.get_metrics_by_multiple_endpoints(
-                project=self.project.name,
-                endpoint_ids=[mep_uid, mep2_uid],
-                events_format=mm_constants.GetEventsFormat.INTERSECTION,
+            intersection_events_by_type = (
+                self._run_db.get_metrics_by_multiple_endpoints(
+                    project=self.project.name,
+                    endpoint_ids=[mep_uid, mep2_uid],
+                    events_format=mm_constants.GetEventsFormat.INTERSECTION,
+                )
+            )
+            metrics_key = mm_constants.INTERSECT_DICT_KEYS[
+                mm_constants.ModelEndpointMonitoringMetricType.METRIC
+            ]
+            results_key = mm_constants.INTERSECT_DICT_KEYS[
+                mm_constants.ModelEndpointMonitoringMetricType.RESULT
+            ]
+            assert ["invocations", "metric1"] == sorted(
+                [metric.name for metric in intersection_events_by_type[metrics_key]]
+            )
+            assert ["result3"] == sorted(
+                [result.name for result in intersection_events_by_type[results_key]]
             )
 
         finally:
