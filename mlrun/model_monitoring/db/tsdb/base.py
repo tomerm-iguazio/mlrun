@@ -510,9 +510,8 @@ class TSDBConnector(ABC):
             name_column = mm_schemas.MetricData.METRIC_NAME
 
         grouped_by_fields.append(name_column)
-
-        print(f"grouped_by_fields: {grouped_by_fields}")
-
+        #  groupby has different behavior for category columns
+        df["endpoint_id"] = df["endpoint_id"].astype(str)
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
             lambda group: list(
@@ -548,7 +547,6 @@ class TSDBConnector(ABC):
 
         :return:        A grouped dict of mm metrics objects.
         """
-        print(f"df ({type}) in df_to_events_intersection_dict: \n {df}")
         dict_key = mm_schemas.INTERSECT_DICT_KEYS[type]
         metrics = []
         if df.empty:
@@ -562,16 +560,11 @@ class TSDBConnector(ABC):
         else:
             name_column = mm_schemas.MetricData.METRIC_NAME
         columns_to_zip.insert(1, name_column)
-        #  group by has different behavior for category columns
+        #  groupby has different behavior for category columns
         df["endpoint_id"] = df["endpoint_id"].astype(str)
-        print(f"name_column: {name_column}")
-        print(f"columns_to_zip: {columns_to_zip}")
         df["event_values"] = list(zip(*[df[col] for col in columns_to_zip]))
-        print(f"df with event_values: {df}")
         grouped_by_event_values = df.groupby("endpoint_id")["event_values"].apply(set)
-        print(f"grouped_by_event_values: {grouped_by_event_values}")
         common_event_values_combinations = set.intersection(*grouped_by_event_values)
-        print(f"common_event_values_combinations: {common_event_values_combinations}")
         result_kind = None
         for data in common_event_values_combinations:
             application_name, event_name = data[0], data[1]
@@ -586,7 +579,6 @@ class TSDBConnector(ABC):
                     kind=result_kind,
                 )
             )
-        print(f"metrics in df_to_events_intersection_dict: {metrics}")
         return {dict_key: metrics}
 
     @staticmethod
