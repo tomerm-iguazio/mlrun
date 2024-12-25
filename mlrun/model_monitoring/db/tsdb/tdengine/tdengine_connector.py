@@ -618,6 +618,7 @@ class TDEngineConnector(TSDBConnector):
             group_by=[
                 mm_schemas.WriterEvent.APPLICATION_NAME,
                 mm_schemas.MetricData.METRIC_NAME,
+                mm_schemas.EventFieldType.ENDPOINT_ID,
             ],
             agg_funcs=["last"],
         )
