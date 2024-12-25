@@ -105,23 +105,19 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         return data
 
     @pytest.mark.skipif(
-        "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-        not in TestMLRunSystem._get_env_from_file(),
-        reason="MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION not defined",
+        not mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+        reason="tsdb_connection is not defined",
     )
     @pytest.mark.parametrize("use_v3io_tsdb_connector", [True, False])
     def test_get_model_endpoint_metrics(self, use_v3io_tsdb_connector):
         if use_v3io_tsdb_connector:
             tsdb_connection_string = "v3io"
         else:
-            tsdb_connection_string = os.environ[
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ]
+            tsdb_connection_string = mlrun.mlconf.model_endpoint_monitoring.tsdb_connection
             if not tsdb_connection_string.startswith("taosws://"):
                 pytest.skip(
                     "taosws:// is not set as MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION, skipping."
                 )
-
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
             project=self.project_name,
             tsdb_connection_string=tsdb_connection_string,
