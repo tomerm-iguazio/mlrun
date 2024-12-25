@@ -437,6 +437,11 @@ async def get_metrics_by_multiple_endpoints(
             events[metrics_key].append(
                 mlrun.model_monitoring.helpers.get_invocations_metric(project)
             )
+    elif events_format == mm_constants.GetEventsFormat.SINGLE:
+        raise mlrun.errors.MLRunInvalidArgumentError(
+            "GetEventsFormat.SINGLE is not supported in "
+            "get_metrics_by_multiple_endpoints"
+        )
     return events
 
 

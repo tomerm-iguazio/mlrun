@@ -126,20 +126,22 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             project=self.project_name,
             tsdb_connection_string=tsdb_connection_string,
         )
+
+        self.project.set_model_monitoring_credentials(
+            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            tsdb_connection=tsdb_connection_string,
+        )
+        db = mlrun.get_run_db()
+        model_endpoint = self._mock_random_endpoint("testing")
+        model_endpoint = db.create_model_endpoint(model_endpoint)
+
+        model_endpoint2 = self._mock_random_endpoint("testing2")
+        model_endpoint2 = db.create_model_endpoint(model_endpoint2)
+
+        mep_uid = model_endpoint.metadata.uid
+        mep2_uid = model_endpoint2.metadata.uid
+
         try:
-            self.project.set_model_monitoring_credentials(
-                stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
-                tsdb_connection=tsdb_connection_string,
-            )
-            db = mlrun.get_run_db()
-            model_endpoint = self._mock_random_endpoint("testing")
-            model_endpoint = db.create_model_endpoint(model_endpoint)
-
-            model_endpoint2 = self._mock_random_endpoint("testing2")
-            model_endpoint2 = db.create_model_endpoint(model_endpoint2)
-
-            mep_uid = model_endpoint.metadata.uid
-            mep2_uid = model_endpoint2.metadata.uid
             tsdb_client.create_tables()
             tsdb_client.write_application_event(
                 self._generate_event(endpoint_id=mep_uid, event_name="result1")
@@ -183,6 +185,8 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             assert expected_for_mep1 == sorted(
                 [event.name for event in income_events_mep1]
             )
+
+            # separation:
             income_events_by_endpoint = self._run_db.get_metrics_by_multiple_endpoints(
                 project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
             )
@@ -197,17 +201,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             ]
             assert expected_for_mep2 == sorted(result_for_mep2)
 
-            # get nonexistent MEP IDs
-            result_for_non_exist = self._run_db.get_metrics_by_multiple_endpoints(
-                project=self.project.name, endpoint_ids=["not_exist"], type="results"
-            )
-            assert not result_for_non_exist["not_exist"]
-
-            result_for_non_exist = self._run_db.get_model_endpoint_monitoring_metrics(
-                project=self.project.name, endpoint_id="not_exist", type="results"
-            )
-            assert not result_for_non_exist
-
+            # intersection:
             intersection_events_by_type = (
                 self._run_db.get_metrics_by_multiple_endpoints(
                     project=self.project.name,
@@ -227,6 +221,27 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             assert ["result3"] == sorted(
                 [result.name for result in intersection_events_by_type[results_key]]
             )
+
+            # get nonexistent MEP IDs:
+            result_for_non_exist = self._run_db.get_model_endpoint_monitoring_metrics(
+                project=self.project.name, endpoint_id="not_exist", type="results"
+            )
+            assert result_for_non_exist == []
+
+            result_for_non_exist = self._run_db.get_metrics_by_multiple_endpoints(
+                project=self.project.name, endpoint_ids=["not_exist"], type="results"
+            )
+            assert result_for_non_exist == {"not_exist": []}
+
+            intersection_results_for_non_exist = (
+                self._run_db.get_metrics_by_multiple_endpoints(
+                    project=self.project.name,
+                    endpoint_ids=["not_exist", "not_exist2"],
+                    events_format=mm_constants.GetEventsFormat.INTERSECTION,
+                    type="results",
+                )
+            )
+            assert intersection_results_for_non_exist[results_key] == []
 
         finally:
             tsdb_client.delete_tsdb_resources()
