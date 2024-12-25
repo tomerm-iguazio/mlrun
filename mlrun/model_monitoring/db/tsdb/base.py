@@ -563,7 +563,7 @@ class TSDBConnector(ABC):
             name_column = mm_schemas.MetricData.METRIC_NAME
         columns_to_zip.insert(1, name_column)
         #  group by has different behavior for category columns
-        df["endpoint_id"] = df['endpoint_id'].astype(str)
+        df["endpoint_id"] = df["endpoint_id"].astype(str)
         print(f"name_column: {name_column}")
         print(f"columns_to_zip: {columns_to_zip}")
         df["event_values"] = list(zip(*[df[col] for col in columns_to_zip]))
