@@ -113,7 +113,9 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         if use_v3io_tsdb_connector:
             tsdb_connection_string = "v3io"
         else:
-            tsdb_connection_string = mlrun.mlconf.model_endpoint_monitoring.tsdb_connection
+            tsdb_connection_string = (
+                mlrun.mlconf.model_endpoint_monitoring.tsdb_connection
+            )
             if not tsdb_connection_string.startswith("taosws://"):
                 pytest.skip(
                     "taosws:// is not set as MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION, skipping."

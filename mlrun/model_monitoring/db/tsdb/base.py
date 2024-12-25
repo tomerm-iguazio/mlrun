@@ -496,7 +496,7 @@ class TSDBConnector(ABC):
         :param project: The project name.
         :param type:    The type of the metrics (either "result" or "metric").
 
-        :return:        A grouped dict of mm metrics objects.
+        :return:        A grouped dict of mm metrics/results, using model_endpoints_ids as keys.
         """
 
         if df.empty:
@@ -539,13 +539,20 @@ class TSDBConnector(ABC):
         type: typing.Union[str, mm_schemas.ModelEndpointMonitoringMetricType],
     ) -> dict[str, list[mm_schemas.ModelEndpointMonitoringMetric]]:
         """
-        Parse a DataFrame of metrics from the TSDB into a dict of intersection metrics/results by full_name.
+        Parse a DataFrame of metrics from the TSDB into a dict of intersection metrics/results by name and application
+         (and kind in results).
 
         :param df:      The DataFrame to parse.
         :param project: The project name.
         :param type:    The type of the metrics (either "result" or "metric").
 
-        :return:        A grouped dict of mm metrics objects.
+        :return:        A dictionary where the key is event type (as defined by `INTERSECT_DICT_KEYS`),
+                        and the value is a list containing the intersect metrics or results across all endpoint IDs.
+
+                        For example:
+                        {
+                            "intersect_metrics": [...]
+                        }
         """
         dict_key = mm_schemas.INTERSECT_DICT_KEYS[type]
         metrics = []
@@ -560,6 +567,7 @@ class TSDBConnector(ABC):
         else:
             name_column = mm_schemas.MetricData.METRIC_NAME
         columns_to_zip.insert(1, name_column)
+
         #  groupby has different behavior for category columns
         df["endpoint_id"] = df["endpoint_id"].astype(str)
         df["event_values"] = list(zip(*[df[col] for col in columns_to_zip]))
