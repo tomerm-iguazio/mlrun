@@ -3542,7 +3542,7 @@ class HTTPRunDB(RunDBInterface):
         path = f"projects/{project}/model-endpoints/metrics"
         params = {
             "type": type,
-            "endpoint_ids": endpoint_ids,
+            "endpoint-id": endpoint_ids,
             "events_format": events_format,
         }
         error_message = (

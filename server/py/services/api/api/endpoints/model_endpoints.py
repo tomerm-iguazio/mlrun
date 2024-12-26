@@ -372,21 +372,22 @@ async def get_metrics_by_multiple_endpoints(
     project: ProjectAnnotation,
     auth_info: schemas.AuthInfo = Depends(framework.api.deps.authenticate_request),
     type: Literal["results", "metrics", "all"] = "all",
-    endpoint_ids: list[str] = Query(None, alias="endpoint_ids"),
+    endpoint_ids: list[EndpointIDAnnotation] = Query(None, alias="endpoint-id"),
     events_format: mm_constants.GetEventsFormat = mm_constants.GetEventsFormat.SEPARATION,
 ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
     """
-    :param project:      The name of the project.
-    :param auth_info:    The auth info of the request.
-    :param type:         The type of the metrics to return. "all" means "results"
-                         and "metrics".
-    :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
-    :param events_format:
-    :returns:            A dictionary of application metrics and/or results for the model endpoints,
-                         keyed by endpoint IDs.
+    :param project:       The name of the project.
+    :param auth_info:     The auth info of the request.
+    :param type:          The type of the metrics to return. "all" means "results"
+                          and "metrics".
+    :param endpoint_ids:  The unique id of the model endpoint. Can be a single id or a list of ids.
+    :param events_format: response format:
+
+                          separation: {"mep_id1":[...], "mep_id2":[...]}
+                          intersection {"intersect_metrics":[], "intersect_results":[]}
+    :returns:             A dictionary of application metrics and/or results for the model endpoints,
+                          keyed by endpoint IDs.
     """
-    print(f"project: {project}")
-    print(f"endpoint_ids: {endpoint_ids}")
     events = {}
     permissions_tasks = []
     is_metrics_supported = type == "metrics" or type == "all"

@@ -48,6 +48,7 @@ from tests.system.base import TestMLRunSystem
 
 _MLRUN_MODEL_MONITORING_DB = "mysql+pymysql://root@mlrun-db:3306/mlrun_model_monitoring"
 
+
 # Marked as enterprise because of v3io mount and pipelines
 @TestMLRunSystem.skip_test_if_env_not_configured
 @pytest.mark.enterprise
@@ -108,7 +109,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         not in TestMLRunSystem._get_env_from_file(),
         reason="MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION not defined",
     )
-    @pytest.mark.parametrize("use_v3io_tsdb_connector", [True])
+    @pytest.mark.parametrize("use_v3io_tsdb_connector", [True, False])
     def test_get_model_endpoint_metrics(self, use_v3io_tsdb_connector):
         if use_v3io_tsdb_connector:
             tsdb_connection_string = "v3io"
@@ -184,63 +185,63 @@ class TestModelEndpointsOperations(TestMLRunSystem):
                 [event.name for event in income_events_mep1]
             )
 
-        #     # separation:
-        #     income_events_by_endpoint = self._run_db.get_metrics_by_multiple_endpoints(
-        #         project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
-        #     )
-        #
-        #     result_for_mep1 = [
-        #         event.name for event in income_events_by_endpoint[mep_uid]
-        #     ]
-        #     assert expected_for_mep1 == sorted(result_for_mep1)
-        #
-        #     result_for_mep2 = [
-        #         event.name for event in income_events_by_endpoint[mep2_uid]
-        #     ]
-        #     assert expected_for_mep2 == sorted(result_for_mep2)
-        #
-        #     # intersection:
-        #     intersection_events_by_type = (
-        #         self._run_db.get_metrics_by_multiple_endpoints(
-        #             project=self.project.name,
-        #             endpoint_ids=[mep_uid, mep2_uid],
-        #             events_format=mm_constants.GetEventsFormat.INTERSECTION,
-        #         )
-        #     )
-        #     metrics_key = mm_constants.INTERSECT_DICT_KEYS[
-        #         mm_constants.ModelEndpointMonitoringMetricType.METRIC
-        #     ]
-        #     results_key = mm_constants.INTERSECT_DICT_KEYS[
-        #         mm_constants.ModelEndpointMonitoringMetricType.RESULT
-        #     ]
-        #     assert ["invocations", "metric1"] == sorted(
-        #         [metric.name for metric in intersection_events_by_type[metrics_key]]
-        #     )
-        #     assert ["result3"] == sorted(
-        #         [result.name for result in intersection_events_by_type[results_key]]
-        #     )
-        #
-        #     # get nonexistent MEP IDs:
-        #     result_for_non_exist = self._run_db.get_model_endpoint_monitoring_metrics(
-        #         project=self.project.name, endpoint_id="not_exist", type="results"
-        #     )
-        #     assert result_for_non_exist == []
-        #
-        #     result_for_non_exist = self._run_db.get_metrics_by_multiple_endpoints(
-        #         project=self.project.name, endpoint_ids=["not_exist"], type="results"
-        #     )
-        #     assert result_for_non_exist == {"not_exist": []}
-        #
-        #     intersection_results_for_non_exist = (
-        #         self._run_db.get_metrics_by_multiple_endpoints(
-        #             project=self.project.name,
-        #             endpoint_ids=["not_exist", "not_exist2"],
-        #             events_format=mm_constants.GetEventsFormat.INTERSECTION,
-        #             type="results",
-        #         )
-        #     )
-        #     assert intersection_results_for_non_exist[results_key] == []
-        #
+            # separation:
+            income_events_by_endpoint = self._run_db.get_metrics_by_multiple_endpoints(
+                project=self.project.name, endpoint_ids=[mep_uid, mep2_uid]
+            )
+
+            result_for_mep1 = [
+                event.name for event in income_events_by_endpoint[mep_uid]
+            ]
+            assert expected_for_mep1 == sorted(result_for_mep1)
+
+            result_for_mep2 = [
+                event.name for event in income_events_by_endpoint[mep2_uid]
+            ]
+            assert expected_for_mep2 == sorted(result_for_mep2)
+
+            # intersection:
+            intersection_events_by_type = (
+                self._run_db.get_metrics_by_multiple_endpoints(
+                    project=self.project.name,
+                    endpoint_ids=[mep_uid, mep2_uid],
+                    events_format=mm_constants.GetEventsFormat.INTERSECTION,
+                )
+            )
+            metrics_key = mm_constants.INTERSECT_DICT_KEYS[
+                mm_constants.ModelEndpointMonitoringMetricType.METRIC
+            ]
+            results_key = mm_constants.INTERSECT_DICT_KEYS[
+                mm_constants.ModelEndpointMonitoringMetricType.RESULT
+            ]
+            assert ["invocations", "metric1"] == sorted(
+                [metric.name for metric in intersection_events_by_type[metrics_key]]
+            )
+            assert ["result3"] == sorted(
+                [result.name for result in intersection_events_by_type[results_key]]
+            )
+
+            # get nonexistent MEP IDs:
+            result_for_non_exist = self._run_db.get_model_endpoint_monitoring_metrics(
+                project=self.project.name, endpoint_id="not_exist", type="results"
+            )
+            assert result_for_non_exist == []
+
+            result_for_non_exist = self._run_db.get_metrics_by_multiple_endpoints(
+                project=self.project.name, endpoint_ids=["not_exist"], type="results"
+            )
+            assert result_for_non_exist == {"not_exist": []}
+
+            intersection_results_for_non_exist = (
+                self._run_db.get_metrics_by_multiple_endpoints(
+                    project=self.project.name,
+                    endpoint_ids=["not_exist", "not_exist2"],
+                    events_format=mm_constants.GetEventsFormat.INTERSECTION,
+                    type="results",
+                )
+            )
+            assert intersection_results_for_non_exist[results_key] == []
+
         finally:
             tsdb_client.delete_tsdb_resources()
 
