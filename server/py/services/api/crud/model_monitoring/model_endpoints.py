@@ -937,6 +937,7 @@ class ModelEndpoints:
         :param metrics_format:  Determines the format of the result. Can be either 'list' or 'dict'.
         :return: metrics in the chosen format.
         """
+        print(f"get_model_endpoints_metrics project: {project}")
         try:
             tsdb_connector = mlrun.model_monitoring.get_tsdb_connector(
                 project=project,

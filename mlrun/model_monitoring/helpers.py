@@ -271,6 +271,7 @@ def _get_profile(
     profile_name = mlrun.get_secret_or_env(
         key=profile_name_key, secret_provider=secret_provider
     )
+    print(f"profile_name: {profile_name}")
     if not profile_name:
         raise mlrun.errors.MLRunNotFoundError(
             f"Not found `{profile_name_key}` profile name"

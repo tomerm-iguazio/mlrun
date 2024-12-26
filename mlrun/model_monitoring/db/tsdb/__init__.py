@@ -83,6 +83,7 @@ def get_tsdb_connector(
     """
 
     try:
+        print(f"get_tsdb_connector project: {project}")
         profile = mlrun.model_monitoring.helpers._get_tsdb_profile(
             project=project, secret_provider=secret_provider
         )
