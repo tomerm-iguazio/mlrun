@@ -536,7 +536,6 @@ class DatastoreProfile2Json(pydantic.v1.BaseModel):
             "hdfs": DatastoreProfileHdfs,
             "config": ConfigProfile,
         }
-        print(f"datastore_type: {datastore_type}")  # None, why?
         if datastore_type in ds_profile_factory:
             return ds_profile_factory[datastore_type].parse_obj(decoded_dict)
         else:
