@@ -3537,7 +3537,7 @@ class HTTPRunDB(RunDBInterface):
         :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
         :param type: The type of the metrics to return. "all" means "results" and "metrics".
 
-        :return: A dictionary of application metrics and/or results for the model endpoints, keyed by endpoint IDs.
+        :return: A dictionary of application metrics and/or results for the model endpoints formatted by events_format.
         """
         path = f"projects/{project}/model-endpoints/metrics"
         params = {

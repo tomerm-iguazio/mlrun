@@ -385,7 +385,7 @@ async def get_metrics_by_multiple_endpoints(
                           separation: {"mep_id1":[...], "mep_id2":[...]}
                           intersection {"intersect_metrics":[], "intersect_results":[]}
     :returns:             A dictionary of application metrics and/or results for the model endpoints,
-                          keyed by endpoint IDs.
+                          formatted by events_format.
     """
     events = {}
     permissions_tasks = []
