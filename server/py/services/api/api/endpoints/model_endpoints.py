@@ -381,10 +381,12 @@ async def get_metrics_by_multiple_endpoints(
     :param type:         The type of the metrics to return. "all" means "results"
                          and "metrics".
     :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
-        :param format:
+    :param events_format:
     :returns:            A dictionary of application metrics and/or results for the model endpoints,
                          keyed by endpoint IDs.
     """
+    print(f"project: {project}")
+    print(f"endpoint_ids: {endpoint_ids}")
     events = {}
     permissions_tasks = []
     is_metrics_supported = type == "metrics" or type == "all"
