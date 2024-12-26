@@ -421,12 +421,8 @@ async def get_metrics_by_multiple_endpoints(
                 )
 
     elif events_format == mm_constants.GetEventsFormat.INTERSECTION:
-        print("getting result on intersections")
         for task_result in task_results:
-            print(f"task_result: {task_result}")
             events.update(task_result)
-        print("intersections tasks done")
-        print(f"total events: {events}\n")
         if is_metrics_supported:
             metrics_key = mm_constants.INTERSECT_DICT_KEYS[
                 mm_constants.ModelEndpointMonitoringMetricType.METRIC
