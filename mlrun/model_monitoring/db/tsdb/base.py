@@ -239,7 +239,7 @@ class TSDBConnector(ABC):
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
         """
-        Fetches distinct metrics metadata from the metrics TSDB table for a specified model endpoint.
+        Fetches distinct metrics metadata from the metrics TSDB table for a specified model endpoints.
 
         :param endpoint_id:        The model endpoint identifier. Can be a single id or a list of ids.
         :param start:              The start time of the query.
@@ -257,7 +257,7 @@ class TSDBConnector(ABC):
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
         """
-        Fetches distinct results metadata from the app-results TSDB table for a specified model endpoint.
+        Fetches distinct results metadata from the app-results TSDB table for a specified model endpoints.
 
         :param endpoint_id:        The model endpoint identifier. Can be a single id or a list of ids.
         :param start:              The start time of the query.

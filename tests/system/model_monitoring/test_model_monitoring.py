@@ -104,11 +104,6 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         }
         return data
 
-    @pytest.mark.skipif(
-        "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-        not in TestMLRunSystem._get_env_from_file(),
-        reason="MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION not defined",
-    )
     @pytest.mark.parametrize("use_v3io_tsdb_connector", [True, False])
     def test_get_model_endpoint_metrics(self, use_v3io_tsdb_connector):
         if use_v3io_tsdb_connector:
