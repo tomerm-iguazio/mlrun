@@ -33,6 +33,8 @@ _TSDB_BE = "tsdb"
 _TSDB_RATE = "1/s"
 _CONTAINER = "users"
 
+V3IO_MEPS_LIMIT = 50  # TODO remove limitation after fixing ML-8886
+
 
 def _is_no_schema_error(exc: v3io_frames.Error) -> bool:
     """
@@ -582,6 +584,10 @@ class V3IOTSDBConnector(TSDBConnector):
         if isinstance(endpoint_id, str):
             return f"endpoint_id=='{endpoint_id}'"
         elif isinstance(endpoint_id, list):
+            if len(endpoint_id) > V3IO_MEPS_LIMIT:
+                raise mlrun.errors.MLRunInvalidArgumentError(
+                    f"Filtering more than {V3IO_MEPS_LIMIT} model endpoints in the V3IO connector is not supported."
+                )
             return f"endpoint_id IN({str(endpoint_id)[1:-1]}) "
         else:
             raise mlrun.errors.MLRunInvalidArgumentError(
