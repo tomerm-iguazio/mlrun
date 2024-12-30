@@ -2138,6 +2138,8 @@ class MlrunProject(ModelObj):
         matching_results = []
         alerts = []
         endpoint_ids = [endpoint.metadata.uid for endpoint in endpoints.endpoints]
+        # using separation to group by endpoint IDs:
+        # {"mep_id1": [...], "mep_id2": [...]}
         results_by_endpoint = db.get_metrics_by_multiple_endpoints(
             project=self.name,
             endpoint_ids=endpoint_ids,
