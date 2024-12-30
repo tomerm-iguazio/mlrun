@@ -15,7 +15,7 @@
 import threading
 import time
 import traceback
-from typing import Optional, Union
+from typing import Optional
 
 import mlrun.artifacts
 import mlrun.common.model_monitoring.helpers
@@ -23,8 +23,6 @@ import mlrun.common.schemas.model_monitoring
 import mlrun.model_monitoring
 from mlrun.utils import logger, now_date
 
-from ..common.schemas.model_monitoring import ModelEndpointSchema
-from .server import GraphServer
 from .utils import StepToDict, _extract_input_data, _update_result_body
 
 
@@ -98,7 +96,7 @@ class V2ModelServer(StepToDict):
         self.name = name
         self.version = ""
         if name and ":" in name:
-            self.name, self.version = name.split(":", 1)
+            self.version = name.split(":", 1)[-1]
         self.context = context
         self.ready = False
         self.error = ""
@@ -115,8 +113,8 @@ class V2ModelServer(StepToDict):
         if model:
             self.model = model
             self.ready = True
-        self._versioned_model_name = None
         self.model_endpoint_uid = None
+        self.model_endpoint = None
         self.shard_by_endpoint = shard_by_endpoint
         self._model_logger = None
 
@@ -130,7 +128,7 @@ class V2ModelServer(StepToDict):
         self.ready = True
         self.context.logger.info(f"model {self.name} was loaded")
 
-    def post_init(self, mode="sync"):
+    def post_init(self, mode="sync", **kwargs):
         """sync/async model loading, for internal use"""
         if not self.ready:
             if mode == "async":
@@ -140,17 +138,23 @@ class V2ModelServer(StepToDict):
             else:
                 self._load_and_update_state()
 
-        server = getattr(self.context, "_server", None) or getattr(
-            self.context, "server", None
-        )
+        server: mlrun.serving.GraphServer = getattr(
+            self.context, "_server", None
+        ) or getattr(self.context, "server", None)
         if not server:
             logger.warn("GraphServer not initialized for VotingEnsemble instance")
             return
 
+        if not self.context.is_mock and not self.model_spec:
+            self.get_model()
         if not self.context.is_mock or self.context.monitoring_mock:
-            self.model_endpoint_uid = _init_endpoint_record(
-                graph_server=server, model=self
+            self.model_endpoint = mlrun.get_run_db().get_model_endpoint(
+                project=server.project,
+                name=self.name,
+                function_name=server.function_name,
+                function_tag=server.function_tag or "latest",
             )
+            self.model_endpoint_uid = self.model_endpoint.metadata.uid
         self._model_logger = (
             _ModelLogPusher(self, self.context)
             if self.context and self.context.stream.enabled
@@ -231,23 +235,6 @@ class V2ModelServer(StepToDict):
         request = self.preprocess(event_body, op)
         return self.validate(request, op)
 
-    @property
-    def versioned_model_name(self):
-        if self._versioned_model_name:
-            return self._versioned_model_name
-
-        # Generating version model value based on the model name and model version
-        if self.model_path and self.model_path.startswith("store://"):
-            # Enrich the model server with the model artifact metadata
-            self.get_model()
-            if not self.version:
-                # Enrich the model version with the model artifact tag
-                self.version = self.model_spec.tag
-            self.labels = self.model_spec.labels
-        version = self.version or "latest"
-        self._versioned_model_name = f"{self.name}:{version}"
-        return self._versioned_model_name
-
     def do_event(self, event, *args, **kwargs):
         """main model event handler method"""
         start = now_date()
@@ -290,7 +277,7 @@ class V2ModelServer(StepToDict):
 
             response = {
                 "id": event_id,
-                "model_name": self.name,
+                "model_name": self.name.split(":")[0],
                 "outputs": outputs,
                 "timestamp": start.isoformat(sep=" ", timespec="microseconds"),
             }
@@ -321,7 +308,7 @@ class V2ModelServer(StepToDict):
             # get model metadata operation
             setattr(event, "terminated", True)
             event_body = {
-                "name": self.name,
+                "name": self.name.split(":")[0],
                 "version": self.version or "",
                 "inputs": [],
                 "outputs": [],
@@ -551,140 +538,3 @@ class _ModelLogPusher:
                 if getattr(self.model, "metrics", None):
                     data["metrics"] = self.model.metrics
                 self.output_stream.push([data], partition_key=partition_key)
-
-
-def _init_endpoint_record(
-    graph_server: GraphServer, model: V2ModelServer
-) -> Union[str, None]:
-    """
-    Initialize model endpoint record and write it into the DB. In general, this method retrieve the unique model
-    endpoint ID which is generated according to the function uri and the model version. If the model endpoint is
-    already exist in the DB, we skip the creation process. Otherwise, it writes the new model endpoint record to the DB.
-
-    :param graph_server: A GraphServer object which will be used for getting the function uri.
-    :param model:        Base model serving class (v2). It contains important details for the model endpoint record
-                         such as model name, model path, and model version.
-
-    :return: Model endpoint unique ID.
-    """
-
-    logger.info("Initializing endpoint records")
-    if not model.model_spec:
-        model.get_model()
-    if model.model_spec:
-        model_name = model.model_spec.metadata.key
-        model_db_key = model.model_spec.spec.db_key
-        model_uid = model.model_spec.metadata.uid
-        model_tag = model.model_spec.tag
-        model_labels = model.model_spec.labels  # todo : check if we still need this
-    else:
-        model_name = None
-        model_db_key = None
-        model_uid = None
-        model_tag = None
-        model_labels = {}
-    try:
-        model_ep = mlrun.get_run_db().get_model_endpoint(
-            project=graph_server.project,
-            name=model.name,
-            function_name=graph_server.function_name,
-            function_tag=graph_server.function_tag or "latest",
-        )
-    except mlrun.errors.MLRunNotFoundError:
-        model_ep = None
-    except mlrun.errors.MLRunBadRequestError as err:
-        logger.info(
-            "Cannot get the model endpoints store", err=mlrun.errors.err_to_str(err)
-        )
-        return
-
-    function = mlrun.get_run_db().get_function(
-        name=graph_server.function_name,
-        project=graph_server.project,
-        tag=graph_server.function_tag or "latest",
-    )
-    function_uid = function.get("metadata", {}).get("uid")
-    if not model_ep and model.context.server.track_models:
-        logger.info(
-            "Creating a new model endpoint record",
-            name=model.name,
-            project=graph_server.project,
-            function_name=graph_server.function_name,
-            function_tag=graph_server.function_tag or "latest",
-            function_uid=function_uid,
-            model_name=model_name,
-            model_tag=model_tag,
-            model_db_key=model_db_key,
-            model_uid=model_uid,
-            model_class=model.__class__.__name__,
-        )
-        model_ep = mlrun.common.schemas.ModelEndpoint(
-            metadata=mlrun.common.schemas.ModelEndpointMetadata(
-                project=graph_server.project,
-                labels=model_labels,
-                name=model.name,
-                endpoint_type=mlrun.common.schemas.model_monitoring.EndpointType.NODE_EP,
-            ),
-            spec=mlrun.common.schemas.ModelEndpointSpec(
-                function_name=graph_server.function_name,
-                function_uid=function_uid,
-                function_tag=graph_server.function_tag or "latest",
-                model_name=model_name,
-                model_db_key=model_db_key,
-                model_uid=model_uid,
-                model_class=model.__class__.__name__,
-                model_tag=model_tag,
-            ),
-            status=mlrun.common.schemas.ModelEndpointStatus(
-                monitoring_mode=mlrun.common.schemas.model_monitoring.ModelMonitoringMode.enabled
-                if model.context.server.track_models
-                else mlrun.common.schemas.model_monitoring.ModelMonitoringMode.disabled,
-            ),
-        )
-        db = mlrun.get_run_db()
-        model_ep = db.create_model_endpoint(model_endpoint=model_ep)
-
-    elif model_ep:
-        attributes = {}
-        if function_uid != model_ep.spec.function_uid:
-            attributes[ModelEndpointSchema.FUNCTION_UID] = function_uid
-        if model_name != model_ep.spec.model_name:
-            attributes[ModelEndpointSchema.MODEL_NAME] = model_name
-        if model_uid != model_ep.spec.model_uid:
-            attributes[ModelEndpointSchema.MODEL_UID] = model_uid
-        if model_tag != model_ep.spec.model_tag:
-            attributes[ModelEndpointSchema.MODEL_TAG] = model_tag
-        if model_db_key != model_ep.spec.model_db_key:
-            attributes[ModelEndpointSchema.MODEL_DB_KEY] = model_db_key
-        if model_labels != model_ep.metadata.labels:
-            attributes[ModelEndpointSchema.LABELS] = model_labels
-        if model.__class__.__name__ != model_ep.spec.model_class:
-            attributes[ModelEndpointSchema.MODEL_CLASS] = model.__class__.__name__
-        if (
-            model_ep.status.monitoring_mode
-            == mlrun.common.schemas.model_monitoring.ModelMonitoringMode.enabled
-        ) != model.context.server.track_models:
-            attributes[ModelEndpointSchema.MONITORING_MODE] = (
-                mlrun.common.schemas.model_monitoring.ModelMonitoringMode.enabled
-                if model.context.server.track_models
-                else mlrun.common.schemas.model_monitoring.ModelMonitoringMode.disabled
-            )
-        if attributes:
-            logger.info(
-                "Updating model endpoint attributes",
-                attributes=attributes,
-                project=model_ep.metadata.project,
-                name=model_ep.metadata.name,
-                function_name=model_ep.spec.function_name,
-            )
-            db = mlrun.get_run_db()
-            model_ep = db.patch_model_endpoint(
-                project=model_ep.metadata.project,
-                name=model_ep.metadata.name,
-                endpoint_id=model_ep.metadata.uid,
-                attributes=attributes,
-            )
-    else:
-        return None
-
-    return model_ep.metadata.uid
