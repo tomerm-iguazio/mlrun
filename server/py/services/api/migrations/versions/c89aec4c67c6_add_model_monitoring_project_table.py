@@ -13,11 +13,11 @@
 # limitations under the License.
 #
 
-"""Add model_monitoring_project table
+"""Add model monitoring project table
 
-Revision ID: 25237a4b1229
-Revises: d03853198b28
-Create Date: 2024-12-02 11:36:47.373288
+Revision ID: c89aec4c67c6
+Revises: 63a7eec6d034
+Create Date: 2024-12-30 14:17:14.908637
 
 """
 
@@ -26,8 +26,8 @@ from alembic import op
 from sqlalchemy.dialects import mysql
 
 # revision identifiers, used by Alembic.
-revision = "25237a4b1229"
-down_revision = "d03853198b28"
+revision = "c89aec4c67c6"
+down_revision = "63a7eec6d034"
 branch_labels = None
 depends_on = None
 

@@ -981,7 +981,6 @@ with warnings.catch_warnings():
         def get_identifier_string(self) -> str:
             return f"{self.key}"
 
-
     class ModelMonitoringProject(Base, mlrun.utils.db.BaseModel):
         __tablename__ = "model_monitoring_projects"
         __table_args__ = (
