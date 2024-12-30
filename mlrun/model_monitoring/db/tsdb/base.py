@@ -239,7 +239,7 @@ class TSDBConnector(ABC):
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
         """
-        Fetches distinct metrics metadata from the metrics TSDB table for a specified model endpoint.
+        Fetches distinct metrics metadata from the metrics TSDB table for a specified model endpoints.
 
         :param endpoint_id:        The model endpoint identifier. Can be a single id or a list of ids.
         :param start:              The start time of the query.
@@ -257,7 +257,7 @@ class TSDBConnector(ABC):
         end: typing.Optional[datetime] = None,
     ) -> pd.DataFrame:
         """
-        Fetches distinct results metadata from the app-results TSDB table for a specified model endpoint.
+        Fetches distinct results metadata from the app-results TSDB table for a specified model endpoints.
 
         :param endpoint_id:        The model endpoint identifier. Can be a single id or a list of ids.
         :param start:              The start time of the query.
@@ -510,7 +510,7 @@ class TSDBConnector(ABC):
             name_column = mm_schemas.MetricData.METRIC_NAME
 
         grouped_by_fields.append(name_column)
-        #  groupby has different behavior for category columns
+        # groupby has different behavior for category columns
         df["endpoint_id"] = df["endpoint_id"].astype(str)
         grouped_by_df = df.groupby("endpoint_id")
         grouped_dict = grouped_by_df.apply(
@@ -568,7 +568,7 @@ class TSDBConnector(ABC):
             name_column = mm_schemas.MetricData.METRIC_NAME
         columns_to_zip.insert(1, name_column)
 
-        #  groupby has different behavior for category columns
+        # groupby has different behavior for category columns
         df["endpoint_id"] = df["endpoint_id"].astype(str)
         df["event_values"] = list(zip(*[df[col] for col in columns_to_zip]))
         grouped_by_event_values = df.groupby("endpoint_id")["event_values"].apply(set)

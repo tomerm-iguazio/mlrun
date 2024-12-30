@@ -3533,10 +3533,13 @@ class HTTPRunDB(RunDBInterface):
     ) -> dict[str, list[mm_endpoints.ModelEndpointMonitoringMetric]]:
         """Get application metrics/results by endpoint id and project.
 
-        :param project: The name of the project.
-        :param endpoint_ids: The unique id of the model endpoint. Can be a single id or a list of ids.
-        :param type: The type of the metrics to return. "all" means "results" and "metrics".
+        :param project:         The name of the project.
+        :param endpoint_ids:    The unique id of the model endpoint. Can be a single id or a list of ids.
+        :param type:            The type of the metrics to return. "all" means "results" and "metrics".
+        :param events_format:   response format:
 
+                                separation: {"mep_id1":[...], "mep_id2":[...]}
+                                intersection {"intersect_metrics":[], "intersect_results":[]}
         :return: A dictionary of application metrics and/or results for the model endpoints formatted by events_format.
         """
         path = f"projects/{project}/model-endpoints/metrics"

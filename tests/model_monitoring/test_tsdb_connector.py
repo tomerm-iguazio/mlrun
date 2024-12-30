@@ -47,7 +47,12 @@ class TestTSDBConnectorStaticMethods:
             }
         )
 
-    def test_df_to_metrics_grouped_dict(self, results_data, metrics_data):
+    @pytest.fixture
+    def empty_df(self):
+        """Fixture to create shared test data."""
+        return pd.DataFrame()
+
+    def test_df_to_metrics_grouped_dict(self, results_data, metrics_data, empty_df):
         results_by_endpoint = TSDBConnector.df_to_metrics_grouped_dict(
             df=results_data, type="result", project="my_project"
         )
@@ -68,7 +73,21 @@ class TestTSDBConnectorStaticMethods:
             [metric.name for metric in metrics_by_endpoint["mep_uid2"]]
         )
 
-    def test_df_to_metrics_list(self, results_data, metrics_data):
+        # empty df test:
+        assert (
+            TSDBConnector.df_to_metrics_grouped_dict(
+                df=empty_df, type="result", project="my_project"
+            )
+            == {}
+        )
+        assert (
+            TSDBConnector.df_to_metrics_grouped_dict(
+                df=empty_df, type="metric", project="my_project"
+            )
+            == {}
+        )
+
+    def test_df_to_metrics_list(self, results_data, metrics_data, empty_df):
         results = TSDBConnector.df_to_metrics_list(
             df=results_data, type="result", project="my_project"
         )
@@ -83,25 +102,46 @@ class TestTSDBConnectorStaticMethods:
             [metric.name for metric in metrics]
         )
 
-    def test_df_to_events_intersection_dict(self, results_data, metrics_data):
+        # empty df test:
+        assert (
+            TSDBConnector.df_to_metrics_list(
+                df=empty_df, type="result", project="my_project"
+            )
+            == []
+        )
+        assert (
+            TSDBConnector.df_to_metrics_list(
+                df=empty_df, type="metric", project="my_project"
+            )
+            == []
+        )
+
+    def test_df_to_events_intersection_dict(self, results_data, metrics_data, empty_df):
+        metrics_key = mm_schemas.INTERSECT_DICT_KEYS[
+            mm_schemas.ModelEndpointMonitoringMetricType.METRIC
+        ]
+        results_key = mm_schemas.INTERSECT_DICT_KEYS[
+            mm_schemas.ModelEndpointMonitoringMetricType.RESULT
+        ]
         result_intersection_dict = TSDBConnector.df_to_events_intersection_dict(
             df=results_data, type="result", project="my_project"
         )
-        results = result_intersection_dict[
-            mm_schemas.INTERSECT_DICT_KEYS[
-                mm_schemas.ModelEndpointMonitoringMetricType.RESULT
-            ]
-        ]
+        results = result_intersection_dict[results_key]
         assert len(results) == 1
         assert results[0].full_name == "my_project.my_app.result.result1"
 
         metric_intersection_dict = TSDBConnector.df_to_events_intersection_dict(
             df=metrics_data, type="metric", project="my_project"
         )
-        metrics = metric_intersection_dict[
-            mm_schemas.INTERSECT_DICT_KEYS[
-                mm_schemas.ModelEndpointMonitoringMetricType.METRIC
-            ]
-        ]
+
+        metrics = metric_intersection_dict[metrics_key]
         assert len(metrics) == 1
         assert metrics[0].full_name == "my_project.my_app.metric.metric1"
+
+        # empty df test:
+        assert TSDBConnector.df_to_events_intersection_dict(
+            df=empty_df, type="metric", project="my_project"
+        ) == {metrics_key: []}
+        assert TSDBConnector.df_to_events_intersection_dict(
+            df=empty_df, type="result", project="my_project"
+        ) == {results_key: []}

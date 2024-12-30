@@ -13,7 +13,7 @@
 # limitations under the License.
 
 import typing
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 import pandas as pd
 import taosws
@@ -553,12 +553,11 @@ class TDEngineConnector(TSDBConnector):
             },
             inplace=True,
         )
-        df[mm_schemas.EventFieldType.LAST_REQUEST] = df[
-            mm_schemas.EventFieldType.LAST_REQUEST
-        ].map(
-            lambda last_request: datetime.strptime(
-                last_request, "%Y-%m-%d %H:%M:%S.%f %z"
-            ).astimezone(tz=timezone.utc)
+        df[mm_schemas.EventFieldType.LAST_REQUEST] = pd.to_datetime(
+            df[mm_schemas.EventFieldType.LAST_REQUEST],
+            errors="coerce",
+            format="ISO8601",
+            utc=True,
         )
         return df
 

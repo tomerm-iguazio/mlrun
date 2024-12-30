@@ -412,8 +412,7 @@ async def get_metrics_by_multiple_endpoints(
         for endpoint_id in endpoint_ids:
             events[endpoint_id] = []
             for task_result in task_results:
-                if mm_constants.GetEventsFormat.SEPARATION:
-                    events[endpoint_id].extend(task_result.get(endpoint_id, []))
+                events[endpoint_id].extend(task_result.get(endpoint_id, []))
             if is_metrics_supported:
                 events[endpoint_id].append(
                     mlrun.model_monitoring.helpers.get_invocations_metric(project)
