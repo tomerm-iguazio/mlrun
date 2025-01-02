@@ -5849,7 +5849,6 @@ class SQLDB(DBInterface):
         if not alert_record:
             return self._create_alert(session, alert)
         alert_record.full_object = alert.dict()
-        alert_state = self.get_alert_state(session, alert_record.id)
 
         self._delete_alert_notifications(session, alert.name, alert, alert.project)
         self._store_notifications(
@@ -5860,27 +5859,25 @@ class SQLDB(DBInterface):
             alert.project,
         )
 
-        self._upsert(session, [alert_record, alert_state])
+        self._upsert(session, [alert_record])
         return self.get_alert_by_id(session, alert_record.id)
 
     def _create_alert(
         self, session, alert: mlrun.common.schemas.AlertConfig
     ) -> mlrun.common.schemas.AlertConfig:
         alert_record = self._transform_alert_config_schema_to_record(alert)
-        self._upsert(session, [alert_record])
-
-        alert_record = self._get_alert_record(
-            session, alert_record.name, alert_record.project
+        alert_id = self._upsert_object_and_flush_to_get_field(
+            session, alert_record, "id"
         )
 
         self._store_notifications(
             session,
             AlertConfig,
             alert.get_raw_notifications(),
-            alert_record.id,
+            alert_id,
             alert.project,
         )
-        self.create_alert_state(session, alert_record)
+        self.create_alert_state(session, alert_id)
 
         return self._transform_alert_config_record_to_schema(alert_record)
 
@@ -6125,7 +6122,7 @@ class SQLDB(DBInterface):
     @staticmethod
     def _transform_alert_config_record_to_schema(
         alert_config_record: AlertConfig,
-    ) -> mlrun.common.schemas.AlertConfig:
+    ) -> typing.Optional[mlrun.common.schemas.AlertConfig]:
         if alert_config_record is None:
             return None
 
@@ -6166,8 +6163,20 @@ class SQLDB(DBInterface):
         active: bool = False,
         obj: typing.Optional[dict] = None,
     ):
-        alert = self.get_alert(session, project, name)
-        state = self.get_alert_state(session, alert.id)
+        query = (
+            self._query(session, AlertState)
+            .join(AlertConfig, AlertConfig.id == AlertState.parent_id)
+            .filter(
+                AlertConfig.name == name,
+                AlertConfig.project == project,
+            )
+        )
+        state = query.one_or_none()
+        if state is None:
+            raise mlrun.errors.MLRunNotFoundError(
+                f"Alert state not found for alert name: {name}, project: {project}"
+            )
+
         if count is not None:
             state.count = count
         state.last_updated = last_updated
@@ -6177,15 +6186,20 @@ class SQLDB(DBInterface):
         self._upsert(session, [state])
 
     def get_alert_state(self, session, alert_id: int) -> AlertState:
-        return self._query(session, AlertState, parent_id=alert_id).one()
+        state = self._query(session, AlertState, parent_id=alert_id).one_or_none()
+        if state is None:
+            raise mlrun.errors.MLRunNotFoundError(
+                f"Alert state not found for alert id: {alert_id}"
+            )
+        return state
 
     def get_alert_state_dict(self, session, alert_id: int) -> dict:
         state = self.get_alert_state(session, alert_id)
         if state is not None:
             return state.to_dict()
 
-    def create_alert_state(self, session, alert_record):
-        state = AlertState(count=0, parent_id=alert_record.id)
+    def create_alert_state(self, session, alert_id):
+        state = AlertState(count=0, parent_id=alert_id)
         self._upsert(session, [state])
 
     def delete_alert_notifications(
@@ -6622,7 +6636,7 @@ class SQLDB(DBInterface):
         session,
         cls,
         notification_objects: list[mlrun.model.Notification],
-        parent_id: str,
+        parent_id: Union[str, int],
         project: str,
     ):
         db_notifications = {
@@ -6632,12 +6646,6 @@ class SQLDB(DBInterface):
             )
         }
         notifications = []
-        logger.debug(
-            "Storing notifications",
-            notifications_length=len(notification_objects),
-            parent_id=parent_id,
-            project=project,
-        )
         for notification_model in notification_objects:
             new_notification = False
             notification = db_notifications.get(notification_model.name, None)
