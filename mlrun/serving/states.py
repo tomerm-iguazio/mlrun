@@ -806,6 +806,10 @@ class RouterStep(TaskStep):
             del self._routes[key]
 
     def init_object(self, context, namespace, mode="sync", reset=False, **extra_kwargs):
+        if not self.routes:
+            raise mlrun.errors.MLRunRuntimeError(
+                "You have to add models to the router step before initializing it"
+            )
         if not self._is_local_function(context):
             return
 
