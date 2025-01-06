@@ -14,6 +14,7 @@
 
 import concurrent.futures
 import json
+import os
 import pickle
 import time
 import typing
@@ -40,6 +41,7 @@ import mlrun.feature_store as fstore
 import mlrun.model_monitoring
 import mlrun.model_monitoring.api
 import mlrun.model_monitoring.applications.histogram_data_drift
+from mlrun.datastore.datastore_profile import DatastoreProfileV3io
 from mlrun.datastore.targets import ParquetTarget
 from mlrun.model_monitoring.applications import (
     SUPPORTED_EVIDENTLY_VERSION,
@@ -110,7 +112,7 @@ class _V3IORecordsChecker:
             project_name, "./", allow_cross_project=True
         )
         project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
 
@@ -876,7 +878,7 @@ class TestModelMonitoringInitialize(TestMLRunSystem):
                 image=self.image or "mlrun/mlrun"
             )
         self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
         self.project.enable_model_monitoring(
@@ -952,7 +954,9 @@ class TestModelMonitoringInitialize(TestMLRunSystem):
             # controller and writer(with has stream) should be deleted
             for name in mm_constants.MonitoringFunctionNames.list():
                 stream_path = mlrun.model_monitoring.helpers.get_stream_path(
-                    project=self.project.name, function_name=name
+                    project=self.project.name,
+                    function_name=name,
+                    profile=DatastoreProfileV3io(name="tmp"),
                 )
                 _, container, stream_path = (
                     mlrun.common.model_monitoring.helpers.parse_model_endpoint_store_prefix(
@@ -980,6 +984,7 @@ class TestModelMonitoringInitialize(TestMLRunSystem):
             stream_path = mlrun.model_monitoring.helpers.get_stream_path(
                 project=self.project.name,
                 function_name=mm_constants.HistogramDataDriftApplicationConstants.NAME,
+                profile=DatastoreProfileV3io(name="tmp"),
             )
             _, container, stream_path = (
                 mlrun.common.model_monitoring.helpers.parse_model_endpoint_store_prefix(
@@ -995,6 +1000,7 @@ class TestModelMonitoringInitialize(TestMLRunSystem):
                 stream_path = mlrun.model_monitoring.helpers.get_stream_path(
                     project=self.project.name,
                     function_name=mm_constants.HistogramDataDriftApplicationConstants.NAME,
+                    profile=DatastoreProfileV3io(name="tmp"),
                 )
                 _, container, stream_path = (
                     mlrun.common.model_monitoring.helpers.parse_model_endpoint_store_prefix(
@@ -1258,7 +1264,7 @@ class TestMonitoredServings(TestMLRunSystem):
     def test_different_kind_of_serving(self) -> None:
         self.function_name = "serving-router"
         self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
         self.project.enable_model_monitoring(
@@ -1303,7 +1309,7 @@ class TestMonitoredServings(TestMLRunSystem):
     def test_tracking(self) -> None:
         self.function_name = "serving-1"
         self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
         self.project.enable_model_monitoring(
@@ -1384,7 +1390,7 @@ class TestMonitoredServings(TestMLRunSystem):
     def test_enable_model_monitoring_after_failure(self) -> None:
         self.function_name = "test-function"
         self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
 
@@ -1490,7 +1496,7 @@ class TestAppJobModelEndpointData(TestMLRunSystem):
 
     def _set_credentials(self) -> None:
         self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
 
@@ -1627,7 +1633,7 @@ class TestBatchServingWithSampling(TestMLRunSystem):
 
     def _set_credentials(self) -> None:
         self.project.set_model_monitoring_credentials(
-            stream_path=mlrun.mlconf.model_endpoint_monitoring.stream_connection,
+            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
             tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
         )
 
