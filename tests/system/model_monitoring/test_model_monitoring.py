@@ -47,6 +47,8 @@ from mlrun.utils import generate_artifact_uri
 from mlrun.utils.v3io_clients import get_frames_client
 from tests.system.base import TestMLRunSystem
 
+from . import get_tsdb_datastore_profile_from_env
+
 _MLRUN_MODEL_MONITORING_DB = "mysql+pymysql://root@mlrun-db:3306/mlrun_model_monitoring"
 
 
@@ -68,7 +70,9 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             return
         self.project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
 
     def _generate_event(
@@ -107,12 +111,13 @@ class TestModelEndpointsOperations(TestMLRunSystem):
 
     def test_get_model_endpoint_metrics(self):
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
-            project=self.project_name,
-            tsdb_connection_string=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            project=self.project_name, profile=get_tsdb_datastore_profile_from_env()
         )
         self.project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
         db = mlrun.get_run_db()
         model_endpoint = self._mock_random_endpoint("testing")
@@ -536,7 +541,9 @@ class TestBasicModelMonitoring(TestMLRunSystem):
 
         project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
             replace_creds=True,  # remove once ML-7501 is resolved
         )
 
@@ -1143,7 +1150,9 @@ class TestBatchDrift(TestMLRunSystem):
         # Deploy model monitoring infra
         project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
         project.enable_model_monitoring(
             base_period=1,
@@ -1282,7 +1291,9 @@ class TestModelMonitoringKafka(TestMLRunSystem):
 
         project.set_model_monitoring_credentials(
             stream_path=f"kafka://{self.brokers}",
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
 
         # enable model monitoring
@@ -1373,7 +1384,9 @@ class TestInferenceWithSpecialChars(TestMLRunSystem):
         # Set the model monitoring credentials
         self.project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
 
     @classmethod
@@ -1489,8 +1502,7 @@ class TestModelInferenceTSDBRecord(TestMLRunSystem):
     @classmethod
     def _test_v3io_tsdb_record(cls) -> None:
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
-            project=cls.project_name,
-            tsdb_connection_string=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            project=cls.project_name, profile=get_tsdb_datastore_profile_from_env()
         )
 
         df: pd.DataFrame = tsdb_client._get_records(
@@ -1514,7 +1526,9 @@ class TestModelInferenceTSDBRecord(TestMLRunSystem):
     def test_record(self) -> None:
         self.project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
         self.project.enable_model_monitoring(
             base_period=1,
@@ -1552,7 +1566,9 @@ class TestModelEndpointWithManyFeatures(TestMLRunSystem):
 
         project.set_model_monitoring_credentials(
             stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=mlrun.mlconf.model_endpoint_monitoring.tsdb_connection,
+            tsdb_connection=os.getenv(
+                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
+            ),
         )
 
         # Generate a model with 500 features
