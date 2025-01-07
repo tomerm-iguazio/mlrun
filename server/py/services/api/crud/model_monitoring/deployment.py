@@ -328,7 +328,8 @@ class MonitoringDeployment:
                 function=function, function_name=function_name
             )
 
-        function.spec.disable_default_http_trigger = True
+        if function_name != mm_constants.MonitoringFunctionNames.APPLICATION_CONTROLLER:
+            function.spec.disable_default_http_trigger = True
 
         return function
 
@@ -346,7 +347,10 @@ class MonitoringDeployment:
         stream_source = mlrun.datastore.sources.KafkaSource(
             brokers=brokers,
             topics=[topic],
-            attributes={"max_workers": stream_args.kafka.num_workers},
+            attributes={
+                "max_workers": stream_args.kafka.num_workers,
+                "worker_allocation_mode": "static",
+            },
         )
         try:
             stream_source.create_topics(
@@ -375,11 +379,16 @@ class MonitoringDeployment:
         function_name: str,
         stream_args: mlrun.config.Config,
     ):
-        access_key = self.model_monitoring_access_key
-        kwargs = {"access_key": self.model_monitoring_access_key}
+        access_key = (
+            self.model_monitoring_access_key
+            if function_name
+            != mm_constants.MonitoringFunctionNames.APPLICATION_CONTROLLER
+            else mlrun.mlconf.get_v3io_access_key()
+        )
+        kwargs = {"access_key": access_key}
         if mlrun.mlconf.is_explicit_ack_enabled():
             kwargs["explicit_ack_mode"] = "explicitOnly"
-            kwargs["worker_allocation_mode"] = "static"
+        kwargs["worker_allocation_mode"] = "static"
         kwargs["max_workers"] = stream_args.v3io.num_workers
         services.api.api.endpoints.nuclio.create_model_monitoring_stream(
             project=self.project,
@@ -444,10 +453,15 @@ class MonitoringDeployment:
             project=self.project, secret_provider=self._secret_provider
         )
 
+        controller_stream_uri = mlrun.model_monitoring.get_stream_path(
+            project=self.project,
+            function_name=mm_constants.MonitoringFunctionNames.APPLICATION_CONTROLLER,
+            secret_provider=self._secret_provider,
+        )
+
         # Create monitoring serving graph
         stream_processor.apply_monitoring_serving_graph(
-            function,
-            tsdb_connector,
+            function, tsdb_connector, controller_stream_uri
         )
 
         # Set the project to the serving function
@@ -489,11 +503,17 @@ class MonitoringDeployment:
         # Set the project to the job function
         function.metadata.project = self.project
 
+        # Add stream triggers
+        function = self.apply_and_create_stream_trigger(
+            function=function,
+            function_name=mm_constants.MonitoringFunctionNames.APPLICATION_CONTROLLER,
+            stream_args=config.model_endpoint_monitoring.controller_stream_args,
+        )
+
         function = self._apply_access_key_and_mount_function(
             function=function,
             function_name=mm_constants.MonitoringFunctionNames.APPLICATION_CONTROLLER,
         )
-        function.spec.max_replicas = 1
         # Enrich runtime with the required configurations
         framework.api.utils.apply_enrichment_and_validation_on_function(
             function, self.auth_info
