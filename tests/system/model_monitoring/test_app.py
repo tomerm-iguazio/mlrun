@@ -751,8 +751,6 @@ class TestRecordResults(TestMLRunSystem, _V3IORecordsChecker):
         cls.training_set = cls.x_train.join(cls.y_train)
         cls.test_set = cls.x_test.join(cls.y_test)
         cls.infer_results_df = cls.test_set
-        # endpoint
-        cls.endpoint_id = "58d42fdd76ad999c377fad1adcafd2790b5a89b9"
         cls.function_name = f"{cls.name_prefix}-function"
         # training
         cls._train()
@@ -847,7 +845,7 @@ class TestRecordResults(TestMLRunSystem, _V3IORecordsChecker):
         self._test_v3io_records(
             mep.metadata.uid, inputs=set(self.columns), outputs=set(self.y_name)
         )
-        self._test_predictions_table(self.endpoint_id, should_be_empty=True)
+        self._test_predictions_table(mep.metadata.uid, should_be_empty=True)
 
 
 @TestMLRunSystem.skip_test_if_env_not_configured
