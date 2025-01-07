@@ -613,7 +613,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
         self._assert_model_endpoint_tags_and_labels(
             endpoint=endpoint,
             model_name=model_name,
-            tag=["some-tag", "latest"],
+            tag="some-tag",
             labels=labels,
         )
         self._assert_model_uri(model_obj=model_obj, endpoint=endpoint)
@@ -649,7 +649,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
         self,
         endpoint: mlrun.common.schemas.ModelEndpoint,
         model_name: str,
-        tag: list[str],
+        tag: str,
         labels: dict[str, str],
     ) -> None:
         assert endpoint.metadata.labels == labels
