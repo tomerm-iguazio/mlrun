@@ -364,6 +364,9 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         endpoints_intersect = in_endpoint_names.intersection(out_endpoint_names)
         assert len(endpoints_intersect) == number_of_endpoints
 
+        for endpoint in endpoints_out:
+            assert endpoint.metadata.labels
+
     def test_max_archive_list_endpoints(self):
         # Validates the process of listing model endpoints with max archive limitation. In this test
         # we create 5 model endpoints and then create another one. The oldest one should be deleted
