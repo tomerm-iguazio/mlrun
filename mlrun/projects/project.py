@@ -1965,6 +1965,7 @@ class MlrunProject(ModelObj):
             ... )
 
         """
+        document_loader_spec = document_loader_spec or DocumentLoaderSpec()
         if not document_loader_spec.download_object and upload:
             raise ValueError(
                 "This document loader expects direct links/URLs and does not support file uploads. "
@@ -1973,9 +1974,8 @@ class MlrunProject(ModelObj):
         doc_artifact = DocumentArtifact(
             key=key,
             original_source=local_path or target_path,
-            document_loader_spec=document_loader_spec
-            if document_loader_spec
-            else DocumentLoaderSpec(),
+            document_loader_spec=document_loader_spec,
+            collections=kwargs.pop("collections", None),
             **kwargs,
         )
         return self.log_artifact(
