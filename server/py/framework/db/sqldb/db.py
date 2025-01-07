@@ -7170,7 +7170,11 @@ class SQLDB(DBInterface):
             )
 
     def _split_mep_update_attr(self, attributes: dict):
-        labels = attributes.pop("labels", None)
+        if "labels" in attributes:
+            # labels can be None, so if labels key exists, return {} and override existing labels.
+            labels = attributes.pop("labels") or {}
+        else:
+            labels = None
         schema_attr = {}
         for key in list(attributes.keys()):
             if hasattr(ModelEndpoint, key):
