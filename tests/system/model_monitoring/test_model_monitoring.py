@@ -369,6 +369,28 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         endpoints_intersect = in_endpoint_names.intersection(out_endpoint_names)
         assert len(endpoints_intersect) == number_of_endpoints
 
+    def test_labels(self):
+        db = mlrun.get_run_db()
+        endpoint_name = "testing-endpoint"
+        endpoint = self._mock_random_endpoint(endpoint_name)
+        in_endpoint = db.create_model_endpoint(endpoint)
+        endpoint_id = in_endpoint.metadata.uid
+        out_endpoint = self._run_db.get_model_endpoint(
+            name=endpoint_name, project=self.project_name, endpoint_id=endpoint_id
+        )
+        assert out_endpoint.metadata.labels
+
+        # testing inplace creation strategy:
+        endpoint = self._mock_random_endpoint(endpoint_name, add_labels=False)
+        db.create_model_endpoint(
+            endpoint,
+            creation_strategy=mm_constants.ModelEndpointCreationStrategy.INPLACE,
+        )
+        out_endpoint = self._run_db.get_model_endpoint(
+            name=endpoint_name, project=self.project_name, endpoint_id=endpoint_id
+        )
+        assert not out_endpoint.metadata.labels
+
     def test_max_archive_list_endpoints(self):
         # Validates the process of listing model endpoints with max archive limitation. In this test
         # we create 5 model endpoints and then create another one. The oldest one should be deleted
@@ -491,6 +513,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         function_tag: Optional[str] = "v1",
         model_name: Optional[str] = None,
         model_uid: Optional[str] = None,
+        add_labels=True,
     ) -> mlrun.common.schemas.model_monitoring.ModelEndpoint:
         def random_labels():
             return {
@@ -501,7 +524,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             metadata=mlrun.common.schemas.model_monitoring.ModelEndpointMetadata(
                 name=name,
                 project=self.project_name,
-                labels=random_labels(),
+                labels=random_labels() if add_labels else {},
             ),
             spec=mlrun.common.schemas.model_monitoring.ModelEndpointSpec(
                 function_name=function_name,
@@ -617,7 +640,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
         self._assert_model_endpoint_tags_and_labels(
             endpoint=endpoint,
             model_name=model_name,
-            tag=["some-tag", "latest"],
+            tag="some-tag",
             labels=labels,
         )
         self._assert_model_uri(model_obj=model_obj, endpoint=endpoint)
@@ -653,7 +676,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
         self,
         endpoint: mlrun.common.schemas.ModelEndpoint,
         model_name: str,
-        tag: list[str],
+        tag: str,
         labels: dict[str, str],
     ) -> None:
         assert endpoint.metadata.labels == labels
