@@ -2145,7 +2145,7 @@ class MlrunProject(ModelObj):
         specific_result_names = [
             result_name
             for result_name in result_names
-            if result_name.count(".") == 3 and "*" in result_name
+            if result_name.count(".") == 3 and "*" not in result_name
         ]
         alerts = []
         endpoint_ids = [endpoint.metadata.uid for endpoint in endpoints.endpoints]
