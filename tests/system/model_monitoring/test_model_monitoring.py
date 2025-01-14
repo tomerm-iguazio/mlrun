@@ -1539,7 +1539,6 @@ class TestModelEndpointGetMetrics(TestMLRunSystem):
         mep_name = model_endpoint.metadata.name
         mep2_name = model_endpoint2.metadata.name
 
-        # waits for the writer function to be deployed
         writer = self.project.get_function(
             key=mm_constants.MonitoringFunctionNames.WRITER
         )
