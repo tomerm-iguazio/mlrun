@@ -2120,7 +2120,7 @@ class MlrunProject(ModelObj):
         :param name:                   AlertConfig name.
         :param summary:                Summary of the alert, will be sent in the generated notifications
         :param endpoints:              The endpoints from which metrics will be retrieved to configure the alerts.
-                                       This can be a `ModelEndpointList` object obtained via the `list_model_endpoints`
+                                       This `ModelEndpointList` object obtained via the `list_model_endpoints`
                                        method or created manually using `ModelEndpoint` objects.
         :param events:                 AlertTrigger event types (EventKind).
         :param notifications:          List of notifications to invoke once the alert is triggered
@@ -2130,8 +2130,8 @@ class MlrunProject(ModelObj):
                                        For example:
                                        [`app1.result-*`, `*.result1`]
                                        will match "mep1.app1.result.result-1" and "mep1.app2.result.result1".
-                                       A specific result_name (not a wildcard) will always result in an alert
-                                       configuration being created, regardless of whether the result exists.
+                                       A specific result_name (not a wildcard) will always create a new alert
+                                       config, regardless of whether the result name exists.
         :param severity:               Severity of the alert.
         :param criteria:               When the alert will be triggered based on the
                                        specified number of events within the defined time period.
