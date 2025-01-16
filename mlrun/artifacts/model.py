@@ -459,6 +459,7 @@ def get_model(model_dir, suffix=""):
             ),
             None,
         ) or ".pkl"
+        model_file = model_dir
     else:
         suffix = suffix or ".pkl"
         dirobj = mlrun.datastore.store_manager.object(url=model_dir)
