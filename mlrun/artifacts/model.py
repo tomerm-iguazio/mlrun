@@ -428,6 +428,16 @@ def get_model(model_dir, suffix=""):
     extra_dataitems = {}
     model_suffix_options = [".tar.gz", ".pkl", ".bin", ".pickle"]
     default_suffix = ".pkl"
+
+    alternative_suffix = next(
+        (
+            optional_suffix
+            for optional_suffix in model_suffix_options
+            if model_dir.lower().endswith(optional_suffix)
+        ),
+        None,
+    )
+
     if hasattr(model_dir, "artifact_url"):
         model_dir = model_dir.artifact_url
 
@@ -449,23 +459,8 @@ def get_model(model_dir, suffix=""):
         suffix = suffix or default_suffix
     elif suffix and model_dir.endswith(suffix):
         model_file = model_dir
-    elif not suffix and any(
-        [
-            model_dir.lower().endswith(model_suffix)
-            for model_suffix in model_suffix_options
-        ]
-    ):
-        suffix = (
-            next(
-                (
-                    optional_suffix
-                    for optional_suffix in model_suffix_options
-                    if model_dir.lower().endswith(optional_suffix)
-                ),
-                None,
-            )
-            or default_suffix
-        )
+    elif not suffix and alternative_suffix:
+        suffix = alternative_suffix
         model_file = model_dir
     else:
         suffix = suffix or default_suffix
