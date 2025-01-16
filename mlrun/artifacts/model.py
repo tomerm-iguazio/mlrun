@@ -30,6 +30,7 @@ from ..utils import StorePrefix, is_relative_path
 from .base import Artifact, ArtifactSpec, upload_extra_data
 
 model_spec_filename = "model_spec.yaml"
+MODEL_OPTIONAL_SUFFIXES = [".tar.gz", ".pkl", ".bin", ".pickle"]
 
 
 class ModelArtifactSpec(ArtifactSpec):
@@ -426,13 +427,12 @@ def get_model(model_dir, suffix=""):
     model_file = ""
     model_spec = None
     extra_dataitems = {}
-    model_suffix_options = [".tar.gz", ".pkl", ".bin", ".pickle"]
     default_suffix = ".pkl"
 
     alternative_suffix = next(
         (
             optional_suffix
-            for optional_suffix in model_suffix_options
+            for optional_suffix in MODEL_OPTIONAL_SUFFIXES
             if model_dir.lower().endswith(optional_suffix)
         ),
         None,
