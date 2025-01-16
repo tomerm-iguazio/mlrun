@@ -427,6 +427,7 @@ def get_model(model_dir, suffix=""):
     model_spec = None
     extra_dataitems = {}
     model_suffix_options = [".tar.gz", ".pkl", ".bin", ".pickle"]
+    default_suffix = ".pkl"
     if hasattr(model_dir, "artifact_url"):
         model_dir = model_dir.artifact_url
 
@@ -440,28 +441,34 @@ def get_model(model_dir, suffix=""):
             target, model_spec.model_target_file or model_spec.model_file
         )
         extra_dataitems = _get_extra(target, model_spec.extra_data)
-
+        suffix = suffix or default_suffix
     elif model_dir.lower().endswith(".yaml"):
         model_spec = _load_model_spec(model_dir)
         model_file = _get_file_path(model_dir, model_spec.model_file)
         extra_dataitems = _get_extra(model_dir, model_spec.extra_data)
-        suffix = ".pkl"
-    elif model_dir.endswith(suffix):
+        suffix = suffix or default_suffix
+    elif suffix and model_dir.endswith(suffix):
         model_file = model_dir
     elif not suffix and any(
-        [model_dir.lower().endswith(model_suffix for model_suffix in model_suffix_options)]
+        [
+            model_dir.lower().endswith(model_suffix)
+            for model_suffix in model_suffix_options
+        ]
     ):
-        suffix = next(
-            (
-                optional_suffix
-                for optional_suffix in model_suffix_options
-                if model_dir.lower().endswith(optional_suffix)
-            ),
-            None,
-        ) or ".pkl"
+        suffix = (
+            next(
+                (
+                    optional_suffix
+                    for optional_suffix in model_suffix_options
+                    if model_dir.lower().endswith(optional_suffix)
+                ),
+                None,
+            )
+            or default_suffix
+        )
         model_file = model_dir
     else:
-        suffix = suffix or ".pkl"
+        suffix = suffix or default_suffix
         dirobj = mlrun.datastore.store_manager.object(url=model_dir)
         model_dir_list = dirobj.listdir()
         if model_spec_filename in model_dir_list:
