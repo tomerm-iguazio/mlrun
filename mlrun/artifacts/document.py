@@ -384,7 +384,7 @@ class DocumentArtifact(Artifact):
             metadata[self.METADATA_ORIGINAL_SOURCE_KEY] = self.spec.original_source
             metadata[self.METADATA_SOURCE_KEY] = self.get_source()
             metadata[self.METADATA_ARTIFACT_TAG] = self.tag or "latest"
-            metadata[self.METADATA_ARTIFACT_KEY] = self.key
+            metadata[self.METADATA_ARTIFACT_KEY] = self.db_key
             metadata[self.METADATA_ARTIFACT_PROJECT] = self.metadata.project
 
             if self.get_target_path():
