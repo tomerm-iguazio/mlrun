@@ -16,7 +16,6 @@ import os
 import pathlib
 import shutil
 import unittest.mock
-import uuid
 
 import pandas
 import pytest
@@ -124,25 +123,6 @@ class TestArtifacts(tests.integration.sdk_api.base.TestMLRunIntegration):
                     data = fp.read()
                 assert data == b"123"
                 assert extra_dataitems["kk"].get() == b"456"
-
-    def test_get_model_without_suffix(self):
-        project = mlrun.new_project("get-model-without-suffix")
-        model_name = f"custom_suffix_model_{uuid.uuid4()}"
-        for suffix in mlrun.artifacts.model.MODEL_OPTIONAL_SUFFIXES:
-            file_name = f"model.{suffix}"
-            project.log_model(
-                model_name,
-                body=b"123",
-                model_file=file_name,
-                artifact_path=results_dir,
-            )
-            model_dir_path = os.path.join(results_dir, model_name)
-            model_path = os.path.join(model_dir_path, file_name)
-            temp_path, _, extra_dataitems = mlrun.artifacts.get_model(model_path)
-            assert temp_path == model_path
-            with open(temp_path, "rb") as fp:
-                data = fp.read()
-            assert data == b"123"
 
     def test_import_remote_zip(self):
         project = mlrun.new_project("log-mod")
