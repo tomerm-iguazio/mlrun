@@ -14,6 +14,7 @@
 from logging.config import fileConfig
 
 import sqlalchemy
+import sqlalchemy.exc
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
@@ -100,7 +101,19 @@ def run_migrations_online():
                 host=host,
                 db="mlrun",
             )
-            connection.execute(sqlalchemy.sql.text(f"KILL {connection_id};"))
+            try:
+                connection.execute(sqlalchemy.sql.text(f"KILL {connection_id};"))
+            except sqlalchemy.exc.OperationalError as exc:
+                if "Unknown thread id" in str(exc):
+                    logger.warning(
+                        "DB connection already closed.",
+                        connection_id=connection_id,
+                        user=user,
+                        host=host,
+                        db="mlrun",
+                    )
+                else:
+                    raise exc
 
         context.configure(connection=connection, target_metadata=target_metadata)
 
