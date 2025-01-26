@@ -79,7 +79,7 @@ from mlrun.utils import (
     validate_artifact_key_name,
     validate_tag_name,
 )
-
+from mlrun.common.schemas.model_monitoring.constants import FQN_REGEX
 import framework.constants
 import framework.db.session
 import framework.utils.helpers
@@ -7120,6 +7120,8 @@ class SQLDB(DBInterface):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Model endpoint name and project must be provided"
             )
+        if not FQN_REGEX.fullmatch(model_endpoint.metadata.name):
+            raise ValueError("model endpoint name is not in the expected format")
         logger.debug(
             "Storing Model Endpoint to DB",
             metadata=model_endpoint.metadata,

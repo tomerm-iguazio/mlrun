@@ -441,7 +441,7 @@ class ControllerPolicy:
 
 class HistogramDataDriftApplicationConstants:
     NAME = "histogram-data-drift"
-    GENERAL_RESULT_NAME = "general_drift"
+    GENERAL_RESULT_NAME = "general-drift"
 
 
 class PredictionsQueryConstants:
@@ -463,7 +463,7 @@ class ModelEndpointMonitoringMetricType(StrEnum):
     METRIC = "metric"
 
 
-_FQN_PART_PATTERN = r"[a-zA-Z0-9_-]+"
+_FQN_PART_PATTERN = r"[a-zA-Z0-9-]+"
 FQN_PATTERN = (
     rf"^(?P<project>{_FQN_PART_PATTERN})\."
     rf"(?P<app>{_FQN_PART_PATTERN})\."
