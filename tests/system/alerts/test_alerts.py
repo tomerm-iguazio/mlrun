@@ -402,7 +402,7 @@ class TestAlerts(TestMLRunSystem):
             severity=alert_objects.AlertSeverity.LOW,
             criteria=criteria,
         )
-        mlrun.get_run_db().store_alert_config(name, alert_data[0])
+        self.project.store_alert_config(alert_data[0])
 
     def _validate_project_alerts_summary(
         self,
