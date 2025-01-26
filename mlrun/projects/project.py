@@ -2124,7 +2124,8 @@ class MlrunProject(ModelObj):
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
         """
-        :param name:                   AlertConfig name.
+        :param name:                   The name of the AlertConfig template. It will be combined with the full result
+                                       name to generate a unique name.
         :param summary:                Summary of the alert, will be sent in the generated notifications
         :param endpoints:              The endpoints from which metrics will be retrieved to configure the alerts.
                                        This `ModelEndpointList` object obtained via the `list_model_endpoints`
@@ -2188,7 +2189,7 @@ class MlrunProject(ModelObj):
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,
-                    name=name,
+                    name=f"{name}-{result_fqn}",
                     summary=summary,
                     severity=severity,
                     entities=alert_constants.EventEntities(
