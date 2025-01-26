@@ -2190,7 +2190,7 @@ class MlrunProject(ModelObj):
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,
-                    name=f"{name}-{result_fqn}",
+                    name=f"{name}-{result_fqn.replace('.','-')}",
                     summary=summary,
                     severity=severity,
                     entities=alert_constants.EventEntities(
