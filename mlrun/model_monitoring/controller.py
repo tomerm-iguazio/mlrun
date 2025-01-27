@@ -243,10 +243,7 @@ class MonitoringApplicationController:
     def __init__(self) -> None:
         """Initialize Monitoring Application Controller"""
         self.project = cast(str, mlrun.mlconf.default_project)
-        self.project_obj = mlrun.load_project(
-            name=self.project, url=self.project, save=False
-        )
-
+        self.project_obj = mlrun.get_run_db().get_project(name=self.project)
         logger.debug(f"Initializing {self.__class__.__name__}", project=self.project)
 
         self._window_length = _get_window_length()
@@ -511,10 +508,7 @@ class MonitoringApplicationController:
         """
         logger.info("Starting monitoring controller chief")
         applications_names = []
-        db = mlrun.get_run_db()
-        endpoints = db.list_model_endpoints(
-            project=self.project, tsdb_metrics=True
-        ).endpoints
+        endpoints = self.project_obj.list_model_endpoints(tsdb_metrics=True).endpoints
         if not endpoints:
             logger.info("No model endpoints found", project=self.project)
             return

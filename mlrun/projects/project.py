@@ -3808,6 +3808,7 @@ class MlrunProject(ModelObj):
         top_level: bool = False,
         uids: Optional[list[str]] = None,
         latest_only: bool = False,
+        tsdb_metrics: bool = True,
     ) -> mlrun.common.schemas.ModelEndpointList:
         """
         Returns a list of `ModelEndpoint` objects. Each `ModelEndpoint` object represents the current state of a
@@ -3858,6 +3859,7 @@ class MlrunProject(ModelObj):
             top_level=top_level,
             uids=uids,
             latest_only=latest_only,
+            tsdb_metrics=tsdb_metrics,
         )
 
     def run_function(
