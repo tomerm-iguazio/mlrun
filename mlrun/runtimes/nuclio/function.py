@@ -600,13 +600,15 @@ class RemoteRuntime(KubeResource):
         # this also means that the function object will be updated with the function status
         self._wait_for_function_deployment(db, verbose=verbose)
         # check if there are any background tasks related to creating model endpoints
-        background_tasks = mlrun.common.schemas.BackgroundTaskList(
-            **data.pop("background_tasks", {"background_tasks": []})
-        ).background_tasks
-        if background_tasks:
+        model_endpoints_creation_background_tasks = (
+            mlrun.common.schemas.BackgroundTaskList(
+                **data.pop("background_tasks", {"background_tasks": []})
+            ).background_tasks
+        )
+        if model_endpoints_creation_background_tasks:
             self._check_model_endpoint_task_state(
                 db=db,
-                background_task=background_tasks[0],
+                background_task=model_endpoints_creation_background_tasks[0],
                 wait_for_completion=False,
             )
 
