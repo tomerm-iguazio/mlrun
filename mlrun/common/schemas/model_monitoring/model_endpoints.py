@@ -25,6 +25,7 @@ from . import ModelEndpointSchema
 from .constants import (
     FQN_REGEX,
     MODEL_ENDPOINT_ID_PATTERN,
+    MODEL_ENDPOINT_NAME_PATTERN,
     PROJECT_PATTERN,
     EndpointType,
     ModelEndpointMonitoringMetricType,
@@ -116,6 +117,7 @@ class ModelEndpointMetadata(ObjectMetadata, ModelEndpointParser):
     project: constr(regex=PROJECT_PATTERN)
     endpoint_type: EndpointType = EndpointType.NODE_EP
     uid: Optional[constr(regex=MODEL_ENDPOINT_ID_PATTERN)]
+    name: Optional[constr(regex=MODEL_ENDPOINT_NAME_PATTERN)]
 
     @classmethod
     def mutable_fields(cls):

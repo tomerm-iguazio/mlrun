@@ -33,10 +33,10 @@ class _ModelMonitoringApplicationDataRes(ABC):
     name: str
 
     def __post_init__(self):
-        pat = re.compile(r"[a-zA-Z-][a-zA-Z0-9-]*")
+        pat = re.compile(mm_constant.RESULT_NAME_PATTERN)
         if not re.fullmatch(pat, self.name):
             raise mlrun.errors.MLRunValueError(
-                "Attribute name must comply with the regex `[a-zA-Z-][a-zA-Z0-9-]*`"
+                f"Attribute name must comply with the regex `{mm_constant.RESULT_NAME_PATTERN}`"
             )
 
     @abstractmethod
