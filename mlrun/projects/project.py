@@ -71,6 +71,7 @@ from mlrun.datastore.vectorstore import VectorStoreCollection
 from mlrun.model_monitoring.helpers import (
     filter_results_by_regex,
     get_result_instance_fqn,
+    get_name_from_result_fqn,
 )
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 from mlrun_pipelines.models import PipelineNodeWrapper
@@ -2186,10 +2187,11 @@ class MlrunProject(ModelObj):
                 )
         alert_result_names = list(set(specific_result_names + matching_results))
         for result_fqn in alert_result_names:
+            result_fqn_name = get_name_from_result_fqn(result_fqn)
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,
-                    name=f"{name}-{result_fqn.replace('.','-')}",
+                    name=f"{name}-{result_fqn_name}",
                     summary=summary,
                     severity=severity,
                     entities=alert_constants.EventEntities(

@@ -447,6 +447,13 @@ def get_result_instance_fqn(
     return f"{model_endpoint_id}.{app_name}.result.{result_name}"
 
 
+def get_name_from_result_fqn(result_fqn: str):
+    if result_fqn.count(".") != 3:
+        raise mlrun.errors.MLRunValueError(f"result_fqn: {result_fqn} is not in the correct format")
+    # Name format cannot contain "."
+    return "-".join(result_fqn.split(".")[i] for i in [0, 1, 3])
+
+
 def get_default_result_instance_fqn(model_endpoint_id: str) -> str:
     return get_result_instance_fqn(
         model_endpoint_id,
