@@ -1440,7 +1440,7 @@ class TestModelEndpointWithManyFeatures(TestMLRunSystem):
             project=project.name,
             model_path=model_obj.uri,
             function_name="dummy_func",
-            model_endpoint_name="dummy_ep",
+            model_endpoint_name="dummy-ep",
         )
 
         assert len(model_endpoint.spec.feature_stats) == 501
