@@ -71,7 +71,8 @@ from mlrun.datastore.datastore_profile import (
 from mlrun.datastore.vectorstore import VectorStoreCollection
 from mlrun.model_monitoring.helpers import (
     filter_results_by_regex,
-    get_result_instance_fqn, get_name_from_result_fqn,
+    get_name_from_result_fqn,
+    get_result_instance_fqn,
 )
 from mlrun.runtimes.nuclio.function import RemoteRuntime
 from mlrun_pipelines.models import PipelineNodeWrapper

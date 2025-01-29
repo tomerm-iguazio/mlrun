@@ -7169,7 +7169,9 @@ class SQLDB(DBInterface):
         if not re.compile(MODEL_ENDPOINT_NAME_PATTERN).fullmatch(
             model_endpoint.metadata.name
         ):
-            raise ValueError(f"model endpoint name {model_endpoint.metadata.name} is not in the expected format")
+            raise ValueError(
+                f"model endpoint name {model_endpoint.metadata.name} is not in the expected format"
+            )
         logger.debug(
             "Storing Model Endpoint to DB",
             metadata=model_endpoint.metadata,

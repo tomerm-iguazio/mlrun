@@ -449,7 +449,9 @@ def get_result_instance_fqn(
 
 def get_name_from_result_fqn(result_fqn: str):
     if result_fqn.count(".") != 3:
-        raise mlrun.errors.MLRunValueError(f"result_fqn: {result_fqn} is not in the correct format")
+        raise mlrun.errors.MLRunValueError(
+            f"result_fqn: {result_fqn} is not in the correct format"
+        )
     # Name format cannot contain "."
     return "-".join(result_fqn.split(".")[i] for i in [0, 1, 3])
 
