@@ -93,7 +93,7 @@ def _get_metrics(
     events_format: mm_constants.GetEventsFormat = mm_constants.GetEventsFormat.SEPARATION,
 ):
     results = {
-        "mep_id1": [
+        "mep-id1": [
             ModelEndpointMonitoringMetric(
                 project=project,
                 app=APP,
@@ -113,7 +113,7 @@ def _get_metrics(
                 name="result-a",
             ),
         ],
-        "mep_id2": [
+        "mep-id2": [
             ModelEndpointMonitoringMetric(
                 project=project,
                 app=APP,
@@ -156,14 +156,14 @@ def test_project_create_model_monitoring_alert_configs() -> None:
     with patch("mlrun.db.get_run_db", return_value=db_mock):
         mep1 = ModelEndpoint(
             metadata=ModelEndpointMetadata(
-                project=project.name, uid="mep_id1", name="mep_id1"
+                project=project.name, uid="mep-id1", name="mep-id1"
             ),
             spec=ModelEndpointSpec(),
             status=ModelEndpointStatus(),
         )
         mep2 = ModelEndpoint(
             metadata=ModelEndpointMetadata(
-                project=project.name, uid="mep_id2", name="mep_id2"
+                project=project.name, uid="mep-id2", name="mep-id2"
             ),
             spec=ModelEndpointSpec(),
             status=ModelEndpointStatus(),
@@ -178,20 +178,20 @@ def test_project_create_model_monitoring_alert_configs() -> None:
             result_names=[
                 f"{APP}.metric-*",
                 "*.result-b",
-                "mep_id1.test_app.result.metric-3",
+                "mep-id1.test_app.result.metric-3",
             ],
         )
-        #  "mep_id1.test_app.result.metric-3" is not exist, but because it is a full result name,
+        #  "mep-id1.test_app.result.metric-3" is not exist, but because it is a full result name,
         #  it should raise a warning and create an alert config.
         alert_ids = []
         for alert in alerts:
             alert_ids += alert.entities.ids
         expected_ids = [
-            "mep_id1.test_app.result.metric-1",
-            "mep_id1.test_app.result.metric-2",
-            "mep_id1.test_app.result.metric-3",
-            "mep_id2.test_app.result.metric-1",
-            "mep_id2.test_app.result.result-b",
+            "mep-id1.test_app.result.metric-1",
+            "mep-id1.test_app.result.metric-2",
+            "mep-id1.test_app.result.metric-3",
+            "mep-id2.test_app.result.metric-1",
+            "mep-id2.test_app.result.result-b",
         ]
         assert sorted(alert_ids) == sorted(expected_ids)
 
