@@ -7121,7 +7121,9 @@ class SQLDB(DBInterface):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Model endpoint name and project must be provided"
             )
-        if not re.compile(MODEL_ENDPOINT_NAME_PATTERN).fullmatch(model_endpoint.metadata.name):
+        if not re.compile(MODEL_ENDPOINT_NAME_PATTERN).fullmatch(
+            model_endpoint.metadata.name
+        ):
             raise ValueError("model endpoint name is not in the expected format")
         logger.debug(
             "Storing Model Endpoint to DB",
