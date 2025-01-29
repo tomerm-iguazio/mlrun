@@ -118,7 +118,7 @@ def test_requirement_specifiers_convention():
     ignored_invalid_map = {
         # See comment near requirement for why we're limiting to patch changes only for all of these
         "aiobotocore": {">=2.5.0,<2.16"},
-        "storey": {"~=1.8.8"},
+        "storey": {"~=1.8.9"},
         "pydantic": {">=1.10.15", ">=1,<2"},
         "nuclio-sdk": {">=0.5"},
         "sphinx-book-theme": {"~=1.0.1"},
@@ -149,6 +149,7 @@ def test_requirement_specifiers_convention():
         "setuptools": {">=75.2"},
         "dask": {
             '~=2024.12.1; python_version >= "3.11"',
+            '[array,dataframe,distributed]~=2023.12.1; python_version < "3.11"',
             '~=2023.12.1; python_version < "3.11"',
         },
         "distributed": {
@@ -207,6 +208,7 @@ def test_requirement_specifiers_inconsistencies():
         },
         "dask": {
             '~=2024.12.1; python_version >= "3.11"',
+            '[array,dataframe,distributed]~=2023.12.1; python_version < "3.11"',
             '~=2023.12.1; python_version < "3.11"',
         },
         "distributed": {

@@ -11,13 +11,13 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-
 import asyncio
 import json
 import time
 import traceback
 import typing
 import uuid
+from asyncio import Semaphore
 from http import HTTPStatus
 from pathlib import Path
 
@@ -1151,7 +1151,6 @@ class MonitoringDeployment:
     def _verify_kafka_access(
         kafka_profile: mlrun.datastore.datastore_profile.DatastoreProfileKafkaSource,
     ) -> None:
-        import kafka
         import kafka.errors
 
         kafka_brokers = kafka_profile.brokers
@@ -1307,7 +1306,12 @@ class MonitoringDeployment:
             return False
         return True
 
-    async def create_model_endpoints(self, function: dict, function_name: str):
+    @staticmethod
+    async def create_model_endpoints(
+        function: dict,
+        function_name: str,
+        project: str,
+    ):
         """
         Create model endpoints for the given function.
         1. Create model endpoint instructions list from the function graph.
@@ -1318,11 +1322,17 @@ class MonitoringDeployment:
 
         :param function:        The function object.
         :param function_name:   The name of the function.
+        :param project:         The project name.
         """
+        logger.info(
+            "Start Running BGT for model endpoint creation",
+            project=project,
+            function=function_name,
+        )
         try:
             function = mlrun.new_function(
                 runtime=function,
-                project=self.project,
+                project=project,
                 name=function_name,
             )
         except Exception as err:
@@ -1331,14 +1341,15 @@ class MonitoringDeployment:
                 HTTPStatus.BAD_REQUEST.value,
                 reason=f"Runtime error: {mlrun.errors.err_to_str(err)}",
             )
-        tasks: list[asyncio.Task] = []
         model_endpoints_instructions: list[
             tuple[
                 mlrun.common.schemas.ModelEndpoint,
                 mm_constants.ModelEndpointCreationStrategy,
                 str,
             ]
-        ] = self._extract_model_endpoints_from_function_graph(
+        ] = MonitoringDeployment(
+            project=project
+        )._extract_model_endpoints_from_function_graph(
             function_name=function.metadata.name,
             function_tag=function.metadata.tag,
             track_models=function.spec.track_models,
@@ -1347,60 +1358,43 @@ class MonitoringDeployment:
                 mm_constants.EventFieldType.SAMPLING_PERCENTAGE, 100
             ),
         )  # model endpoint, creation strategy, model path
-        router_model_endpoints_instructions: list[
+        semaphore = Semaphore(50)  # Limit concurrent tasks
+        coroutines = []
+        batchsize = 500
+        for i in range(0, len(model_endpoints_instructions), batchsize):
+            batch = model_endpoints_instructions[i : i + batchsize]
+            coroutines.append(
+                MonitoringDeployment._create_model_endpoint_limited(
+                    semaphore, batch, project
+                )
+            )
+
+        await asyncio.gather(*coroutines)
+        logger.info(
+            "Finish Running BGT for model endpoint creation",
+            project=project,
+            function=function_name,
+        )
+
+    @staticmethod
+    async def _create_model_endpoint_limited(
+        semaphore: Semaphore,
+        model_endpoints_instructions: list[
             tuple[
                 mlrun.common.schemas.ModelEndpoint,
                 mm_constants.ModelEndpointCreationStrategy,
                 str,
             ]
-        ] = []
-        for (
-            model_endpoint,
-            creation_strategy,
-            model_path,
-        ) in model_endpoints_instructions:
-            if (
-                model_endpoint.metadata.endpoint_type
-                != mm_constants.EndpointType.ROUTER
-            ):
-                tasks.append(
-                    asyncio.create_task(
-                        framework.db.session.run_async_function_with_new_db_session(
-                            func=services.api.crud.ModelEndpoints().create_model_endpoint,
-                            model_endpoint=model_endpoint,
-                            creation_strategy=creation_strategy,
-                            model_path=model_path,
-                        )
-                    )
-                )
-            else:
-                router_model_endpoints_instructions.append(
-                    (model_endpoint, creation_strategy, model_path)
-                )
-
-        created_model_endpoint = await asyncio.gather(*tasks)
-        router_tasks: list[asyncio.Task] = []
-        for (
-            model_endpoint,
-            creation_strategy,
-            model_path,
-        ) in router_model_endpoints_instructions:
-            for mep in created_model_endpoint:
-                if mep.metadata.name in model_endpoint.spec.children:
-                    model_endpoint.spec.children_uids.append(mep.metadata.uid)
-            router_tasks.append(
-                asyncio.create_task(
-                    framework.db.session.run_async_function_with_new_db_session(
-                        func=services.api.crud.ModelEndpoints().create_model_endpoint,
-                        model_endpoint=model_endpoint,
-                        creation_strategy=creation_strategy,
-                        model_path=model_path,
-                    )
-                )
+        ],
+        project: str,
+    ):
+        async with semaphore:
+            result = await framework.db.session.run_async_function_with_new_db_session(
+                func=services.api.crud.ModelEndpoints().create_model_endpoints,
+                model_endpoints_instructions=model_endpoints_instructions,
+                project=project,
             )
-        created_model_endpoint.extend(await asyncio.gather(*router_tasks))
-
-        return created_model_endpoint
+            return result
 
     def _extract_model_endpoints_from_function_graph(
         self,
@@ -1457,12 +1451,13 @@ class MonitoringDeployment:
     ]:
         model_endpoints_instructions = []
         routes_names = []
-
+        routes_uids = []
         for route in router_step.routes.values():
             if (
                 route.model_endpoint_creation_strategy
                 != mm_constants.ModelEndpointCreationStrategy.SKIP
             ):
+                uid = uuid.uuid4().hex
                 model_endpoints_instructions.append(
                     (
                         self._model_endpoint_draft(
@@ -1473,12 +1468,14 @@ class MonitoringDeployment:
                             function_tag=function_tag,
                             track_models=track_models,
                             sampling_percentage=sampling_percentage,
+                            uid=uid,
                         ),
                         route.model_endpoint_creation_strategy,
                         route.class_args.get("model_path", ""),
                     )
                 )
                 routes_names.append(route.name)
+                routes_uids.append(uid)
         if (
             router_step.model_endpoint_creation_strategy
             != mm_constants.ModelEndpointCreationStrategy.SKIP
@@ -1493,6 +1490,7 @@ class MonitoringDeployment:
                         function_tag=function_tag,
                         track_models=track_models,
                         children_names=routes_names,
+                        children_uids=routes_uids,
                         sampling_percentage=sampling_percentage,
                     ),
                     router_step.model_endpoint_creation_strategy,
@@ -1557,15 +1555,15 @@ class MonitoringDeployment:
         function_name: str,
         function_tag: str,
         track_models: bool,
+        uid: typing.Optional[str] = None,
         children_names: typing.Optional[list[str]] = None,
+        children_uids: typing.Optional[list[str]] = None,
         sampling_percentage: typing.Optional[float] = None,
     ) -> mlrun.common.schemas.ModelEndpoint:
         function_tag = function_tag or "latest"
         return mlrun.common.schemas.ModelEndpoint(
             metadata=mlrun.common.schemas.ModelEndpointMetadata(
-                project=self.project,
-                name=name,
-                endpoint_type=endpoint_type,
+                project=self.project, name=name, endpoint_type=endpoint_type, uid=uid
             ),
             spec=mlrun.common.schemas.ModelEndpointSpec(
                 function_name=function_name,
@@ -1573,6 +1571,7 @@ class MonitoringDeployment:
                 function_uid=f"{unversioned_tagged_object_uid_prefix}{function_tag}",  # TODO: remove after ML-8596
                 model_class=model_class,
                 children=children_names,
+                children_uids=children_uids,
             ),
             status=mlrun.common.schemas.ModelEndpointStatus(
                 monitoring_mode=mlrun.common.schemas.model_monitoring.ModelMonitoringMode.enabled
@@ -1580,6 +1579,27 @@ class MonitoringDeployment:
                 else mlrun.common.schemas.model_monitoring.ModelMonitoringMode.disabled,
                 sampling_percentage=sampling_percentage,
             ),
+        )
+
+    @staticmethod
+    def _create_model_endpoint_background_task(
+        db_session: sqlalchemy.orm.Session,
+        background_tasks: BackgroundTasks,
+        function_name: str,
+        function: dict,
+        project_name: str,
+    ):
+        background_task_name = str(uuid.uuid4())
+        return framework.utils.background_tasks.ProjectBackgroundTasksHandler().create_background_task(
+            db_session,
+            project_name,
+            background_tasks,
+            MonitoringDeployment.create_model_endpoints,
+            mlrun.mlconf.background_tasks.default_timeouts.operations.model_endpoint_creation,
+            background_task_name,
+            function,
+            function_name,
+            project_name,
         )
 
 

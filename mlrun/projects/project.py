@@ -1254,7 +1254,13 @@ class MlrunProject(ModelObj):
         mlrun.utils.helpers.validate_builder_source(source, pull_at_runtime, workdir)
 
         self.spec.load_source_on_run = pull_at_runtime
+
+        source_has_changed = source != self.spec.source
         self.spec.source = source or self.spec.source
+
+        # new source should not relay on old workdir
+        if source_has_changed:
+            self.spec.workdir = workdir
 
         if self.spec.source.startswith("git://"):
             source, reference, branch = resolve_git_reference_from_source(source)
@@ -1264,7 +1270,6 @@ class MlrunProject(ModelObj):
                     "'git://<url>/org/repo.git#<branch-name or refs/heads/..>'"
                 )
 
-        self.spec.workdir = workdir or self.spec.workdir
         try:
             # reset function objects (to recalculate build attributes)
             self.sync_functions()
@@ -1949,7 +1954,8 @@ class MlrunProject(ModelObj):
                     kwargs={"extract_images": True}
                 )
         :param upload: Whether to upload the artifact
-        :param labels: Key-value labels
+        :param labels:  Key-value labels. A 'source' label is automatically added using either
+                        local_path or target_path to facilitate easier document searching.
         :param target_path: Target file path
         :param kwargs: Additional keyword arguments
         :return: DocumentArtifact object
@@ -1979,13 +1985,24 @@ class MlrunProject(ModelObj):
                 "The document loader is configured to not support downloads but the upload flag is set to True."
                 "Either set loader.download_object=True or set upload=False"
             )
+        original_source = local_path or target_path
         doc_artifact = DocumentArtifact(
             key=key,
-            original_source=local_path or target_path,
+            original_source=original_source,
             document_loader_spec=document_loader_spec,
             collections=kwargs.pop("collections", None),
             **kwargs,
         )
+
+        # limit label to a max of 255 characters (for db reasons)
+        max_length = 255
+        labels = labels or {}
+        labels["source"] = (
+            original_source[: max_length - 3] + "..."
+            if len(original_source) > max_length
+            else original_source
+        )
+
         return self.log_artifact(
             item=doc_artifact,
             tag=tag,
@@ -3446,12 +3463,13 @@ class MlrunProject(ModelObj):
 
         arguments = arguments or {}
         need_repo = self.spec._need_repo()
-        if self.spec.repo and self.spec.repo.is_dirty():
-            msg = "You seem to have uncommitted git changes, use .push()"
-            if dirty or not need_repo:
-                logger.warning("WARNING!, " + msg)
-            else:
-                raise ProjectError(msg + " or dirty=True")
+        if not dirty:
+            if self.spec.repo and self.spec.repo.is_dirty():
+                msg = "You seem to have uncommitted git changes, use .push()"
+                if not need_repo:
+                    logger.warning("WARNING!, " + msg)
+                else:
+                    raise ProjectError(msg + " or dirty=True")
 
         if need_repo and self.spec.repo and not self.spec.source:
             raise ProjectError(
@@ -3798,6 +3816,7 @@ class MlrunProject(ModelObj):
         top_level: bool = False,
         uids: Optional[list[str]] = None,
         latest_only: bool = False,
+        tsdb_metrics: bool = True,
     ) -> mlrun.common.schemas.ModelEndpointList:
         """
         Returns a list of `ModelEndpoint` objects. Each `ModelEndpoint` object represents the current state of a
@@ -3848,6 +3867,7 @@ class MlrunProject(ModelObj):
             top_level=top_level,
             uids=uids,
             latest_only=latest_only,
+            tsdb_metrics=tsdb_metrics,
         )
 
     def run_function(
