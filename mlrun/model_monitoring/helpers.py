@@ -452,6 +452,8 @@ def get_name_from_result_fqn(result_fqn: str):
         raise mlrun.errors.MLRunValueError(
             f"result_fqn: {result_fqn} is not in the correct format"
         )
+    # TODO remove after prohibiting "_" in ML-9227
+    result_fqn = result_fqn.replace("_", "-")
     # Name format cannot contain "."
     return "--".join(result_fqn.split(".")[i] for i in [0, 1, 3])
 

@@ -127,11 +127,13 @@ class ModelEndpointMetadata(ObjectMetadata, ModelEndpointParser):
         if self.name and "_" in self.name:
             warnings.warn(
                 "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0",
-                DeprecationWarning)
+                DeprecationWarning,
+            )
         if self.uid and "_" in self.uid:
             warnings.warn(
                 "The use of the underscore (_) character in model endpoint uid will be forcibly prohibited in 1.10.0",
-                DeprecationWarning)
+                DeprecationWarning,
+            )
 
 
 class ModelEndpointSpec(ObjectSpec, ModelEndpointParser):
