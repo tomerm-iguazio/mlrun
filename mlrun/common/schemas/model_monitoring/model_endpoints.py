@@ -13,6 +13,7 @@
 # limitations under the License.
 import abc
 import json
+import warnings
 from datetime import datetime
 from typing import Any, NamedTuple, Optional, TypeVar
 
@@ -25,7 +26,6 @@ from . import ModelEndpointSchema
 from .constants import (
     FQN_REGEX,
     MODEL_ENDPOINT_ID_PATTERN,
-    MODEL_ENDPOINT_NAME_PATTERN,
     PROJECT_PATTERN,
     EndpointType,
     ModelEndpointMonitoringMetricType,
@@ -117,11 +117,21 @@ class ModelEndpointMetadata(ObjectMetadata, ModelEndpointParser):
     project: constr(regex=PROJECT_PATTERN)
     endpoint_type: EndpointType = EndpointType.NODE_EP
     uid: Optional[constr(regex=MODEL_ENDPOINT_ID_PATTERN)]
-    name: Optional[constr(regex=MODEL_ENDPOINT_NAME_PATTERN)]
 
     @classmethod
     def mutable_fields(cls):
         return ["labels"]
+
+    def __post_init__(self):
+        # TODO: deprecate "_" usage in 1.10.0
+        if self.name and "_" in self.name:
+            warnings.warn(
+                "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0",
+                DeprecationWarning)
+        if self.uid and "_" in self.uid:
+            warnings.warn(
+                "The use of the underscore (_) character in model endpoint uid will be forcibly prohibited in 1.10.0",
+                DeprecationWarning)
 
 
 class ModelEndpointSpec(ObjectSpec, ModelEndpointParser):
@@ -282,6 +292,12 @@ def _parse_metric_fqn_to_monitoring_metric(fqn: str) -> ModelEndpointMonitoringM
     match = FQN_REGEX.fullmatch(fqn)
     if match is None:
         raise ValueError("The fully qualified name is not in the expected format")
+    if "_" in fqn:
+        # TODO: deprecate "_" usage in 1.10.0
+        warnings.warn(
+            "The use of the underscore (_) character in fully qualified names will be forcibly prohibited in 1.10.0",
+            DeprecationWarning,
+        )
     return ModelEndpointMonitoringMetric.parse_obj(
         match.groupdict() | {"full_name": fqn}
     )

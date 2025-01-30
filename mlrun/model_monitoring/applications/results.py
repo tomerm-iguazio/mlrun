@@ -15,6 +15,7 @@
 import dataclasses
 import json
 import re
+import warnings
 from abc import ABC, abstractmethod
 
 from pydantic.v1 import validator
@@ -37,6 +38,13 @@ class _ModelMonitoringApplicationDataRes(ABC):
         if not re.fullmatch(pat, self.name):
             raise mlrun.errors.MLRunValueError(
                 f"Attribute name must comply with the regex `{mm_constant.RESULT_NAME_PATTERN}`"
+            )
+        if "_" in self.name:
+            # TODO: deprecate "_" usage in result_name in 1.10.0
+            warnings.warn(
+                "The use of the underscore (_) character in result name will be will be forcibly prohibited "
+                "in 1.10.0, please use hyphen (-) instead",
+                DeprecationWarning,
             )
 
     @abstractmethod

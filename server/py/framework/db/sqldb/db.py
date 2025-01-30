@@ -20,6 +20,7 @@ import pathlib
 import re
 import typing
 import urllib.parse
+import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
@@ -63,7 +64,6 @@ from mlrun.common.schemas.feature_store import (
     FeatureSetDigestSpecV2,
 )
 from mlrun.common.schemas.model_monitoring import EndpointType, ModelEndpointSchema
-from mlrun.common.schemas.model_monitoring.constants import MODEL_ENDPOINT_NAME_PATTERN
 from mlrun.config import config
 from mlrun.errors import err_to_str
 from mlrun.lists import ArtifactList, RunList
@@ -7166,12 +7166,13 @@ class SQLDB(DBInterface):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Model endpoint name and project must be provided"
             )
-        if not re.compile(MODEL_ENDPOINT_NAME_PATTERN).fullmatch(
-            model_endpoint.metadata.name
-        ):
-            raise ValueError(
-                f"model endpoint name {model_endpoint.metadata.name} is not in the expected format"
+        if "_" in model_endpoint.metadata.name:
+            # TODO: deprecate "_" usage in 1.10.0
+            warnings.warn(
+                "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0",
+                DeprecationWarning,
             )
+
         logger.debug(
             "Storing Model Endpoint to DB",
             metadata=model_endpoint.metadata,
