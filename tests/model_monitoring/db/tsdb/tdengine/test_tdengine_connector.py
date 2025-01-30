@@ -41,7 +41,7 @@ def is_tdengine_defined() -> bool:
 
 @pytest.fixture
 def connector() -> Iterator[TDEngineConnector]:
-    connection = taosws.connect()
+    connection = taosws.connect(connection_string)
     drop_database(connection)
     conn = TDEngineConnector(
         project, connection_string=connection_string, database=database
@@ -58,8 +58,8 @@ def test_write_application_event(
     connector: TDEngineConnector, with_result_extra_data: bool
 ) -> None:
     endpoint_id = "1"
-    app_name = "my_app"
-    result_name = "my_Result"
+    app_name = "my-app"
+    result_name = "my-Result"
     result_kind = 0
     start_infer_time = datetime(2024, 1, 1, tzinfo=timezone.utc)
     end_infer_time = datetime(2024, 1, 1, second=1, tzinfo=timezone.utc)
