@@ -123,7 +123,7 @@ class ModelEndpointMetadata(ObjectMetadata, ModelEndpointParser):
         return ["labels"]
 
     def __post_init__(self):
-        # TODO: deprecate "_" usage in 1.10.0
+        # TODO: deprecate "_" usage in 1.10.0, ML-9227
         if self.name and "_" in self.name:
             warnings.warn(
                 "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0",
@@ -293,7 +293,7 @@ def _parse_metric_fqn_to_monitoring_metric(fqn: str) -> ModelEndpointMonitoringM
     if match is None:
         raise ValueError("The fully qualified name is not in the expected format")
     if "_" in fqn:
-        # TODO: deprecate "_" usage in 1.10.0
+        # TODO: deprecate "_" usage in 1.10.0, ML-9227
         warnings.warn(
             "The use of the underscore (_) character in fully qualified names will be forcibly prohibited in 1.10.0",
             DeprecationWarning,

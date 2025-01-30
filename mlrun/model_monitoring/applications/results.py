@@ -40,7 +40,7 @@ class _ModelMonitoringApplicationDataRes(ABC):
                 f"Attribute name must comply with the regex `{mm_constant.RESULT_NAME_PATTERN}`"
             )
         if "_" in self.name:
-            # TODO: deprecate "_" usage in result_name in 1.10.0
+            # TODO: deprecate "_" usage in result_name in 1.10.0, ML-9227
             warnings.warn(
                 "The use of the underscore (_) character in result name will be will be forcibly prohibited "
                 "in 1.10.0, please use hyphen (-) instead",

@@ -453,7 +453,7 @@ def get_name_from_result_fqn(result_fqn: str):
             f"result_fqn: {result_fqn} is not in the correct format"
         )
     # Name format cannot contain "."
-    return "-".join(result_fqn.split(".")[i] for i in [0, 1, 3])
+    return "--".join(result_fqn.split(".")[i] for i in [0, 1, 3])
 
 
 def get_default_result_instance_fqn(model_endpoint_id: str) -> str:
