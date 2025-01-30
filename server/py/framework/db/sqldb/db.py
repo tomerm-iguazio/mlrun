@@ -5831,8 +5831,7 @@ class SQLDB(DBInterface):
             version=version,
         )
 
-        now = datetime.now(timezone.utc)
-        data_version_record = DataVersion(version=version, created=now)
+        data_version_record = DataVersion(version=version)
         self._upsert(session, [data_version_record])
 
     def store_alert_template(
@@ -7041,7 +7040,6 @@ class SQLDB(DBInterface):
                 current_page=current_page,
                 page_size=page_size,
                 kwargs=kwargs,
-                last_accessed=datetime.now(timezone.utc),
             )
 
         self._upsert(session, [param_record])
