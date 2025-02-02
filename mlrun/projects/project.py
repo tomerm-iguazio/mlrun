@@ -2222,6 +2222,12 @@ class MlrunProject(ModelObj):
                     reset_policy=reset_policy,
                 )
             )
+        if not alerts:
+            warnings.warn(
+                "No alert config has been created. "
+                "Try specifying a result name explicitly or wait for the results"
+            )
+
         return alerts
 
     def set_model_monitoring_function(
