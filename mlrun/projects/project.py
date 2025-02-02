@@ -2225,7 +2225,7 @@ class MlrunProject(ModelObj):
         if not alerts:
             warnings.warn(
                 "No alert config has been created. "
-                "Try specifying a result name explicitly or wait for the results"
+                "Try specifying a result name explicitly or verifying that results are available"
             )
 
         return alerts
