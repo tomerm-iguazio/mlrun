@@ -294,12 +294,6 @@ def _parse_metric_fqn_to_monitoring_metric(fqn: str) -> ModelEndpointMonitoringM
     match = FQN_REGEX.fullmatch(fqn)
     if match is None:
         raise ValueError("The fully qualified name is not in the expected format")
-    if "_" in fqn:
-        # TODO: deprecate "_" usage in 1.10.0, ML-9227
-        warnings.warn(
-            "The use of the underscore (_) character in fully qualified names will be forcibly prohibited in 1.10.0",
-            DeprecationWarning,
-        )
     return ModelEndpointMonitoringMetric.parse_obj(
         match.groupdict() | {"full_name": fqn}
     )
