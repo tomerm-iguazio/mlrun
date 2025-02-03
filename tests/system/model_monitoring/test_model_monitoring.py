@@ -33,6 +33,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 import mlrun.artifacts.model
+import mlrun.common.schemas.alert as alert_objects
 import mlrun.common.schemas.model_monitoring
 import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.feature_store
@@ -41,6 +42,7 @@ import mlrun.runtimes.mounts
 import mlrun.runtimes.utils
 import mlrun.serving.routers
 import mlrun.utils
+from mlrun.common.schemas.model_monitoring.model_endpoints import ModelEndpointList
 from mlrun.datastore import get_stream_pusher
 from mlrun.datastore.datastore_profile import DatastoreProfileV3io
 from mlrun.model import BaseMetadata
@@ -203,6 +205,31 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         )
         assert endpoint_after_update.status.monitoring_mode == "enabled"
         assert endpoint_after_update.spec.model_class == "modelcc-3"
+
+    def test_alert_name_creation(self):
+        model_endpoint = mock_random_endpoint(
+            self.project_name,
+            "testing",
+            function_name="function1",
+            function_tag=None,  # latest is the default
+        )
+        db = mlrun.get_run_db()
+        model_endpoint = db.create_model_endpoint(model_endpoint=model_endpoint)
+        mep_id = model_endpoint.metadata.uid
+        #  in regular case we should have notifications, but we do not save the alert configs so it is not required.
+        alert_configs = self.project.create_model_monitoring_alert_configs(
+            name="test",
+            summary="test",
+            endpoints=ModelEndpointList(endpoints=[model_endpoint]),
+            events=[alert_objects.EventKind.DATA_DRIFT_DETECTED],
+            notifications=[],
+            result_names=[
+                f"{mep_id}.app.result.result1",
+                f"{mep_id}.app.result.result2",
+            ],
+        )
+        assert len(alert_configs) == 2
+        assert alert_configs[0].name != alert_configs[1].name
 
     def test_list_endpoints_on_empty_project(self):
         endpoints_out = self.project.list_model_endpoints()
