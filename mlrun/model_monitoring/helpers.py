@@ -455,6 +455,7 @@ def get_name_from_result_fqn(result_fqn: str):
     # TODO remove after prohibiting "_" in ML-9227
     result_fqn = result_fqn.replace("_", "-")
     # Name format cannot contain "."
+    # The third component is always `result`, so it is not necessary for checking uniqueness.
     return "--".join(result_fqn.split(".")[i] for i in [0, 1, 3])
 
 
