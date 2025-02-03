@@ -13,7 +13,6 @@
 # limitations under the License.
 
 import typing
-import warnings
 from abc import ABC, abstractmethod
 from datetime import datetime
 
@@ -608,15 +607,3 @@ class TSDBConnector(ABC):
                 "Both start and end must be datetime objects"
             )
         return start, end
-
-    @staticmethod
-    def _validate_name(
-        name, event_type: mm_schemas.WriterEventKind = mm_schemas.WriterEventKind.RESULT
-    ):
-        # TODO: deprecate "_" usage in 1.10.0, ML-9227
-        if "_" in name:
-            warnings.warn(
-                f"The use of the underscore (_) character in {event_type} name will be forcibly prohibited in 1.10.0,"
-                f" {event_type}: {name}",
-                DeprecationWarning,
-            )
