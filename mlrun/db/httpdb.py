@@ -3719,6 +3719,13 @@ class HTTPRunDB(RunDBInterface):
             2. Create a new model endpoint with the same name and set it to `latest`.
         :return: The created model endpoint object.
         """
+        if model_endpoint.metadata.name and "_" in model_endpoint.metadata.name:
+            # TODO: deprecate "_" usage in result_name in 1.10.0, ML-9227
+            warnings.warn(
+                "The use of the underscore (_) character in model endpoint name will be forcibly prohibited "
+                "in 1.10.0, please use hyphen (-) instead",
+                DeprecationWarning,
+            )
 
         path = f"projects/{model_endpoint.metadata.project}/model-endpoints"
         response = self.api_call(

@@ -17,6 +17,7 @@ import json
 import re
 import warnings
 from abc import ABC, abstractmethod
+from typing import ClassVar
 
 from pydantic.v1 import validator
 from pydantic.v1.dataclasses import dataclass
@@ -26,7 +27,7 @@ import mlrun.common.model_monitoring.helpers
 import mlrun.common.schemas.model_monitoring.constants as mm_constant
 import mlrun.utils.v3io_clients
 from mlrun.utils import logger
-from typing import ClassVar
+
 _RESULT_EXTRA_DATA_MAX_SIZE = 998
 
 

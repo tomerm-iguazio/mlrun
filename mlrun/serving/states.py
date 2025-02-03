@@ -23,6 +23,7 @@ __all__ = [
 import os
 import pathlib
 import traceback
+import warnings
 from copy import copy, deepcopy
 from inspect import getfullargspec, signature
 from typing import Any, Optional, Union, cast
@@ -804,6 +805,14 @@ class RouterStep(TaskStep):
             2. Create a new model endpoint with the same name and set it to `latest`.
 
         """
+
+        if key and "_" in key:
+            # TODO: deprecate "_" usage in result_name in 1.10.0, ML-9227
+            warnings.warn(
+                "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0,"
+                " replacing underscores with hyphens (-)",
+                DeprecationWarning,
+            )
         if len(self.routes.keys()) >= MAX_MODELS_PER_ROUTER and key not in self.routes:
             raise mlrun.errors.MLRunModelLimitExceededError(
                 f"Router cannot support more than {MAX_MODELS_PER_ROUTER} model endpoints. "
