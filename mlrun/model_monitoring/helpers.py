@@ -448,6 +448,11 @@ def get_result_instance_fqn(
 
 
 def get_name_from_result_fqn(result_fqn: str):
+    """
+    :param   result_fqn: current get_result_instance_fqn format: `{model_endpoint_id}.{app_name}.result.{result_name}`
+
+    :return: shorter fqn without forbidden alert characters.
+    """
     if result_fqn.count(".") != 3:
         raise mlrun.errors.MLRunValueError(
             f"result_fqn: {result_fqn} is not in the correct format"
