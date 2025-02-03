@@ -26,6 +26,7 @@ from sklearn.datasets import load_iris
 
 import mlrun
 from mlrun.runtimes import nuclio_init_hook
+from mlrun.runtimes.funcdoc import py_eval
 from mlrun.runtimes.nuclio.serving import serving_subkind
 from mlrun.serving import V2ModelServer
 from mlrun.serving.server import (
@@ -842,3 +843,13 @@ def test_add_route_exceeds_max_models():
     assert (
         len(server.graph.routes) == max_models
     ), f"expected to have {max_models} models"
+
+
+def test_serialize():
+    fn = mlrun.new_function("tests", kind="serving")
+    fn.set_topology("router")
+    fn.add_model("my", ".", class_name=ModelTestingClass(multiplier=100))
+
+    # simulate mlrun/__main__.py
+    eval_fn_result = py_eval(str(fn.to_dict()))
+    mlrun.utils.helpers.as_dict(eval_fn_result)
