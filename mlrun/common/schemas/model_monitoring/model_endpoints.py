@@ -122,19 +122,6 @@ class ModelEndpointMetadata(ObjectMetadata, ModelEndpointParser):
     def mutable_fields(cls):
         return ["labels"]
 
-    def __post_init__(self):
-        # TODO: deprecate "_" usage in 1.10.0, ML-9227
-        if self.name and "_" in self.name:
-            warnings.warn(
-                "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0",
-                DeprecationWarning,
-            )
-        if self.uid and "_" in self.uid:
-            warnings.warn(
-                "The use of the underscore (_) character in model endpoint uid will be forcibly prohibited in 1.10.0",
-                DeprecationWarning,
-            )
-
 
 class ModelEndpointSpec(ObjectSpec, ModelEndpointParser):
     model_uid: Optional[str] = ""

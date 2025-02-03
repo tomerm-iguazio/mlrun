@@ -26,12 +26,13 @@ import mlrun.common.model_monitoring.helpers
 import mlrun.common.schemas.model_monitoring.constants as mm_constant
 import mlrun.utils.v3io_clients
 from mlrun.utils import logger
-
+from typing import ClassVar
 _RESULT_EXTRA_DATA_MAX_SIZE = 998
 
 
 class _ModelMonitoringApplicationDataRes(ABC):
     name: str
+    _raised_warning: ClassVar[bool] = False
 
     def __post_init__(self):
         pat = re.compile(mm_constant.RESULT_NAME_PATTERN)
@@ -39,6 +40,8 @@ class _ModelMonitoringApplicationDataRes(ABC):
             raise mlrun.errors.MLRunValueError(
                 f"Attribute name must comply with the regex `{mm_constant.RESULT_NAME_PATTERN}`"
             )
+        if self._raised_warning:
+            return
         if "_" in self.name:
             # TODO: deprecate "_" usage in result_name in 1.10.0, ML-9227
             warnings.warn(
@@ -46,6 +49,7 @@ class _ModelMonitoringApplicationDataRes(ABC):
                 "in 1.10.0, please use hyphen (-) instead",
                 DeprecationWarning,
             )
+            _ModelMonitoringApplicationDataRes._raised_warning = True
 
     @abstractmethod
     def to_dict(self):
