@@ -802,7 +802,6 @@ class RouterStep(TaskStep):
             * **archive**:
             1. If model endpoints with the same name exist, preserve them.
             2. Create a new model endpoint with the same name and set it to `latest`.
-
         """
 
         if len(self.routes.keys()) >= MAX_MODELS_PER_ROUTER and key not in self.routes:

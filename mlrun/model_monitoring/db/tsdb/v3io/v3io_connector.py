@@ -378,15 +378,14 @@ class V3IOTSDBConnector(TSDBConnector):
         ]
 
         if kind == mm_schemas.WriterEventKind.METRIC:
-            name_key = mm_schemas.MetricData.METRIC_NAME
             table = self.tables[mm_schemas.V3IOTSDBTables.METRICS]
+            index_cols = index_cols_base + [mm_schemas.MetricData.METRIC_NAME]
         elif kind == mm_schemas.WriterEventKind.RESULT:
-            name_key = mm_schemas.ResultData.RESULT_NAME
             table = self.tables[mm_schemas.V3IOTSDBTables.APP_RESULTS]
+            index_cols = index_cols_base + [mm_schemas.ResultData.RESULT_NAME]
         else:
             raise ValueError(f"Invalid {kind = }")
 
-        index_cols = index_cols_base + [name_key]
         try:
             self.frames_client.write(
                 backend=_TSDB_BE,

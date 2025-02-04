@@ -7168,7 +7168,6 @@ class SQLDB(DBInterface):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Model endpoint name and project must be provided"
             )
-
         logger.debug(
             "Storing Model Endpoint to DB",
             metadata=model_endpoint.metadata,
