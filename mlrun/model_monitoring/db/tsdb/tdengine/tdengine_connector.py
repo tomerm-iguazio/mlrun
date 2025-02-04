@@ -127,12 +127,14 @@ class TDEngineConnector(TSDBConnector):
             table_name = (
                 f"{table_name}_{event[mm_schemas.ResultData.RESULT_NAME]}"
             ).replace("-", "_")
+
         else:
             # Write a new metric
             table = self.tables[mm_schemas.TDEngineSuperTables.METRICS]
             table_name = (
                 f"{table_name}_{event[mm_schemas.MetricData.METRIC_NAME]}"
             ).replace("-", "_")
+
         # Escape the table name for case-sensitivity (ML-7908)
         # https://github.com/taosdata/taos-connector-python/issues/260
         table_name = f"`{table_name}`"
