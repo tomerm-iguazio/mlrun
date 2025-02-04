@@ -508,7 +508,14 @@ class SQLDB(DBInterface):
         self._delete(session, Run, uid=uid, project=project)
 
     def del_runs(
-        self, session, name=None, project=None, labels=None, state=None, days_ago=0
+        self,
+        session,
+        name=None,
+        project=None,
+        labels=None,
+        state=None,
+        days_ago=0,
+        uids=None,
     ):
         project = project or config.default_project
         query = self._find_runs(session, None, project, labels)
@@ -519,6 +526,8 @@ class SQLDB(DBInterface):
             query = self._add_run_name_query(query, name)
         if state:
             query = query.filter(Run.state == state)
+        if uids:
+            query = query.filter(Run.uid.in_(uids))
         for run in query:  # Can not use query.delete with join
             session.delete(run)
         session.commit()
