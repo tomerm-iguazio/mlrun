@@ -23,7 +23,6 @@ __all__ = [
 import os
 import pathlib
 import traceback
-import warnings
 from copy import copy, deepcopy
 from inspect import getfullargspec, signature
 from typing import Any, Optional, Union, cast

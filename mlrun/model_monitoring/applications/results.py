@@ -15,9 +15,7 @@
 import dataclasses
 import json
 import re
-import warnings
 from abc import ABC, abstractmethod
-from typing import ClassVar
 
 from pydantic.v1 import validator
 from pydantic.v1.dataclasses import dataclass

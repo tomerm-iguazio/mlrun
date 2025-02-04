@@ -20,7 +20,6 @@ import pathlib
 import re
 import typing
 import urllib.parse
-import warnings
 from copy import deepcopy
 from datetime import datetime, timedelta, timezone
 from typing import Any, Optional, Union
