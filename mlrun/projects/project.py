@@ -71,7 +71,7 @@ from mlrun.datastore.datastore_profile import (
 from mlrun.datastore.vectorstore import VectorStoreCollection
 from mlrun.model_monitoring.helpers import (
     filter_results_by_regex,
-    get_name_from_result_fqn,
+    get_alert_align_result_fqn,
     get_result_instance_fqn,
 )
 from mlrun.runtimes.nuclio.function import RemoteRuntime
@@ -2205,7 +2205,7 @@ class MlrunProject(ModelObj):
                 )
         alert_result_names = list(set(specific_result_names + matching_results))
         for result_fqn in alert_result_names:
-            result_fqn_name = get_name_from_result_fqn(result_fqn)
+            result_fqn_name = get_alert_align_result_fqn(result_fqn)
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,

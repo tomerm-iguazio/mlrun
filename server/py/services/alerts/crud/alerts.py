@@ -437,9 +437,10 @@ class Alerts(
 
     @staticmethod
     def validate_alert_name(name: str) -> None:
-        if not re.fullmatch(r"^[a-zA-Z0-9-]+$", name):
+        if not re.fullmatch(r"^[a-zA-Z0-9-_]+$", name):
             raise mlrun.errors.MLRunBadRequestError(
-                f"Invalid alert name '{name}'. Alert names can only contain alphanumeric characters and hyphens."
+                f"Invalid alert name '{name}'. Alert names can only contain alphanumeric characters, hyphens"
+                f" and underscores."
             )
 
     @staticmethod

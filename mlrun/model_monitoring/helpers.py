@@ -447,7 +447,7 @@ def get_result_instance_fqn(
     return f"{model_endpoint_id}.{app_name}.result.{result_name}"
 
 
-def get_name_from_result_fqn(result_fqn: str):
+def get_alert_align_result_fqn(result_fqn: str):
     """
     :param   result_fqn: current get_result_instance_fqn format: `{model_endpoint_id}.{app_name}.result.{result_name}`
 
@@ -457,7 +457,6 @@ def get_name_from_result_fqn(result_fqn: str):
         raise mlrun.errors.MLRunValueError(
             f"result_fqn: {result_fqn} is not in the correct format"
         )
-    # TODO remove after prohibiting "_" in ML-9227
     # Name format cannot contain "."
     # The third component is always `result`, so it is not necessary for checking uniqueness.
     return "_".join(result_fqn.split(".")[i] for i in [0, 1, 3])
