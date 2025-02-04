@@ -380,15 +380,9 @@ class V3IOTSDBConnector(TSDBConnector):
         if kind == mm_schemas.WriterEventKind.METRIC:
             name_key = mm_schemas.MetricData.METRIC_NAME
             table = self.tables[mm_schemas.V3IOTSDBTables.METRICS]
-            self._validate_name(
-                name=event[name_key], event_type=mm_schemas.WriterEventKind.METRIC
-            )
         elif kind == mm_schemas.WriterEventKind.RESULT:
             name_key = mm_schemas.ResultData.RESULT_NAME
             table = self.tables[mm_schemas.V3IOTSDBTables.APP_RESULTS]
-            self._validate_name(
-                name=event[name_key], event_type=mm_schemas.WriterEventKind.RESULT
-            )
         else:
             raise ValueError(f"Invalid {kind = }")
 

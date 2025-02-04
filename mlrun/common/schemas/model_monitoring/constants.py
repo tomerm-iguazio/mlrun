@@ -441,7 +441,7 @@ class ControllerPolicy:
 
 class HistogramDataDriftApplicationConstants:
     NAME = "histogram-data-drift"
-    GENERAL_RESULT_NAME = "general-drift"
+    GENERAL_RESULT_NAME = "general_drift"
 
 
 class PredictionsQueryConstants:

@@ -458,10 +458,9 @@ def get_name_from_result_fqn(result_fqn: str):
             f"result_fqn: {result_fqn} is not in the correct format"
         )
     # TODO remove after prohibiting "_" in ML-9227
-    result_fqn = result_fqn.replace("_", "-")
     # Name format cannot contain "."
     # The third component is always `result`, so it is not necessary for checking uniqueness.
-    return "--".join(result_fqn.split(".")[i] for i in [0, 1, 3])
+    return "_".join(result_fqn.split(".")[i] for i in [0, 1, 3])
 
 
 def get_default_result_instance_fqn(model_endpoint_id: str) -> str:

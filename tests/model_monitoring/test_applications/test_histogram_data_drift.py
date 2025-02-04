@@ -223,7 +223,7 @@ class TestApplication:
                     res.kind == ResultKindApp.data_drift
                 ), "The kind should be data drift"
                 assert (
-                    res.name == "general-drift"
+                    res.name == "general_drift"
                 ), "The result name should be general_drift"
                 assert (
                     res.status == ResultStatusApp.potential_detection

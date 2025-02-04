@@ -33,7 +33,6 @@ _RESULT_EXTRA_DATA_MAX_SIZE = 998
 
 class _ModelMonitoringApplicationDataRes(ABC):
     name: str
-    _raised_warning: ClassVar[bool] = False
 
     def __post_init__(self):
         pat = re.compile(mm_constant.RESULT_NAME_PATTERN)
@@ -41,16 +40,6 @@ class _ModelMonitoringApplicationDataRes(ABC):
             raise mlrun.errors.MLRunValueError(
                 f"Attribute name must comply with the regex `{mm_constant.RESULT_NAME_PATTERN}`"
             )
-        if self._raised_warning:
-            return
-        if "_" in self.name:
-            # TODO: deprecate "_" usage in result_name in 1.10.0, ML-9227
-            warnings.warn(
-                "The use of the underscore (_) character in result name will be will be forcibly prohibited "
-                "in 1.10.0, please use hyphen (-) instead",
-                DeprecationWarning,
-            )
-            _ModelMonitoringApplicationDataRes._raised_warning = True
 
     @abstractmethod
     def to_dict(self):
@@ -64,7 +53,7 @@ class ModelMonitoringApplicationResult(_ModelMonitoringApplicationDataRes):
 
     :param name:           (str) Name of the application result. This name must be
                             unique for each metric in a single application
-                            (name must be of the format :code:`[a-zA-Z-][a-zA-Z0-9-]*`).
+                            (name must be of the format :code:`[a-zA-Z_][a-zA-Z0-9_]*`).
     :param value:          (float) Value of the application result.
     :param kind:           (ResultKindApp) Kind of application result.
     :param status:         (ResultStatusApp) Status of the application result.
@@ -117,7 +106,7 @@ class ModelMonitoringApplicationMetric(_ModelMonitoringApplicationDataRes):
 
     :param name:           (str) Name of the application metric. This name must be
                             unique for each metric in a single application
-                            (name must be of the format :code:`[a-zA-Z-][a-zA-Z0-9-]*`).
+                            (name must be of the format :code:`[a-zA-Z_][a-zA-Z0-9_]*`).
     :param value:          (float) Value of the application metric.
     """
 

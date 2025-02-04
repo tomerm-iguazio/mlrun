@@ -491,7 +491,7 @@ class TestMonitoringAppFlow(TestMLRunSystem, _V3IORecordsChecker):
             inputs = {f"f{i}" for i in range(len(dataset.feature_names))}
 
         self.project.log_model(
-            f"{self.model_name}-{with_training_set}",
+            f"{self.model_name}_{with_training_set}",
             model_dir=str((Path(__file__).parent / "assets").absolute()),
             model_file="model.pkl",
             training_set=train_set,
@@ -548,8 +548,8 @@ class TestMonitoringAppFlow(TestMLRunSystem, _V3IORecordsChecker):
             ),
         )
         serving_fn.add_model(
-            f"{cls.model_name}-{with_training_set}",
-            model_path=f"store://models/{cls.project_name}/{cls.model_name}-{with_training_set}:latest",
+            f"{cls.model_name}_{with_training_set}",
+            model_path=f"store://models/{cls.project_name}/{cls.model_name}_{with_training_set}:latest",
         )
         serving_fn.set_tracking()
         if cls.image is not None:
@@ -567,7 +567,7 @@ class TestMonitoringAppFlow(TestMLRunSystem, _V3IORecordsChecker):
         with_training_set: bool = True,
     ) -> datetime:
         result = serving_fn.invoke(
-            f"v2/models/{cls.model_name}-{with_training_set}/infer",
+            f"v2/models/{cls.model_name}_{with_training_set}/infer",
             json.dumps({"inputs": [[0.0] * cls.num_features] * num_events}),
         )
         assert isinstance(result, dict), "Unexpected result type"
@@ -587,7 +587,7 @@ class TestMonitoringAppFlow(TestMLRunSystem, _V3IORecordsChecker):
         for i in range(cls.error_count):
             try:
                 serving_fn.invoke(
-                    f"v2/models/{cls.model_name}-{with_training_set}/infer",
+                    f"v2/models/{cls.model_name}_{with_training_set}/infer",
                     json.dumps({"inputs": [[0.0] * (cls.num_features + 1)]}),
                 )
             except Exception:
@@ -708,7 +708,7 @@ class TestMonitoringAppFlow(TestMLRunSystem, _V3IORecordsChecker):
         )
 
         mep = mlrun.db.get_run_db().get_model_endpoint(
-            name=f"{self.model_name}-{with_training_set}",
+            name=f"{self.model_name}_{with_training_set}",
             project=self.project.name,
             function_name="model-serving",
             function_tag="latest",

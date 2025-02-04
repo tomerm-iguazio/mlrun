@@ -7169,12 +7169,6 @@ class SQLDB(DBInterface):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Model endpoint name and project must be provided"
             )
-        if "_" in model_endpoint.metadata.name:
-            # TODO: deprecate "_" usage in 1.10.0, ML-9227
-            warnings.warn(
-                "The use of the underscore (_) character in model endpoint name will be forcibly prohibited in 1.10.0",
-                DeprecationWarning,
-            )
 
         logger.debug(
             "Storing Model Endpoint to DB",
