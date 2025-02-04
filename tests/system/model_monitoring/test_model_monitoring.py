@@ -206,7 +206,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         assert endpoint_after_update.status.monitoring_mode == "enabled"
         assert endpoint_after_update.spec.model_class == "modelcc-3"
 
-    def test_alert_name_creation(self):
+    def test_alert_name_uniqueness(self):
         model_endpoint = mock_random_endpoint(
             self.project_name,
             "testing",
