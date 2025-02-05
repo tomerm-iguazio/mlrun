@@ -3332,13 +3332,12 @@ class HTTPRunDB(RunDBInterface):
     def raise_error(
         self,
         project: Optional[str] = None,
-    ) -> list[dict]:
-
+    ):
         project = project or config.default_project
 
         path = f"projects/{project}/raise_error"
 
-        error_message = f"error"
+        error_message = "error"
         resp = self.api_call("GET", path, error_message)
         return resp
 
