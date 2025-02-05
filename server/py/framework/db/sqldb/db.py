@@ -16,6 +16,7 @@ import asyncio
 import collections
 import functools
 import hashlib
+import inspect
 import pathlib
 import re
 import typing
@@ -42,7 +43,7 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.exc import SQLAlchemyError
-from sqlalchemy.inspection import inspect
+from sqlalchemy.inspection import inspect as sqlalchemy_inspect
 from sqlalchemy.orm import Session, aliased
 from sqlalchemy.orm.attributes import flag_modified
 
@@ -507,7 +508,14 @@ class SQLDB(DBInterface):
         self._delete(session, Run, uid=uid, project=project)
 
     def del_runs(
-        self, session, name=None, project=None, labels=None, state=None, days_ago=0
+        self,
+        session,
+        name=None,
+        project=None,
+        labels=None,
+        state=None,
+        days_ago=0,
+        uids=None,
     ):
         project = project or config.default_project
         query = self._find_runs(session, None, project, labels)
@@ -518,6 +526,8 @@ class SQLDB(DBInterface):
             query = self._add_run_name_query(query, name)
         if state:
             query = query.filter(Run.state == state)
+        if uids:
+            query = query.filter(Run.uid.in_(uids))
         for run in query:  # Can not use query.delete with join
             session.delete(run)
         session.commit()
@@ -1517,6 +1527,35 @@ class SQLDB(DBInterface):
             ArtifactV2.Tag.name,
         )
 
+        # If the query matches the default UI list artifacts request, we bypass the DB optimizer and use the index
+        # `idx_project_bi_updated` because we know it provides optimal results for this specific query.
+        if self._is_default_list_artifacts_query(
+            project,
+            ids,
+            tag,
+            labels,
+            since,
+            until,
+            name,
+            kind,
+            category,
+            iter,
+            uid,
+            producer_id,
+            producer_uri,
+            best_iteration,
+            most_recent,
+            attach_tags,
+            offset,
+            limit,
+            with_entities,
+            partition_by,
+            rows_per_partition,
+            partition_sort_by,
+            partition_order,
+        ):
+            query = query.with_hint(ArtifactV2, "USE INDEX idx_project_bi_updated")
+
         if project:
             query = query.filter(ArtifactV2.project == project)
         if ids and ids != "*":
@@ -1614,6 +1653,81 @@ class SQLDB(DBInterface):
             return list(artifacts)
 
         return results
+
+    def _is_default_list_artifacts_query(
+        self,
+        project: str,
+        ids: typing.Optional[typing.Union[list[str], str]] = None,
+        tag: typing.Optional[str] = None,
+        labels: typing.Optional[typing.Union[list[str], str]] = None,
+        since: typing.Optional[datetime] = None,
+        until: typing.Optional[datetime] = None,
+        name: typing.Optional[str] = None,
+        kind: mlrun.common.schemas.ArtifactCategories = None,
+        category: mlrun.common.schemas.ArtifactCategories = None,
+        iter: typing.Optional[int] = None,
+        uid: typing.Optional[str] = None,
+        producer_id: typing.Optional[str] = None,
+        producer_uri: typing.Optional[str] = None,
+        best_iteration: bool = False,
+        most_recent: bool = False,
+        attach_tags: bool = False,
+        offset: typing.Optional[int] = None,
+        limit: typing.Optional[int] = None,
+        with_entities: typing.Optional[list[Any]] = None,
+        partition_by: typing.Optional[
+            mlrun.common.schemas.ArtifactPartitionByField
+        ] = None,
+        rows_per_partition: typing.Optional[int] = 1,
+        partition_sort_by: typing.Optional[
+            mlrun.common.schemas.SortField
+        ] = mlrun.common.schemas.SortField.updated,
+        partition_order: typing.Optional[
+            mlrun.common.schemas.OrderType
+        ] = mlrun.common.schemas.OrderType.desc,
+    ) -> bool:
+        parameters = inspect.signature(self._find_artifacts).parameters
+        default_list_params = {
+            name: parameter.default for name, parameter in parameters.items()
+        }
+        default_list_params.update(
+            {
+                "limit": 1001,
+                "best_iteration": True,
+                "tag": "latest",
+            }
+        )
+
+        # The project and category parameters are ignored since they are variable in the default query.
+        # The offset parameter varies with pagination, whereas the limit remains constant, so we only validate
+        # the limit and the offset is also ignored here.
+        current_params = {
+            "ids": ids,
+            "tag": tag,
+            "labels": labels,
+            "since": since,
+            "until": until,
+            "name": name,
+            "kind": kind,
+            "iter": iter,
+            "uid": uid,
+            "producer_id": producer_id,
+            "producer_uri": producer_uri,
+            "best_iteration": best_iteration,
+            "most_recent": most_recent,
+            "attach_tags": attach_tags,
+            "limit": limit,
+            "with_entities": with_entities,
+            "partition_by": partition_by,
+            "rows_per_partition": rows_per_partition,
+            "partition_sort_by": partition_sort_by,
+            "partition_order": partition_order,
+        }
+
+        # Check if all current parameters match their default values
+        return all(
+            default_list_params[key] == value for key, value in current_params.items()
+        )
 
     def _find_artifacts_for_producer_id(
         self,
@@ -1932,18 +2046,28 @@ class SQLDB(DBInterface):
                 )
                 return
 
-        # Step 3: Move the "latest" tag to the most recently updated artifact with the same key
-        most_recent_artifact_id = self._find_previous_most_recent_artifact_id(
+        # Step 3: Move the "latest" tag to the most recently updated artifacts with the same key
+        most_recent_artifact_ids = self._find_previous_most_recent_artifact_ids(
             session, object_record
         )
 
-        if most_recent_artifact_id:
+        if most_recent_artifact_ids:
             logger.debug(
-                "Moving 'latest' tag to the most recent artifact",
-                artifact_id=most_recent_artifact_id,
+                "Moving 'latest' tag to the most recent artifacts",
+                artifact_id=most_recent_artifact_ids,
             )
-            latest_tag.obj_id = most_recent_artifact_id
+            latest_tag.obj_id = most_recent_artifact_ids[0]
             session.add(latest_tag)
+
+            # if there are more than one recent artifacts (hyperparam run), we need to add the latest tag to all of them
+            for recent_artifact_id in most_recent_artifact_ids[1:]:
+                tag = ArtifactV2.Tag(
+                    project=object_record.project,
+                    name=mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+                    obj_name=object_record.key,
+                )
+                tag.obj_id = recent_artifact_id
+                session.add(tag)
         else:
             logger.warning(
                 "No recent artifact found to move 'latest' tag",
@@ -1987,20 +2111,49 @@ class SQLDB(DBInterface):
         )
 
     @staticmethod
-    def _find_previous_most_recent_artifact_id(session, object_record):
-        """Find the most recent artifact id based on the update timestamp, excluding the current artifact."""
-        query = session.query(ArtifactV2.id).filter(
+    def _find_previous_most_recent_artifact_ids(session, object_record):
+        """Find the most recent artifact ids based on the update timestamp, excluding the current artifact."""
+
+        # get only the fields that we care about to reduce the amount of data we load into memory
+        query = session.query(
+            ArtifactV2.id,
+            ArtifactV2.iteration,
+            ArtifactV2.producer_id,
+        ).filter(
             ArtifactV2.id != object_record.id,
             ArtifactV2.project == object_record.project,
             ArtifactV2.key == object_record.key,
-            ArtifactV2.best_iteration,
         )
 
-        # Return the ID of the most recent artifact based on the update timestamp.
-        # Since `.first()` returns a tuple when selecting specific columns (e.g., artifact ID),
-        # we access the first element of the tuple to retrieve the ID.
+        # Find of the most recent artifact based on the update timestamp.
         result = query.order_by(ArtifactV2.updated.desc()).first()
-        return result[0] if result else None
+        if not result:
+            return None
+
+        artifact_id, artifact_iteration, artifact_producer_id = result
+
+        if artifact_iteration != 0:
+            # latest artifact is a part of a hyperparam run, so we need to add the latest tag to all the artifacts
+            # with the same producer_id, key and project, that don't have the latest tag, or don't have a tag at all
+            query = (
+                session.query(ArtifactV2.id)
+                .filter(
+                    ArtifactV2.producer_id == artifact_producer_id,
+                    ArtifactV2.key == object_record.key,
+                    ArtifactV2.project == object_record.project,
+                )
+                .outerjoin(ArtifactV2.Tag, ArtifactV2.Tag.obj_id == ArtifactV2.id)
+                .filter(
+                    or_(
+                        ArtifactV2.Tag.name.is_(None),
+                        ArtifactV2.Tag.name
+                        != mlrun.common.constants.RESERVED_TAG_NAME_LATEST,
+                    )
+                )
+            )
+            return [result[0] for result in query.all()]
+
+        return [artifact_id]
 
     # ---- Functions ----
     @retry_on_conflict
@@ -4922,7 +5075,9 @@ class SQLDB(DBInterface):
         return session.query(cls).filter_by(**kw)
 
     def _get_count(self, session, cls):
-        return session.query(func.count(inspect(cls).primary_key[0])).scalar()
+        return session.query(
+            func.count(sqlalchemy_inspect(cls).primary_key[0])
+        ).scalar()
 
     def _get_class_instance_by_uid(self, session, cls, name, project, uid):
         query = (
