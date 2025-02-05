@@ -112,7 +112,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             db.get_project_summary("not-exists-project-name")
         exception_object = exception.value
         # verify that the class name is not a part of the message.
-        assert "MLRunNotFoundError" not in str(exception_object)
+        assert str(exception_object).startswith("Failed retrieving project summary for not-exists-project-name")
 
     @pytest.mark.parametrize("by_uid", [True, False])
     def test_clear_endpoint(self, by_uid):

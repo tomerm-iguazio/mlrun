@@ -691,13 +691,6 @@ def test_feature_sets(create_server):
     entities = db.list_entities(project, labels=["type=prod"])
     assert len(entities) == count
 
-
-def test_raise_error(create_server):
-    server: Server = create_server()
-    db: HTTPRunDB = server.conn
-    db.raise_error(project="test")
-
-
 def test_remove_labels_from_feature_set(create_server):
     server: Server = create_server()
     db: HTTPRunDB = server.conn

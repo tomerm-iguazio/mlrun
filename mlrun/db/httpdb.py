@@ -3329,18 +3329,6 @@ class HTTPRunDB(RunDBInterface):
             return self._wait_for_project_to_reach_terminal_state(project_name)
         return mlrun.projects.MlrunProject.from_dict(response.json())
 
-    def raise_error(
-        self,
-        project: Optional[str] = None,
-    ):
-        project = project or config.default_project
-
-        path = f"projects/{project}/raise_error"
-
-        error_message = "error"
-        resp = self.api_call("GET", path, error_message)
-        return resp
-
     def _wait_for_project_to_reach_terminal_state(
         self, project_name: str
     ) -> mlrun.projects.MlrunProject:

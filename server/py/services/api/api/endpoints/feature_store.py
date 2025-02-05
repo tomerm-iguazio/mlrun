@@ -900,11 +900,3 @@ async def _verify_feature_vector_features_permissions(
         auth_info,
     )
 
-
-@router.get("/raise_error")
-async def raise_error(
-    project: str,
-    auth_info: mlrun.common.schemas.AuthInfo = Depends(deps.authenticate_request),
-    db_session: Session = Depends(deps.get_db_session),
-):
-    raise mlrun.errors.MLRunAccessDeniedError("test denied")
