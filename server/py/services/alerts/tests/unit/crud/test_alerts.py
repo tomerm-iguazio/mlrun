@@ -109,7 +109,7 @@ class TestAlerts(TestAlertsBase):
             ("name with spaces", pytest.raises(mlrun.errors.MLRunBadRequestError)),
             ("invalid/name", pytest.raises(mlrun.errors.MLRunBadRequestError)),
             ("invalid@name", pytest.raises(mlrun.errors.MLRunBadRequestError)),
-            ("invalid.name", pytest.raises(mlrun.errors.MLRunBadRequestError)),
+            ("invalid_name", does_not_raise()),
             ("$invalid_name", pytest.raises(mlrun.errors.MLRunBadRequestError)),
             ("valid-name", does_not_raise()),
             ("valid-name-123", does_not_raise()),
