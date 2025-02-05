@@ -106,6 +106,10 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             ),
         )
 
+    def test_raise_error(self):
+        db = mlrun.get_run_db()
+        db.raise_error()
+
     @pytest.mark.parametrize("by_uid", [True, False])
     def test_clear_endpoint(self, by_uid):
         """Validates the process of create and delete a basic model endpoint"""
