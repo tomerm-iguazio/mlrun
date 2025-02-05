@@ -229,7 +229,9 @@ class TestModelEndpointsOperations(TestMLRunSystem):
             ],
         )
         assert len(alert_configs) == 2
-        assert alert_configs[0].name != alert_configs[1].name
+        alert_names = sorted([alert_config.name for alert_config in alert_configs])
+        assert alert_names[0] == f"test--{mep_id}_app_result1"
+        assert alert_names[1] == f"test--{mep_id}_app_result2"
 
     def test_list_endpoints_on_empty_project(self):
         endpoints_out = self.project.list_model_endpoints()

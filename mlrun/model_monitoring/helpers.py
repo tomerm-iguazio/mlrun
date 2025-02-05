@@ -554,7 +554,7 @@ def get_result_instance_fqn(
     return f"{model_endpoint_id}.{app_name}.result.{result_name}"
 
 
-def get_alert_align_result_fqn(result_fqn: str):
+def get_alert_name_from_result_fqn(result_fqn: str):
     """
     :param   result_fqn: current get_result_instance_fqn format: `{model_endpoint_id}.{app_name}.result.{result_name}`
 
@@ -562,7 +562,8 @@ def get_alert_align_result_fqn(result_fqn: str):
     """
     if result_fqn.count(".") != 3:
         raise mlrun.errors.MLRunValueError(
-            f"result_fqn: {result_fqn} is not in the correct format"
+            f"result_fqn: {result_fqn} is not in the correct format: {{model_endpoint_id}}.{{app_name}}."
+            f"result.{{result_name}}"
         )
     # Name format cannot contain "."
     # The third component is always `result`, so it is not necessary for checking uniqueness.
