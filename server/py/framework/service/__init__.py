@@ -239,20 +239,21 @@ class Service(ABC):
         if hasattr(request.state, "request_id"):
             request_id = request.state.request_id
         status_code = exc.response.status_code
-        error_message = repr(exc)
+        string_error_message = str(exc)
+        repr_error_message = repr(exc)
         log_message = "Request handling returned error status"
 
         if isinstance(exc, mlrun.errors.EXPECTED_ERRORS):
             self._logger.debug(
                 log_message,
-                error_message=error_message,
+                error_message=repr_error_message,
                 status_code=status_code,
                 request_id=request_id,
             )
         else:
             self._logger.warning(
                 log_message,
-                error_message=error_message,
+                error_message=repr_error_message,
                 status_code=status_code,
                 traceback=traceback.format_exc(),
                 request_id=request_id,
@@ -260,7 +261,7 @@ class Service(ABC):
 
         return await fastapi.exception_handlers.http_exception_handler(
             request,
-            fastapi.HTTPException(status_code=status_code, detail=error_message),
+            fastapi.HTTPException(status_code=status_code, detail=string_error_message),
         )
 
     async def _base_handler(

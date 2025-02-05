@@ -108,7 +108,11 @@ class TestModelEndpointsOperations(TestMLRunSystem):
 
     def test_raise_error(self):
         db = mlrun.get_run_db()
-        db.raise_error()
+        with pytest.raises(mlrun.errors.MLRunNotFoundError) as exception:
+            db.get_project_summary("not-exists-project-name")
+        exception_object = exception.value
+        # verify that the class name is not a part of the message.
+        assert "MLRunNotFoundError" not in str(exception_object)
 
     @pytest.mark.parametrize("by_uid", [True, False])
     def test_clear_endpoint(self, by_uid):
