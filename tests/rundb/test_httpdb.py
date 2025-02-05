@@ -178,7 +178,7 @@ def server_fixture():
 
 servers = [
     "server",
-    # "docker",
+    "docker",
 ]
 
 
@@ -690,6 +690,18 @@ def test_feature_sets(create_server):
     assert len(entities) == count
     entities = db.list_entities(project, labels=["type=prod"])
     assert len(entities) == count
+
+
+def test_error_message_without_class_name(create_server):
+    server: Server = create_server()
+    db: HTTPRunDB = server.conn
+    with pytest.raises(mlrun.errors.MLRunNotFoundError) as exception:
+        db.get_project_summary("not-exists-project-name")
+    exception_object = exception.value
+    # verify that the class name is not a part of the message.
+    assert str(exception_object).startswith(
+        "Failed retrieving project summary for not-exists-project-name"
+    )
 
 
 def test_remove_labels_from_feature_set(create_server):
