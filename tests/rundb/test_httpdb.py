@@ -178,7 +178,7 @@ def server_fixture():
 
 servers = [
     "server",
-    #"docker",
+    # "docker",
 ]
 
 
@@ -690,6 +690,7 @@ def test_feature_sets(create_server):
     assert len(entities) == count
     entities = db.list_entities(project, labels=["type=prod"])
     assert len(entities) == count
+
 
 def test_remove_labels_from_feature_set(create_server):
     server: Server = create_server()

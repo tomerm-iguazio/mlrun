@@ -899,4 +899,3 @@ async def _verify_feature_vector_features_permissions(
         mlrun.common.schemas.AuthorizationAction.read,
         auth_info,
     )
-
