@@ -43,8 +43,6 @@ import mlrun.runtimes.utils
 import mlrun.serving.routers
 import mlrun.utils
 from mlrun.common.schemas.model_monitoring.model_endpoints import ModelEndpointList
-from mlrun.datastore import get_stream_pusher
-from mlrun.datastore.datastore_profile import DatastoreProfileV3io
 from mlrun.model import BaseMetadata
 from mlrun.model_monitoring.helpers import get_output_stream, get_result_instance_fqn
 from mlrun.runtimes import BaseRuntime
