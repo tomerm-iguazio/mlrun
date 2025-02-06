@@ -545,7 +545,7 @@ def get_alert_name_from_result_fqn(result_fqn: str):
 
     :return: shorter fqn without forbidden alert characters.
     """
-    if result_fqn.count(".") != 3 and result_fqn.split(".")[2] == "result":
+    if result_fqn.count(".") != 3 or result_fqn.split(".")[2] == "result":
         raise mlrun.errors.MLRunValueError(
             f"result_fqn: {result_fqn} is not in the correct format: {{model_endpoint_id}}.{{app_name}}."
             f"result.{{result_name}}"
