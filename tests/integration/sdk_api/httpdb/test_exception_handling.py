@@ -52,8 +52,8 @@ class TestExceptionHandling(tests.integration.sdk_api.base.TestMLRunIntegration)
         )
         with pytest.raises(
             mlrun.errors.MLRunBadRequestError,
-            match=rf"Field \'project\.metadata\.name\' is malformed"
-            rf"\. \'{invalid_project_name}\' does not match required pattern: (.*)\"\)",
+            match=rf"$Field \'project\.metadata\.name\' is malformed"
+            rf"\. \'{invalid_project_name}\' does not match required pattern: (.*)\)",
         ):
             mlrun.get_run_db().create_project(project)
 
