@@ -58,6 +58,7 @@ def mock_random_endpoint(
     function_tag: Optional[str] = "v1",
     model_name: Optional[str] = None,
     model_uid: Optional[str] = None,
+    model_db_key: Optional[str] = None,
     add_labels=True,
 ) -> mlrun.common.schemas.model_monitoring.ModelEndpoint:
     def random_labels():
@@ -75,6 +76,7 @@ def mock_random_endpoint(
             function_uid=function_uid,
             model_name=model_name,
             model_uid=model_uid,
+            model_db_key=model_db_key,
             model_class="modelcc",
             model_tag="latest",
         ),
@@ -377,6 +379,81 @@ class TestModelEndpointsOperations(TestMLRunSystemModelMonitoring):
 
         assert mep.status.drift_measures_timestamp is not None
         assert mep.status.current_stats_timestamp is not None
+
+    def test_mep_with_model(self):
+        model_obj = self.project.log_model(
+            "my-model",
+            model_dir=str(self.assets_path),
+            model_file="model.pkl",
+            artifact_path=f"v3io:///projects/{self.project.metadata.name}",
+            outputs=[mlrun.feature_store.Feature(name="l1", value_type="float")],
+            inputs=[mlrun.feature_store.Feature(name="f1", value_type="float")],
+            tag="latest",
+        )
+
+        model_obj_2 = self.project.log_model(
+            "my-model-2",
+            model_dir=str(self.assets_path),
+            model_file="model.pkl",
+            artifact_path=f"v3io:///projects/{self.project.metadata.name}",
+            outputs=[
+                mlrun.feature_store.Feature(name="l1", value_type="float"),
+                mlrun.feature_store.Feature(name="l2", value_type="float"),
+            ],
+            inputs=[mlrun.feature_store.Feature(name="f1", value_type="float")],
+            tag="latest",
+        )
+
+        model_endpoint = mock_random_endpoint(
+            self.project_name,
+            "testing",
+            model_name=model_obj.key,
+            model_uid=model_obj.uid,
+            model_db_key=model_obj.db_key,
+        )
+
+        db = mlrun.get_run_db()
+        db.create_model_endpoint(model_endpoint)
+
+        mep = db.get_model_endpoint(
+            project=model_endpoint.metadata.project,
+            name=model_endpoint.metadata.name,
+            function_name=model_endpoint.spec.function_name,
+            function_tag=model_endpoint.spec.function_tag,
+        )
+        assert mep.spec.feature_names == ["f1"]
+        assert mep.spec.label_names == ["l1"]
+
+        model_endpoint_2 = mock_random_endpoint(
+            self.project_name,
+            "testing",
+            model_name=model_obj_2.key,
+            model_uid=model_obj_2.uid,
+            model_db_key=model_obj_2.db_key,
+        )
+
+        db.create_model_endpoint(model_endpoint_2)  # in-place update
+        mep_2 = db.get_model_endpoint(
+            project=model_endpoint_2.metadata.project,
+            name=model_endpoint_2.metadata.name,
+            function_name=model_endpoint_2.spec.function_name,
+            function_tag=model_endpoint_2.spec.function_tag,
+        )
+        assert mep_2.spec.feature_names == ["f1"]
+        assert mep_2.spec.label_names == ["l1"]
+
+        db.create_model_endpoint(
+            model_endpoint_2,
+            creation_strategy=mm_constants.ModelEndpointCreationStrategy.OVERWRITE,
+        )  # overwrite
+        mep_3 = db.get_model_endpoint(
+            project=model_endpoint_2.metadata.project,
+            name=model_endpoint_2.metadata.name,
+            function_name=model_endpoint_2.spec.function_name,
+            function_tag=model_endpoint_2.spec.function_tag,
+        )
+        assert mep_3.spec.feature_names == ["f1"]
+        assert mep_3.spec.label_names == ["l1", "l2"]
 
 
 @TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
