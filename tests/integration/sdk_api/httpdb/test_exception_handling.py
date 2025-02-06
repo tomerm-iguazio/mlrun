@@ -50,9 +50,10 @@ class TestExceptionHandling(tests.integration.sdk_api.base.TestMLRunIntegration)
         project = mlrun.common.schemas.Project(
             metadata=mlrun.common.schemas.ProjectMetadata(name=invalid_project_name)
         )
+        # verify that the class name is not a part of the message:
         with pytest.raises(
             mlrun.errors.MLRunBadRequestError,
-            match=rf"$Field \'project\.metadata\.name\' is malformed"
+            match=rf"Failed creating project some_project details: Field \'project\.metadata\.name\' is malformed"
             rf"\. \'{invalid_project_name}\' does not match required pattern: (.*)\)",
         ):
             mlrun.get_run_db().create_project(project)

@@ -692,18 +692,6 @@ def test_feature_sets(create_server):
     assert len(entities) == count
 
 
-def test_error_message_without_class_name(create_server):
-    server: Server = create_server()
-    db: HTTPRunDB = server.conn
-    with pytest.raises(mlrun.errors.MLRunNotFoundError) as exception:
-        db.get_project_summary("not-exists-project-name")
-    exception_message = str(exception.value).replace(
-        "Failed retrieving project summary for not-exists-project-name details: ", ""
-    )
-    # verify that the class name is not a part of the message:
-    assert exception_message.startswith("Project not found")
-
-
 def test_remove_labels_from_feature_set(create_server):
     server: Server = create_server()
     db: HTTPRunDB = server.conn
