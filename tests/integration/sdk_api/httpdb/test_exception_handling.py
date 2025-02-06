@@ -78,8 +78,9 @@ class TestExceptionHandling(tests.integration.sdk_api.base.TestMLRunIntegration)
         with pytest.raises(
             mlrun.errors.MLRunRuntimeError,
             match=r"HTTPConnectionPool\(host='does-not-exist', port=80\): Max retries exceeded with url: "
-            rf"\/{mlrun.get_run_db().get_api_path_prefix()}\/projects\/some-project \(Caused by NewConnectionError"
-            r"\('<urllib3\.connection\.HTTPConnection object at (\S*)>: Failed to establish a new connection:"
-            r" \[Errno (.*)'\)\): Failed retrieving project some-project",
+            r"\/api/v1\/projects\/some-project \(Caused by NameResolutionError"
+            r"\(\"<urllib3\.connection\.HTTPConnection object at (\S*)>: Failed to resolve \'does-not-exist\'"
+            r" \(\[Errno(.*)\] nodename nor servname provided, or not known\)\"\)\):"
+            r" Failed retrieving project some-project",
         ):
             mlrun.get_run_db().get_project("some-project")
