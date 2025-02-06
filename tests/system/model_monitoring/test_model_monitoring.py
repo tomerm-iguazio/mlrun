@@ -46,12 +46,12 @@ from mlrun.common.schemas.model_monitoring.model_endpoints import ModelEndpointL
 from mlrun.datastore import get_stream_pusher
 from mlrun.datastore.datastore_profile import DatastoreProfileV3io
 from mlrun.model import BaseMetadata
-from mlrun.model_monitoring.helpers import get_result_instance_fqn, get_stream_path
+from mlrun.model_monitoring.helpers import get_output_stream, get_result_instance_fqn
 from mlrun.runtimes import BaseRuntime
 from mlrun.utils.v3io_clients import get_frames_client
 from tests.system.base import TestMLRunSystem
 
-from . import get_tsdb_datastore_profile_from_env
+from . import TestMLRunSystemModelMonitoring
 
 
 def mock_random_endpoint(
@@ -89,10 +89,9 @@ def mock_random_endpoint(
 
 
 # Marked as enterprise because of v3io mount and pipelines
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestModelEndpointsOperations(TestMLRunSystem):
+class TestModelEndpointsOperations(TestMLRunSystemModelMonitoring):
     """Applying basic model endpoint CRUD operations through MLRun API"""
 
     project_name = "mm-app-project"
@@ -101,12 +100,7 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         super().setup_method(method)
         if method.__name__ == "test_list_endpoints_without_creds":
             return
-        self.project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
+        self.set_mm_credentials()
 
     @pytest.mark.parametrize("by_uid", [True, False])
     def test_clear_endpoint(self, by_uid):
@@ -416,10 +410,9 @@ class TestModelEndpointsOperations(TestMLRunSystem):
         assert mep.status.current_stats_timestamp is not None
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestBasicModelMonitoring(TestMLRunSystem):
+class TestBasicModelMonitoring(TestMLRunSystemModelMonitoring):
     """Deploy and apply monitoring on a basic pre-trained model"""
 
     project_name = "pr-basic-model-monitoring"
@@ -437,13 +430,7 @@ class TestBasicModelMonitoring(TestMLRunSystem):
         # Deploy Model Servers
         project = self.project
 
-        project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-            replace_creds=True,  # remove once ML-7501 is resolved
-        )
+        self.set_mm_credentials()
 
         iris = load_iris()
         train_set = pd.DataFrame(
@@ -979,10 +966,9 @@ class TestVotingModelMonitoring(TestMLRunSystem):
         assert fields_dict["active"] == "boolean"
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestBatchDrift(TestMLRunSystem):
+class TestBatchDrift(TestMLRunSystemModelMonitoring):
     """Record monitoring parquet results and trigger the monitoring batch drift job analysis. This flow tests
     the monitoring process of the batch infer job function that can be imported from the functions hub.
     """
@@ -1031,12 +1017,7 @@ class TestBatchDrift(TestMLRunSystem):
         )
 
         # Deploy model monitoring infra
-        project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
+        self.set_mm_credentials()
         project.enable_model_monitoring(
             base_period=1,
             deploy_histogram_data_drift_app=True,
@@ -1098,10 +1079,9 @@ class TestBatchDrift(TestMLRunSystem):
         }
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestModelMonitoringKafka(TestMLRunSystem):
+class TestModelMonitoringKafka(TestMLRunSystemModelMonitoring):
     """Deploy a basic iris model configured with kafka stream"""
 
     brokers = (
@@ -1156,13 +1136,7 @@ class TestModelMonitoringKafka(TestMLRunSystem):
             ),
         )
 
-        project.set_model_monitoring_credentials(
-            stream_path=f"kafka://{self.brokers}",
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
-
+        self.set_mm_credentials()
         # enable model monitoring
         serving_fn.set_tracking()
 
@@ -1218,10 +1192,9 @@ class TestModelMonitoringKafka(TestMLRunSystem):
         assert model_endpoint.status.metrics["generic"]["predictions_count_5m"] > 0
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestInferenceWithSpecialChars(TestMLRunSystem):
+class TestInferenceWithSpecialChars(TestMLRunSystemModelMonitoring):
     project_name = "pr-infer-special-chars"
     name_prefix = "infer-monitoring"
     # Set image to "<repo>/mlrun:<tag>" for local testing
@@ -1229,7 +1202,6 @@ class TestInferenceWithSpecialChars(TestMLRunSystem):
 
     @classmethod
     def custom_setup_class(cls) -> None:
-        # todo testsssss
         cls.classif = SVC()
         cls.model_name = "classif_model"
         cls.columns = ["feat 1", "b (C)", "Last   for df "]
@@ -1251,12 +1223,7 @@ class TestInferenceWithSpecialChars(TestMLRunSystem):
     def custom_setup(self) -> None:
         mlrun.runtimes.utils.global_context.set(None)
         # Set the model monitoring credentials
-        self.project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
+        self.set_mm_credentials()
 
     @classmethod
     def _generate_data(cls) -> list[Union[pd.DataFrame, pd.Series]]:
@@ -1333,10 +1300,9 @@ class TestInferenceWithSpecialChars(TestMLRunSystem):
         self._test_feature_names()
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestModelInferenceTSDBRecord(TestMLRunSystem):
+class TestModelInferenceTSDBRecord(TestMLRunSystemModelMonitoring):
     """
     Test that batch inference records results to V3IO TSDB when tracking is
     enabled and the selected model does not have a serving endpoint.
@@ -1379,7 +1345,7 @@ class TestModelInferenceTSDBRecord(TestMLRunSystem):
     @classmethod
     def _test_v3io_tsdb_record(cls) -> None:
         tsdb_client = mlrun.model_monitoring.get_tsdb_connector(
-            project=cls.project_name, profile=get_tsdb_datastore_profile_from_env()
+            project=cls.project_name, profile=cls.mm_tsdb_profile
         )
 
         df: pd.DataFrame = tsdb_client._get_records(
@@ -1401,12 +1367,7 @@ class TestModelInferenceTSDBRecord(TestMLRunSystem):
         }, "The result is different than expected"
 
     def test_record(self) -> None:
-        self.project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
+        self.set_mm_credentials()
         self.project.enable_model_monitoring(
             base_period=1,
             deploy_histogram_data_drift_app=True,
@@ -1430,10 +1391,9 @@ class TestModelInferenceTSDBRecord(TestMLRunSystem):
         self._test_v3io_tsdb_record()
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestModelEndpointWithManyFeatures(TestMLRunSystem):
+class TestModelEndpointWithManyFeatures(TestMLRunSystemModelMonitoring):
     """Log a model with 500 features and validate the model endpoint feature stats."""
 
     project_name = "pr-many-features-model-monitoring"
@@ -1441,12 +1401,7 @@ class TestModelEndpointWithManyFeatures(TestMLRunSystem):
     def test_model_endpoint_with_many_features(self) -> None:
         project = self.project
 
-        project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
+        self.set_mm_credentials()
 
         # Generate a model with 500 features
         x, y = make_classification(n_samples=1000, n_features=500, random_state=42)
@@ -1478,10 +1433,9 @@ class TestModelEndpointWithManyFeatures(TestMLRunSystem):
         assert len(model_endpoint.spec.feature_stats) == 501
 
 
-@TestMLRunSystem.skip_test_if_env_not_configured
+@TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
 @pytest.mark.enterprise
-@pytest.mark.model_monitoring
-class TestModelEndpointGetMetrics(TestMLRunSystem):
+class TestModelEndpointGetMetrics(TestMLRunSystemModelMonitoring):
     """Test get_model_endpoint_monitoring_metrics functionality."""
 
     project_name = "model-endpoint-get-metrics"
@@ -1524,12 +1478,7 @@ class TestModelEndpointGetMetrics(TestMLRunSystem):
         return data
 
     def test_get_model_endpoint_metrics(self):
-        self.project.set_model_monitoring_credentials(
-            stream_path=os.getenv("MLRUN_MODEL_ENDPOINT_MONITORING__STREAM_CONNECTION"),
-            tsdb_connection=os.getenv(
-                "MLRUN_MODEL_ENDPOINT_MONITORING__TSDB_CONNECTION"
-            ),
-        )
+        self.set_mm_credentials()
 
         self.project.enable_model_monitoring(image=self.image or "mlrun/mlrun")
         db = mlrun.get_run_db()
@@ -1549,12 +1498,11 @@ class TestModelEndpointGetMetrics(TestMLRunSystem):
         )
         writer._wait_for_function_deployment(db=writer._get_db())
 
-        stream_uri = get_stream_path(
+        output_stream = get_output_stream(
             project=self.project.metadata.name,
             function_name=mm_constants.MonitoringFunctionNames.WRITER,
-            profile=DatastoreProfileV3io(name="tmp"),
+            profile=self.mm_stream_profile,
         )
-        output_stream = get_stream_pusher(stream_uri)
 
         output_stream.push(
             self._generate_event(
