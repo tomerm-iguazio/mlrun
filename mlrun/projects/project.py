@@ -70,6 +70,7 @@ from mlrun.datastore.datastore_profile import (
 from mlrun.datastore.vectorstore import VectorStoreCollection
 from mlrun.model_monitoring.helpers import (
     filter_results_by_regex,
+    get_alert_name_from_result_fqn,
     get_result_instance_fqn,
 )
 from mlrun.runtimes.nuclio.function import RemoteRuntime
@@ -2141,7 +2142,8 @@ class MlrunProject(ModelObj):
         reset_policy: mlrun.common.schemas.alert.ResetPolicy = mlrun.common.schemas.alert.ResetPolicy.AUTO,
     ) -> list[mlrun.alerts.alert.AlertConfig]:
         """
-        :param name:                   AlertConfig name.
+        :param name:                   The name of the AlertConfig template. It will be combined with mep_id, app-name
+                                       and result name to generate a unique name.
         :param summary:                Summary of the alert, will be sent in the generated notifications
         :param endpoints:              The endpoints from which metrics will be retrieved to configure the alerts.
                                        This `ModelEndpointList` object obtained via the `list_model_endpoints`
@@ -2202,10 +2204,11 @@ class MlrunProject(ModelObj):
                 )
         alert_result_names = list(set(specific_result_names + matching_results))
         for result_fqn in alert_result_names:
+            result_fqn_name = get_alert_name_from_result_fqn(result_fqn)
             alerts.append(
                 mlrun.alerts.alert.AlertConfig(
                     project=self.name,
-                    name=name,
+                    name=f"{name}--{result_fqn_name}",
                     summary=summary,
                     severity=severity,
                     entities=alert_constants.EventEntities(
