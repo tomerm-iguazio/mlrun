@@ -120,34 +120,41 @@ class ModelEndpoints:
                 logger.info("The model endpoint is created on a non-existing function")
         model_obj = None
         if model_path and mlrun.datastore.is_store_uri(model_path):
-            try:
-                logger.info("Getting model object from db")
-                _, model_uri = mlrun.datastore.parse_store_uri(model_path)
-                project, key, iteration, tag, tree, uid = parse_artifact_uri(
-                    model_uri, model_endpoint.metadata.project
-                )
-                model_obj = mlrun.artifacts.dict_to_artifact(
-                    services.api.crud.Artifacts().get_artifact(
-                        db_session,
-                        key=key,
-                        tag=tag,
-                        iter=iteration,
-                        project=project,
-                        producer_id=tree,
-                        object_uid=uid,
-                    )
-                )
-
-                model_endpoint.spec.model_name = model_obj.metadata.key
-                model_endpoint.spec.model_db_key = model_obj.spec.db_key
-                model_endpoint.spec.model_uid = model_obj.metadata.uid
-                model_endpoint.spec.model_tag = model_obj.tag
-                model_endpoint.metadata.labels.update(
-                    model_obj.labels
-                )  # todo : check if we still need this
-            except mlrun.errors.MLRunNotFoundError:
-                logger.info("The model endpoint is created on a non-existing model")
+            _, model_uri = mlrun.datastore.parse_store_uri(model_path)
+            project, key, iteration, tag, tree, uid = parse_artifact_uri(
+                model_uri, model_endpoint.metadata.project
+            )
         else:
+            project, key, iteration, tag, tree, uid = (
+                model_endpoint.metadata.project,
+                model_endpoint.spec.model_db_key,
+                None,
+                model_endpoint.spec.model_tag,
+                None,
+                model_endpoint.spec.model_uid,
+            )
+        try:
+            logger.info("Getting model object from db")
+            model_obj = mlrun.artifacts.dict_to_artifact(
+                services.api.crud.Artifacts().get_artifact(
+                    db_session,
+                    key=key,
+                    tag=tag,
+                    iter=iteration,
+                    project=project,
+                    producer_id=tree,
+                    object_uid=uid,
+                )
+            )
+
+            model_endpoint.spec.model_name = model_obj.metadata.key
+            model_endpoint.spec.model_db_key = model_obj.spec.db_key
+            model_endpoint.spec.model_uid = model_obj.metadata.uid
+            model_endpoint.spec.model_tag = model_obj.tag
+            model_endpoint.metadata.labels.update(
+                model_obj.labels
+            )  # todo : check if we still need this
+        except mlrun.errors.MLRunNotFoundError:
             logger.info("The model endpoint is created on a non-existing model")
 
         if (
@@ -511,7 +518,9 @@ class ModelEndpoints:
                     project=model_endpoint.metadata.project,
                 )
                 model_endpoint.spec.feature_names = [
-                    feature.name for feature in features
+                    feature.name
+                    for feature in features
+                    if feature.name not in model_endpoint.spec.label_names
                 ]
 
         return model_endpoint, features

@@ -33,6 +33,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.svm import SVC
 
 import mlrun.artifacts.model
+import mlrun.common.schemas.alert as alert_objects
 import mlrun.common.schemas.model_monitoring
 import mlrun.common.schemas.model_monitoring.constants as mm_constants
 import mlrun.feature_store
@@ -41,6 +42,7 @@ import mlrun.runtimes.mounts
 import mlrun.runtimes.utils
 import mlrun.serving.routers
 import mlrun.utils
+from mlrun.common.schemas.model_monitoring.model_endpoints import ModelEndpointList
 from mlrun.model import BaseMetadata
 from mlrun.model_monitoring.helpers import get_output_stream, get_result_instance_fqn
 from mlrun.runtimes import BaseRuntime
@@ -58,6 +60,7 @@ def mock_random_endpoint(
     function_tag: Optional[str] = "v1",
     model_name: Optional[str] = None,
     model_uid: Optional[str] = None,
+    model_db_key: Optional[str] = None,
     add_labels=True,
 ) -> mlrun.common.schemas.model_monitoring.ModelEndpoint:
     def random_labels():
@@ -75,6 +78,7 @@ def mock_random_endpoint(
             function_uid=function_uid,
             model_name=model_name,
             model_uid=model_uid,
+            model_db_key=model_db_key,
             model_class="modelcc",
             model_tag="latest",
         ),
@@ -195,6 +199,33 @@ class TestModelEndpointsOperations(TestMLRunSystemModelMonitoring):
         )
         assert endpoint_after_update.status.monitoring_mode == "enabled"
         assert endpoint_after_update.spec.model_class == "modelcc-3"
+
+    def test_alert_name_uniqueness(self):
+        model_endpoint = mock_random_endpoint(
+            self.project_name,
+            "testing",
+            function_name="function1",
+            function_tag=None,  # latest is the default
+        )
+        db = mlrun.get_run_db()
+        model_endpoint = db.create_model_endpoint(model_endpoint=model_endpoint)
+        mep_id = model_endpoint.metadata.uid
+        #  in regular case we should have notifications, but we do not save the alert configs so it is not required.
+        alert_configs = self.project.create_model_monitoring_alert_configs(
+            name="test",
+            summary="test",
+            endpoints=ModelEndpointList(endpoints=[model_endpoint]),
+            events=[alert_objects.EventKind.DATA_DRIFT_DETECTED],
+            notifications=[],
+            result_names=[
+                f"{mep_id}.app.result.result1",
+                f"{mep_id}.app.result.result2",
+            ],
+        )
+        assert len(alert_configs) == 2
+        alert_names = sorted([alert_config.name for alert_config in alert_configs])
+        assert alert_names[0] == f"test--{mep_id}_app_result1"
+        assert alert_names[1] == f"test--{mep_id}_app_result2"
 
     def test_list_endpoints_on_empty_project(self):
         endpoints_out = self.project.list_model_endpoints()
@@ -377,6 +408,81 @@ class TestModelEndpointsOperations(TestMLRunSystemModelMonitoring):
 
         assert mep.status.drift_measures_timestamp is not None
         assert mep.status.current_stats_timestamp is not None
+
+    def test_mep_with_model(self):
+        model_obj = self.project.log_model(
+            "my-model",
+            model_dir=str(self.assets_path),
+            model_file="model.pkl",
+            artifact_path=f"v3io:///projects/{self.project.metadata.name}",
+            outputs=[mlrun.feature_store.Feature(name="l1", value_type="float")],
+            inputs=[mlrun.feature_store.Feature(name="f1", value_type="float")],
+            tag="latest",
+        )
+
+        model_obj_2 = self.project.log_model(
+            "my-model-2",
+            model_dir=str(self.assets_path),
+            model_file="model.pkl",
+            artifact_path=f"v3io:///projects/{self.project.metadata.name}",
+            outputs=[
+                mlrun.feature_store.Feature(name="l1", value_type="float"),
+                mlrun.feature_store.Feature(name="l2", value_type="float"),
+            ],
+            inputs=[mlrun.feature_store.Feature(name="f1", value_type="float")],
+            tag="latest",
+        )
+
+        model_endpoint = mock_random_endpoint(
+            self.project_name,
+            "testing",
+            model_name=model_obj.key,
+            model_uid=model_obj.uid,
+            model_db_key=model_obj.db_key,
+        )
+
+        db = mlrun.get_run_db()
+        db.create_model_endpoint(model_endpoint)
+
+        mep = db.get_model_endpoint(
+            project=model_endpoint.metadata.project,
+            name=model_endpoint.metadata.name,
+            function_name=model_endpoint.spec.function_name,
+            function_tag=model_endpoint.spec.function_tag,
+        )
+        assert mep.spec.feature_names == ["f1"]
+        assert mep.spec.label_names == ["l1"]
+
+        model_endpoint_2 = mock_random_endpoint(
+            self.project_name,
+            "testing",
+            model_name=model_obj_2.key,
+            model_uid=model_obj_2.uid,
+            model_db_key=model_obj_2.db_key,
+        )
+
+        db.create_model_endpoint(model_endpoint_2)  # in-place update
+        mep_2 = db.get_model_endpoint(
+            project=model_endpoint_2.metadata.project,
+            name=model_endpoint_2.metadata.name,
+            function_name=model_endpoint_2.spec.function_name,
+            function_tag=model_endpoint_2.spec.function_tag,
+        )
+        assert mep_2.spec.feature_names == ["f1"]
+        assert mep_2.spec.label_names == ["l1"]
+
+        db.create_model_endpoint(
+            model_endpoint_2,
+            creation_strategy=mm_constants.ModelEndpointCreationStrategy.OVERWRITE,
+        )  # overwrite
+        mep_3 = db.get_model_endpoint(
+            project=model_endpoint_2.metadata.project,
+            name=model_endpoint_2.metadata.name,
+            function_name=model_endpoint_2.spec.function_name,
+            function_tag=model_endpoint_2.spec.function_tag,
+        )
+        assert mep_3.spec.feature_names == ["f1"]
+        assert mep_3.spec.label_names == ["l1", "l2"]
 
 
 @TestMLRunSystemModelMonitoring.skip_test_if_env_not_configured
