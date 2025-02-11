@@ -85,7 +85,3 @@ class TestExceptionHandling(tests.integration.sdk_api.base.TestMLRunIntegration)
             r" Failed retrieving project some-project",
         ):
             mlrun.get_run_db().get_project("some-project")
-        try:
-            mlrun.get_run_db().get_project("some-project")
-        except Exception as e:
-            print(e)
