@@ -81,7 +81,7 @@ class TestExceptionHandling(tests.integration.sdk_api.base.TestMLRunIntegration)
             mlrun.errors.MLRunRuntimeError,
             match=r"HTTPConnectionPool\(host='does-not-exist', port=80\): Max retries exceeded with url: "
             r"\/api/v1\/projects\/some-project \(Caused by (NameResolutionError|NewConnectionError)"
-            r"\(\"<urllib3\.connection\.HTTPConnection object at (\S*)>: Failed to .*"
+            r"\((\"|\')<urllib3\.connection\.HTTPConnection object at (\S*)>: Failed to .*"
             r" Failed retrieving project some-project",
         ):
             mlrun.get_run_db().get_project("some-project")
