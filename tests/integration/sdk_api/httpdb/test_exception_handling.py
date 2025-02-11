@@ -75,12 +75,17 @@ class TestExceptionHandling(tests.integration.sdk_api.base.TestMLRunIntegration)
 
         # lastly let's verify that a request error (failure reaching to the server) is handled nicely
         mlrun.get_run_db().base_url = "http://does-not-exist"
+        # The internal error type differs between local and CI runs:
+        # NameResolutionError occurs in local execution, while NewConnectionError appears in the CI environment.
         with pytest.raises(
             mlrun.errors.MLRunRuntimeError,
             match=r"HTTPConnectionPool\(host='does-not-exist', port=80\): Max retries exceeded with url: "
-            r"\/api/v1\/projects\/some-project \(Caused by NameResolutionError"
-            r"\(\"<urllib3\.connection\.HTTPConnection object at (\S*)>: Failed to resolve \'does-not-exist\'"
-            r" \(\[Errno(.*)\] nodename nor servname provided, or not known\)\"\)\):"
+            r"\/api/v1\/projects\/some-project \(Caused by (NameResolutionError|NewConnectionError)"
+            r"\(\"<urllib3\.connection\.HTTPConnection object at (\S*)>: Failed to .*"
             r" Failed retrieving project some-project",
         ):
             mlrun.get_run_db().get_project("some-project")
+        try:
+            mlrun.get_run_db().get_project("some-project")
+        except Exception as e:
+            print(e)
