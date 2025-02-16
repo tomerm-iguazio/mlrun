@@ -267,7 +267,7 @@ class MonitoringApplicationController:
     def _should_monitor_endpoint(
         endpoint: mlrun.common.schemas.ModelEndpoint, application_names: set
     ) -> bool:
-        print("checking in _should_monitor_endpoint")
+        logger.info("checking in _should_monitor_endpoint")
         if (
             # Is the model endpoint monitored?
             endpoint.status.monitoring_mode == mm_constants.ModelMonitoringMode.enabled
@@ -283,17 +283,17 @@ class MonitoringApplicationController:
                 endpoint_id=endpoint.metadata.uid,
             ) as batch_window_generator:
                 if application_names != batch_window_generator.get_application_list():
-                    print("true 1")
+                    logger.info("True 1")
                     return True
                 elif (
                     not batch_window_generator.get_min_last_analyzed()
                     or batch_window_generator.get_min_last_analyzed()
                     <= int(endpoint.status.last_request.timestamp())
                 ):
-                    print("true 2")
+                    logger.info("true 2")
                     return True
                 else:
-                    print("_should_monitor_endpoint in else")
+                    logger.info("_should_monitor_endpoint in else")
                     logger.info(
                         "All the possible intervals were already analyzed, didn't push regular event",
                         endpoint_id=endpoint.metadata.uid,
@@ -304,7 +304,7 @@ class MonitoringApplicationController:
                         last_request=endpoint.status.last_request,
                     )
         else:
-            print("_should_monitor_endpoint not regular")
+            logger.info("_should_monitor_endpoint not regular")
             logger.info(
                 "Should not monitor model endpoint, didn't push regular event",
                 endpoint_id=endpoint.metadata.uid,
@@ -573,7 +573,7 @@ class MonitoringApplicationController:
         applications_names: set,
         v3io_access_key: str,
     ) -> None:
-        print("in endpoint_to_regular_event")
+        logger.info("in endpoint_to_regular_event")
         if MonitoringApplicationController._should_monitor_endpoint(
             endpoint, set(applications_names)
         ):
@@ -608,7 +608,7 @@ class MonitoringApplicationController:
                 endpoint_policy=policy,
             )
         else:
-            print(f"endpoint_to_regular_event: not monitoring endpoint {endpoint.metadata.name}")
+            logger.info(f"endpoint_to_regular_event: not monitoring endpoint {endpoint.metadata.name}")
 
     @staticmethod
     def push_to_controller_stream(
