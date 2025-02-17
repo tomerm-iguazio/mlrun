@@ -589,6 +589,14 @@ def get_invocations_metric(project: str) -> ModelEndpointMonitoringMetric:
 
 
 def _get_monitoring_schedules_folder_path(project: str) -> str:
+    import os
+    for key, secret in dict(os.environ).items():
+        if key in ["MLRUN_FEATURE_STORE__DATA_PREFIXES__DEFAULT", "MLRUN_HTTPDB__REAL_PATH",
+                   "MLRUN_STORAGE__AUTO_MOUNT_TYPE"]:
+            if secret.startswith("s3"):
+                print(f"fitting key: {key} with s3")
+            else:
+                print(f"fitting key: {key} no s3")
     return cast(
         str,
         mlrun.mlconf.get_model_monitoring_file_target_path(
