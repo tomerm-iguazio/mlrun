@@ -150,6 +150,7 @@ class _BatchWindowGenerator(AbstractContextManager):
         self._project = project
         self._endpoint_id = endpoint_id
         self._timedelta = window_length
+        logger.info("_BatchWindowGenerator init until ModelMonitoringSchedulesFile creation")
         self._schedules_file = ModelMonitoringSchedulesFile(
             project=project, endpoint_id=endpoint_id
         )
@@ -268,53 +269,56 @@ class MonitoringApplicationController:
         endpoint: mlrun.common.schemas.ModelEndpoint, application_names: set
     ) -> bool:
         logger.info("checking in _should_monitor_endpoint")
-        if (
-            # Is the model endpoint monitored?
-            endpoint.status.monitoring_mode == mm_constants.ModelMonitoringMode.enabled
-            # Was the model endpoint called? I.e., are the first and last requests nonempty?
-            and endpoint.status.first_request
-            and endpoint.status.last_request
-            # Is the model endpoint not a router endpoint? Router endpoint has no feature stats
-            and endpoint.metadata.endpoint_type.value
-            != mm_constants.EndpointType.ROUTER.value
-        ):
-            with _BatchWindowGenerator(
-                project=endpoint.metadata.project,
-                endpoint_id=endpoint.metadata.uid,
-            ) as batch_window_generator:
-                if application_names != batch_window_generator.get_application_list():
-                    logger.info("True 1")
-                    return True
-                elif (
-                    not batch_window_generator.get_min_last_analyzed()
-                    or batch_window_generator.get_min_last_analyzed()
-                    <= int(endpoint.status.last_request.timestamp())
-                ):
-                    logger.info("true 2")
-                    return True
-                else:
-                    logger.info("_should_monitor_endpoint in else")
-                    logger.info(
-                        "All the possible intervals were already analyzed, didn't push regular event",
-                        endpoint_id=endpoint.metadata.uid,
-                        last_analyzed=datetime.datetime.fromtimestamp(
-                            batch_window_generator.get_min_last_analyzed(),
-                            tz=datetime.timezone.utc,
-                        ),
-                        last_request=endpoint.status.last_request,
-                    )
-        else:
-            logger.info("_should_monitor_endpoint not regular")
-            logger.info(
-                "Should not monitor model endpoint, didn't push regular event",
-                endpoint_id=endpoint.metadata.uid,
-                endpoint_name=endpoint.metadata.name,
-                last_request=endpoint.status.last_request,
-                first_request=endpoint.status.first_request,
-                endpoint_type=endpoint.metadata.endpoint_type,
-                feature_set_uri=endpoint.spec.monitoring_feature_set_uri,
-            )
-        return False
+        try:
+            if (
+                # Is the model endpoint monitored?
+                endpoint.status.monitoring_mode == mm_constants.ModelMonitoringMode.enabled
+                # Was the model endpoint called? I.e., are the first and last requests nonempty?
+                and endpoint.status.first_request
+                and endpoint.status.last_request
+                # Is the model endpoint not a router endpoint? Router endpoint has no feature stats
+                and endpoint.metadata.endpoint_type.value
+                != mm_constants.EndpointType.ROUTER.value
+            ):
+                with _BatchWindowGenerator(
+                    project=endpoint.metadata.project,
+                    endpoint_id=endpoint.metadata.uid,
+                ) as batch_window_generator:
+                    if application_names != batch_window_generator.get_application_list():
+                        logger.info("True 1")
+                        return True
+                    elif (
+                        not batch_window_generator.get_min_last_analyzed()
+                        or batch_window_generator.get_min_last_analyzed()
+                        <= int(endpoint.status.last_request.timestamp())
+                    ):
+                        logger.info("True 2")
+                        return True
+                    else:
+                        logger.info("_should_monitor_endpoint in else")
+                        logger.info(
+                            "All the possible intervals were already analyzed, didn't push regular event",
+                            endpoint_id=endpoint.metadata.uid,
+                            last_analyzed=datetime.datetime.fromtimestamp(
+                                batch_window_generator.get_min_last_analyzed(),
+                                tz=datetime.timezone.utc,
+                            ),
+                            last_request=endpoint.status.last_request,
+                        )
+            else:
+                logger.info("_should_monitor_endpoint not regular")
+                logger.info(
+                    "Should not monitor model endpoint, didn't push regular event",
+                    endpoint_id=endpoint.metadata.uid,
+                    endpoint_name=endpoint.metadata.name,
+                    last_request=endpoint.status.last_request,
+                    first_request=endpoint.status.first_request,
+                    endpoint_type=endpoint.metadata.endpoint_type,
+                    feature_set_uri=endpoint.spec.monitoring_feature_set_uri,
+                )
+            return False
+        except Exception as e:
+            logger.info(f"exception in _should_monitor_endpoint {str(e)}")
 
     def run(self, event: nuclio_sdk.Event) -> None:
         """

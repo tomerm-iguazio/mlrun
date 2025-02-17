@@ -598,9 +598,11 @@ def _get_monitoring_schedules_folder_path(project: str) -> str:
 
 
 def _get_monitoring_schedules_file_path(*, project: str, endpoint_id: str) -> str:
-    return os.path.join(
+    schedules_file_path = os.path.join(
         _get_monitoring_schedules_folder_path(project), f"{endpoint_id}.json"
     )
+    logger.info(f"_get_monitoring_schedules_file_path file path {schedules_file_path}:")
+    return schedules_file_path
 
 
 def get_monitoring_schedules_data(*, project: str, endpoint_id: str) -> "DataItem":
