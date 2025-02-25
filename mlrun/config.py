@@ -1300,14 +1300,11 @@ class Config:
         :return:                Full configured path for the provided kind.
         """
 
-        from mlrun.utils import logger
         if target != "offline":
-            logger.info("get_model_monitoring_file_target_path not offline")
             store_prefix_dict = (
                 mlrun.mlconf.model_endpoint_monitoring.store_prefixes.to_dict()
             )
             if store_prefix_dict.get(kind):
-                logger.info("get_model_monitoring_file_target_path store_prefix_dict.get(kind):")
                 # Target exist in store prefix and has a valid string value
                 return store_prefix_dict[kind].format(project=project, **kwargs)
             if (
@@ -1317,7 +1314,6 @@ class Config:
                 and function_name
                 != mlrun.common.schemas.model_monitoring.constants.MonitoringFunctionNames.APPLICATION_CONTROLLER
             ):
-                logger.info("get_model_monitoring_file_target_path if function_name:")
                 return mlrun.mlconf.model_endpoint_monitoring.store_prefixes.user_space.format(
                     project=project,
                     kind=kind
@@ -1342,7 +1338,6 @@ class Config:
                     project=project,
                     kind=f"{kind}-{function_name.lower()}-v1",
                 )
-            logger.info("get_model_monitoring_file_target_path: default")
             return mlrun.mlconf.model_endpoint_monitoring.store_prefixes.default.format(
                 project=project,
                 kind=kind,

@@ -590,14 +590,6 @@ def get_invocations_metric(project: str) -> ModelEndpointMonitoringMetric:
 
 
 def _get_monitoring_schedules_folder_path(project: str) -> str:
-    import os
-    for key, secret in dict(os.environ).items():
-        if key in ["MLRUN_FEATURE_STORE__DATA_PREFIXES__DEFAULT", "MLRUN_HTTPDB__REAL_PATH",
-                   "MLRUN_STORAGE__AUTO_MOUNT_TYPE"]:
-            if secret.startswith("s3"):
-                logger.info(f"fitting key: {key} with s3")
-            else:
-                logger.info(f"fitting key: {key} no s3")
     return cast(
         str,
         mlrun.mlconf.get_model_monitoring_file_target_path(
@@ -607,11 +599,9 @@ def _get_monitoring_schedules_folder_path(project: str) -> str:
 
 
 def _get_monitoring_schedules_file_path(*, project: str, endpoint_id: str) -> str:
-    schedules_file_path = os.path.join(
+    return os.path.join(
         _get_monitoring_schedules_folder_path(project), f"{endpoint_id}.json"
     )
-    logger.info(f"_get_monitoring_schedules_file_path file path {schedules_file_path}:")
-    return schedules_file_path
 
 
 def get_monitoring_schedules_data(*, project: str, endpoint_id: str) -> "DataItem":
