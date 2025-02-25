@@ -1338,6 +1338,7 @@ class Config:
                     project=project,
                     kind=f"{kind}-{function_name.lower()}-v1",
                 )
+
             return mlrun.mlconf.model_endpoint_monitoring.store_prefixes.default.format(
                 project=project,
                 kind=kind,
