@@ -565,7 +565,10 @@ class MonitoringApplicationController:
             for future in concurrent.futures.as_completed(futures):
                 if future.exception():
                     exception = future.exception()
-                    error = f"Got error in pushing event in endpoint {futures[future]}, traceback:\n"
+                    error = (
+                        f"Failed to push event. Endpoint name: {futures[future].metadata.name}, "
+                        f"endpoint uid: {futures[future].metadata.uid}, traceback:\n"
+                    )
                     error += "".join(
                         traceback.format_exception(
                             None, exception, exception.__traceback__
