@@ -22,6 +22,7 @@ tests/project.yaml
 tests/system/env.yml
 # Coverage reports
 *.coverage
+coverage_reports/
 
 # Editors and operating system files
 # Visual Studio Code settings

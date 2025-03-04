@@ -947,3 +947,12 @@ upgrade-mlrun-deps-lock: verify-uv-version ## Upgrade mlrun-* locked requirement
 		upgrade-mlrun-kfp-deps-lock \
 		upgrade-mlrun-test-deps-lock \
 		upgrade-mlrun-system-test-deps-lock
+
+
+.PHONY: test-coverage
+test-coverage: clean
+	rm -f coverage_reports/unit_tests.coverage
+	#COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v .
+	COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v tests/feature-store/test_common.py::test_parse_feature_string_with_alias
+	@echo "Unit test coverage report:"
+	COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
