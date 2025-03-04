@@ -1399,3 +1399,17 @@ class DBInterface(ABC):
         :param project: The project name.
         """
         pass
+
+    def delete_feature_sets(
+        self,
+        session,
+        project: str,
+        uids: typing.Optional[list[str]] = None,
+    ) -> None:
+        """
+        Delete multiple feature sets.
+        :param session: The database session.
+        :param project: The project name.
+        :param uids:    The feature set uids to delete.
+        """
+        pass

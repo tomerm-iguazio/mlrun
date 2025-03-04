@@ -440,6 +440,15 @@ class TestModelEndpointsOperations(TestMLRunSystemModelMonitoring):
                 latest_only=True
             ).endpoints
 
+        mm_fs = db.list_feature_sets(self.project_name)
+        if (
+            creation_strategy == mm_constants.ModelEndpointCreationStrategy.OVERWRITE
+            or creation_strategy == mm_constants.ModelEndpointCreationStrategy.INPLACE
+        ):
+            assert len(mm_fs) == 1
+        else:
+            assert len(mm_fs) == 2
+
         assert len(endpoints_out) == 1
         assert endpoints_out[0].spec.model_name == "my-model-2"
 

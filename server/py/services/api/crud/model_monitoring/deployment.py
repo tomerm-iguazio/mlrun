@@ -915,7 +915,6 @@ class MonitoringDeployment:
         :param auth_info:                   The auth info of the request.
         :param background_task_name:        The name of the background task.
         :param delete_app_stream_resources: If True, delete the stream resources (e.g., v3io stream or kafka  topics).
-        :param access_key:                  Model monitoring access key, relevant only for V3IO stream.
         """
         await framework.api.utils._delete_function(
             db_session=db_session,
@@ -1346,6 +1345,7 @@ class MonitoringDeployment:
         function_name: str,
         function_tag: str,
         project: str,
+        delete_background_task: fastapi.BackgroundTasks,
         model_endpoints_instructions: list[
             tuple[
                 mlrun.common.schemas.ModelEndpoint,
@@ -1362,7 +1362,9 @@ class MonitoringDeployment:
         4. Create the Router model endpoints according to the instructions list.
 
         :param function_name:                The name of the function.
+        :param function_tag:                 The tag of the function.
         :param project:                      The project name.
+        :param delete_background_task: A background task that will be used to delete old TSDB records (if required).
         :param model_endpoints_instructions: list of tuples of ModelEndpoint schema, CreationStrategy
 
         """
@@ -1384,6 +1386,7 @@ class MonitoringDeployment:
                     project=project,
                     function_name=function_name,
                     function_tag=function_tag or "latest",
+                    delete_background_task=delete_background_task,
                 )
             )
 
@@ -1406,6 +1409,7 @@ class MonitoringDeployment:
         project: str,
         function_name: str,
         function_tag: str,
+        delete_background_task: fastapi.BackgroundTasks,
     ):
         async with semaphore:
             result = await framework.db.session.run_async_function_with_new_db_session(
@@ -1414,6 +1418,7 @@ class MonitoringDeployment:
                 project=project,
                 function_name=function_name,
                 function_tag=function_tag,
+                delete_background_task=delete_background_task,
             )
             return result
 
@@ -1755,6 +1760,7 @@ class MonitoringDeployment:
             function_name,
             function_tag,
             project_name,
+            background_tasks,
             model_endpoints_instructions,
         )
 
