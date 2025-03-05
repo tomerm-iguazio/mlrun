@@ -98,6 +98,11 @@ endif
 
 # Change to `--upgrade-package <package-name>` to upgrade only a specific package
 MLRUN_UV_UPGRADE_FLAG ?= --upgrade
+COMMON_IGNORE_TEST_FLAGS=$(shell echo "--ignore=tests/integration \
+		--ignore=tests/system \
+		--ignore=tests/rundb/test_httpdb.py \
+		--ignore=server/py/services/api/migrations \
+		")
 
 .PHONY: help
 help: ## Display available commands
@@ -529,13 +534,7 @@ test-dockerized: build-test ## Run mlrun tests in docker container
 .PHONY: test
 test: clean ## Run mlrun tests
 	# TODO: Remove ignored tests for Python 3.11 compatibility with KFP 2
-	set -e ;\
-	COMMON_IGNORE_TEST_FLAGS=$$(echo "\
-		--ignore=tests/integration \
-		--ignore=tests/system \
-		--ignore=tests/rundb/test_httpdb.py \
-		--ignore=server/py/services/api/migrations \
-	");\
+	set -e ; \
 	PER_PYTHON_VERSION_IGNORE_TEST_FLAGS=$(if $(filter $(MLRUN_PYTHON_VERSION),3.12),$$(echo "\
 		--ignore=server/py/services/api/tests/unit/api/test_pipelines.py \
 		--ignore=tests/projects/test_kfp.py \
@@ -550,7 +549,7 @@ test: clean ## Run mlrun tests
 		--capture=no \
 		--disable-warnings \
 		--durations=100 \
-		$$COMMON_IGNORE_TEST_FLAGS \
+		$(COMMON_IGNORE_TEST_FLAGS) \
 		$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
 		--forked \
 		-rf
