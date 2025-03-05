@@ -58,4 +58,4 @@ kubeconfig*
 **/hack/*.env
 
 # Coverage reports
-coverage_reports/
+*.coverage
