@@ -950,8 +950,34 @@ upgrade-mlrun-deps-lock: verify-uv-version ## Upgrade mlrun-* locked requirement
 
 .PHONY: test-coverage
 test-coverage: clean
+	# TODO: Remove ignored tests for Python 3.11 compatibility with KFP 2
+
 	rm -f coverage_reports/unit_tests.coverage
+
+	set -e ; \
+	PER_PYTHON_VERSION_IGNORE_TEST_FLAGS=$(if $(filter $(MLRUN_PYTHON_VERSION),3.12),$$(echo "\
+		--ignore=server/py/services/api/tests/unit/api/test_pipelines.py \
+		--ignore=tests/projects/test_kfp.py \
+		--ignore=server/py/services/api/tests/unit/crud/test_pipelines.py \
+		--ignore=tests/serving/test_remote.py \
+		--ignore=tests/projects/test_remote_pipeline.py \
+		--ignore=pipeline-adapters/mlrun-pipelines-kfp-v1-8/tests \
+		"),);\
+	COVERAGE_FILE=coverage_reports/unit_tests.coverage \
+	python \
+	-X faulthandler \
+	-m coverage run --rcfile=tests/tests.coveragerc \
+	-m pytest -v \
+	--capture=no \
+	--disable-warnings \
+	--durations=100 \
+	$(COMMON_IGNORE_TEST_FLAGS) \
+	$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
+	--forked \
+	-rf \
+	-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
+
 	#COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v .
-	COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v tests/feature-store/test_common.py::test_parse_feature_string_with_alias
+	#COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v tests/feature-store/test_common.py::test_parse_feature_string_with_alias
 	@echo "Unit test coverage report:"
 	COVERAGE_FILE=coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
