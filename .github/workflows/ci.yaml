@@ -114,12 +114,18 @@ jobs:
     - name: Install automation scripts dependencies
       run: pip install -r automation/requirements.txt
 
-    - name: Run Dockerized tests
+    - name: Run Dockerized tests coverage
       run: |
         MLRUN_DOCKER_REGISTRY=ghcr.io/ \
         MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} \
         MLRUN_PYTHON_VERSION=${{ matrix.python-version }} \
-        make test-dockerized
+        make test-coverage-dockerized
+    - name: Upload coverage report
+      uses: actions/upload-artifact@v4
+      with:
+        name: coverage_unit_tests_report-${{ github.run_id }}
+        path: /tmp/coverage_reports/unit_tests.coverage
+        retention-days: 90
 
   integration-tests:
     name: Run Dockerized Integration Tests
