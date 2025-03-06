@@ -577,6 +577,16 @@ test-integration-dockerized: build-test ## Run mlrun integration tests in docker
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-integration
 
+.PHONY: test-integration-coverage-dockerized
+test-integration-dockerized: build-test ## Run mlrun integration tests in docker container
+	docker run \
+		-t \
+		--rm \
+		--network='host' \
+		-v /tmp:/tmp \
+		-v /var/run/docker.sock:/var/run/docker.sock \
+		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-integration-coverage
+
 .PHONY: test-integration
 test-integration: clean ## Run mlrun integration tests
 	python -m pytest -v \
@@ -991,3 +1001,20 @@ test-coverage: clean
 	-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
 	@echo "Unit test coverage report:"
 	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
+
+.PHONY: test-integration-coverage
+test-integration-coverage: clean ## Run mlrun integration tests with coverage
+	COVERAGE_FILE=tests/coverage_reports/integration_tests.coverage \
+	python -m \
+		coverage run --rcfile=tests/tests.coveragerc \
+		-m pytest -v \
+		--capture=no \
+		--disable-warnings \
+		--durations=100 \
+		-rf \
+		-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
+		# TODO return:
+		#tests/integration \
+		#tests/rundb/test_httpdb.py
+
+	COVERAGE_FILE=tests/coverage_reports/integration_tests.coverage coverage report --rcfile=tests/tests.coveragerc
