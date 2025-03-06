@@ -989,8 +989,5 @@ test-coverage: clean
 	--forked \
 	-rf \
 	-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
-
-	#COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v .
-	#COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage run --rcfile=tests/tests.coveragerc -m pytest --ignore=integration -rf -v tests/feature-store/test_common.py::test_parse_feature_string_with_alias
 	@echo "Unit test coverage report:"
 	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
