@@ -533,7 +533,7 @@ test-dockerized: build-test ## Run mlrun tests in docker container
 		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test
 
 .PHONY: test-coverage-dockerized
-test-coverage-dockerized: build-test ## Run mlrun tests in docker container
+test-coverage-dockerized: build-test ## Run mlrun tests with coverage in docker container
 	docker run \
 		-t \
 		--rm \
