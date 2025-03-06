@@ -98,11 +98,7 @@ endif
 
 # Change to `--upgrade-package <package-name>` to upgrade only a specific package
 MLRUN_UV_UPGRADE_FLAG ?= --upgrade
-COMMON_IGNORE_TEST_FLAGS=$(shell echo "--ignore=tests/integration \
-		--ignore=tests/system \
-		--ignore=tests/rundb/test_httpdb.py \
-		--ignore=server/py/services/api/migrations \
-		")
+COVERAGE?=false
 
 .PHONY: help
 help: ## Display available commands
@@ -522,32 +518,30 @@ clean: ## Clean python package build artifacts
 
 .PHONY: test-dockerized
 test-dockerized: build-test ## Run mlrun tests in docker container
-	rm -rf /tmp/coverage_reports && mkdir /tmp/coverage_reports \
+	if [ "$(COVERAGE)" = "true" ]; then \
+		rm -rf /tmp/coverage_reports/unit_tests && mkdir -p /tmp/coverage_reports/unit_tests; \
+	fi; \
 	docker run \
 		-t \
 		--rm \
 		--network='host' \
 		-e MLRUN_PYTHON_VERSION=$(MLRUN_PYTHON_VERSION) \
 		-v /tmp:/tmp \
+		-v /tmp/coverage_reports/unit_tests:/mlrun/tests/coverage_reports \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test
+		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test COVERAGE=$(COVERAGE)
 
-.PHONY: test-coverage-dockerized
-test-coverage-dockerized: build-test ## Run mlrun tests with coverage in docker container
-	docker run \
-		-t \
-		--rm \
-		--network='host' \
-		-e MLRUN_PYTHON_VERSION=$(MLRUN_PYTHON_VERSION) \
-		-v /tmp:/tmp \
-		-v /tmp/coverage_reports:/mlrun/tests/coverage_reports \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-coverage
 
 .PHONY: test
 test: clean ## Run mlrun tests
 	# TODO: Remove ignored tests for Python 3.11 compatibility with KFP 2
 	set -e ; \
+	COMMON_IGNORE_TEST_FLAGS=$$(echo "\
+	--ignore=tests/integration \
+	--ignore=tests/system \
+	--ignore=tests/rundb/test_httpdb.py \
+	--ignore=server/py/services/api/migrations \
+	");\
 	PER_PYTHON_VERSION_IGNORE_TEST_FLAGS=$(if $(filter $(MLRUN_PYTHON_VERSION),3.12),$$(echo "\
 		--ignore=server/py/services/api/tests/unit/api/test_pipelines.py \
 		--ignore=tests/projects/test_kfp.py \
@@ -556,16 +550,28 @@ test: clean ## Run mlrun tests
 		--ignore=tests/projects/test_remote_pipeline.py \
 		--ignore=pipeline-adapters/mlrun-pipelines-kfp-v1-8/tests \
 		"),);\
+	if [ "$(COVERAGE)" = "true" ]; then \
+		rm -f tests/coverage_reports/unit_tests.coverage; \
+		export COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage; \
+		COVERAGE_ADDITION="-m coverage run --rcfile=tests/tests.coveragerc"; \
+	else \
+		COVERAGE_ADDITION=""; \
+	fi; \
 	python \
 		-X faulthandler \
+		$$COVERAGE_ADDITION \
 		-m pytest -v \
 		--capture=no \
 		--disable-warnings \
 		--durations=100 \
-		$(COMMON_IGNORE_TEST_FLAGS) \
+		$$COMMON_IGNORE_TEST_FLAGS \
 		$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
 		--forked \
 		-rf
+	if [ "$(COVERAGE)" = "true" ]; then \
+		echo "Unit test coverage report:"; \
+		COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc; \
+	fi;
 
 .PHONY: test-integration-dockerized
 test-integration-dockerized: build-test ## Run mlrun integration tests in docker container
@@ -576,16 +582,6 @@ test-integration-dockerized: build-test ## Run mlrun integration tests in docker
 		-v /tmp:/tmp \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-integration
-
-.PHONY: test-integration-coverage-dockerized
-test-integration-dockerized: build-test ## Run mlrun integration tests in docker container
-	docker run \
-		-t \
-		--rm \
-		--network='host' \
-		-v /tmp:/tmp \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-integration-coverage
 
 .PHONY: test-integration
 test-integration: clean ## Run mlrun integration tests
@@ -997,8 +993,7 @@ test-coverage: clean
 	$(COMMON_IGNORE_TEST_FLAGS) \
 	$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
 	--forked \
-	-rf \
-	-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
+	-rf
 	@echo "Unit test coverage report:"
 	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
 
