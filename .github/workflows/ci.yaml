@@ -202,7 +202,7 @@ jobs:
       - name: Upload coverage report
         uses: actions/upload-artifact@v4
         with:
-          name: coverage_migration_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
+          name: coverage_migration_tests_report-${{ github.run_id }}
           path: /tmp/coverage_reports/migration_tests/migration_tests.coverage
           retention-days: 90
 #
@@ -346,7 +346,7 @@ jobs:
       - name: Download migration coverage report
         uses: actions/download-artifact@v4
         with:
-          name: coverage_migration_tests_report-3.9-${{ github.run_id }}
+          name: coverage_migration_tests_report-${{ github.run_id }}
           # Where to download. file downloaded by name.
           path: tests/coverage_reports/
 
