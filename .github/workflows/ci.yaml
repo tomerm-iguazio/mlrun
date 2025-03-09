@@ -180,25 +180,31 @@ jobs:
          name: coverage_integration_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
          path: /tmp/coverage_reports/integration_tests/integration_tests.coverage
          retention-days: 90
-#
-#  migrations-tests:
-#    name: Run Dockerized Migrations Tests
-#    runs-on: ubuntu-latest
-#    steps:
-#      - uses: actions/checkout@v4
-#      # TODO: re-use the next 2 actions instead of duplicating
-#      - name: Extract git branch
-#        id: git_info
-#        run: |
-#          echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
-#      - name: Resolve docker cache tag
-#        id: docker_cache
-#        run: |
-#          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
-#          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
-#          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
-#      - name: Run Dockerized DB Migration tests
-#        run: MLRUN_DOCKER_REGISTRY=ghcr.io/ MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make test-migrations-dockerized
+
+  migrations-tests:
+    name: Run Dockerized Migrations Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      # TODO: re-use the next 2 actions instead of duplicating
+      - name: Extract git branch
+        id: git_info
+        run: |
+          echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+      - name: Resolve docker cache tag
+        id: docker_cache
+        run: |
+          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
+          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
+          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+      - name: Run Dockerized DB Migration tests
+        run: MLRUN_DOCKER_REGISTRY=ghcr.io/ MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make test-migrations-dockerized COVERAGE=true
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage_migration_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
+          path: /tmp/coverage_reports/migration_tests/migration_tests.coverage
+          retention-days: 90
 #
 #  package-tests:
 #    name: Run package tests (Python ${{ matrix.python-version }}, Pipelines ${{ matrix.pipeline-adapter }})

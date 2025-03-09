@@ -14,6 +14,8 @@
 # limitations under the License.
 #
 
+COVERAGE=${COVERAGE:-false}
+
 set -e
 
 function cleanup {
@@ -51,9 +53,24 @@ done
 
 export PYTHONPATH=${ROOT}/server/py
 
-python -m pytest -v \
+if [ "${COVERAGE}" = "true" ]; then \
+		rm -f tests/coverage_reports/migration_tests.coverage; \
+		export COVERAGE_FILE=tests/coverage_reports/migration_tests.coverage; \
+		COVERAGE_ADDITION="-m coverage run --rcfile=tests/tests.coveragerc"; \
+	else \
+		COVERAGE_ADDITION=""; \
+	fi; \
+
+# shellcheck disable=SC2086
+python ${COVERAGE_ADDITION} \
+    -m pytest -v \
 		--capture=no \
 		--disable-warnings \
 		--durations=100 \
 		-rf \
 		"${ROOT_DIR}"/server/py/services/api/migrations/tests/*
+
+if [ "${COVERAGE}" = "true" ]; then \
+  echo "Migration test coverage report:"; \
+  COVERAGE_FILE=tests/coverage_reports/migration_tests.coverage coverage report --rcfile=tests/tests.coveragerc; \
+fi;

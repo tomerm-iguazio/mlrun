@@ -616,6 +616,9 @@ test-integration: clean ## Run mlrun integration tests
 
 .PHONY: test-migrations-dockerized
 test-migrations-dockerized: build-test ## Run mlrun db migrations tests in docker container
+	if [ "$(COVERAGE)" = "true" ]; then \
+		rm -rf /tmp/coverage_reports/migration_tests && mkdir -p /tmp/coverage_reports/migration_tests; \
+	fi; \
 	docker run \
 		-t \
 		--rm \
@@ -623,11 +626,12 @@ test-migrations-dockerized: build-test ## Run mlrun db migrations tests in docke
 		-v $(shell pwd):/mlrun \
 		-v /tmp:/tmp \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-migrations
+		-v /tmp/coverage_reports/migration_tests:/mlrun/tests/coverage_reports \
+		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-migrations COVERAGE=$(COVERAGE)
 
 .PHONY: test-migrations
 test-migrations: clean ## Run mlrun db migrations tests
-	./automation/scripts/test_migration_mysql.sh
+	COVERAGE=$(COVERAGE) ./automation/scripts/test_migration_mysql.sh
 
 .PHONY: test-system-dockerized
 test-system-dockerized: build-test-system ## Run mlrun system tests in docker container
