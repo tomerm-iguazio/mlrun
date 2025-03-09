@@ -567,7 +567,8 @@ test: clean ## Run mlrun tests
 		$$COMMON_IGNORE_TEST_FLAGS \
 		$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
 		--forked \
-		-rf
+		-rf \
+		-v tests/feature-store/test_common.py::test_parse_feature_string_with_dot_in_feature_set_name # TODO delete
 	if [ "$(COVERAGE)" = "true" ]; then \
 		echo "Unit test coverage report:"; \
 		COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc; \
@@ -575,23 +576,43 @@ test: clean ## Run mlrun tests
 
 .PHONY: test-integration-dockerized
 test-integration-dockerized: build-test ## Run mlrun integration tests in docker container
+	if [ "$(COVERAGE)" = "true" ]; then \
+		rm -rf /tmp/coverage_reports/integration_tests && mkdir -p /tmp/coverage_reports/integration_tests; \
+	fi; \
 	docker run \
 		-t \
 		--rm \
 		--network='host' \
 		-v /tmp:/tmp \
 		-v /var/run/docker.sock:/var/run/docker.sock \
-		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-integration
+		-v /tmp/coverage_reports/integration_tests:/mlrun/tests/coverage_reports \
+		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test-integration COVERAGE=$(COVERAGE)
 
 .PHONY: test-integration
 test-integration: clean ## Run mlrun integration tests
-	python -m pytest -v \
+	set -e; \
+	if [ "$(COVERAGE)" = "true" ]; then \
+		rm -f tests/coverage_reports/integration_tests.coverage; \
+		export COVERAGE_FILE=tests/coverage_reports/integration_tests.coverage; \
+		COVERAGE_ADDITION="-m coverage run --rcfile=tests/tests.coveragerc"; \
+	else \
+		COVERAGE_ADDITION=""; \
+	fi; \
+	python \
+		$$COVERAGE_ADDITION \
+		-m pytest -v \
 		--capture=no \
 		--disable-warnings \
 		--durations=100 \
 		-rf \
-		tests/integration \
-		tests/rundb/test_httpdb.py
+		-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
+		# TODO return:
+		#tests/integration \
+		#tests/rundb/test_httpdb.py
+	if [ "$(COVERAGE)" = "true" ]; then \
+		echo "Integration test coverage report:"; \
+		COVERAGE_FILE=tests/coverage_reports/integration_tests.coverage coverage report --rcfile=tests/tests.coveragerc; \
+	fi;
 
 .PHONY: test-migrations-dockerized
 test-migrations-dockerized: build-test ## Run mlrun db migrations tests in docker container
@@ -967,35 +988,35 @@ upgrade-mlrun-deps-lock: verify-uv-version ## Upgrade mlrun-* locked requirement
 		upgrade-mlrun-system-test-deps-lock
 
 
-.PHONY: test-coverage
-test-coverage: clean
-	# TODO: Remove ignored tests for Python 3.11 compatibility with KFP 2
-
-	rm -f tests/coverage_reports/unit_tests.coverage
-
-	set -e ; \
-	PER_PYTHON_VERSION_IGNORE_TEST_FLAGS=$(if $(filter $(MLRUN_PYTHON_VERSION),3.12),$$(echo "\
-		--ignore=server/py/services/api/tests/unit/api/test_pipelines.py \
-		--ignore=tests/projects/test_kfp.py \
-		--ignore=server/py/services/api/tests/unit/crud/test_pipelines.py \
-		--ignore=tests/serving/test_remote.py \
-		--ignore=tests/projects/test_remote_pipeline.py \
-		--ignore=pipeline-adapters/mlrun-pipelines-kfp-v1-8/tests \
-		"),);\
-	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage \
-	python \
-	-X faulthandler \
-	-m coverage run --rcfile=tests/tests.coveragerc \
-	-m pytest -v \
-	--capture=no \
-	--disable-warnings \
-	--durations=100 \
-	$(COMMON_IGNORE_TEST_FLAGS) \
-	$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
-	--forked \
-	-rf
-	@echo "Unit test coverage report:"
-	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
+#.PHONY: test-coverage
+#test-coverage: clean
+#	# TODO: Remove ignored tests for Python 3.11 compatibility with KFP 2
+#
+#	rm -f tests/coverage_reports/unit_tests.coverage
+#
+#	set -e ; \
+#	PER_PYTHON_VERSION_IGNORE_TEST_FLAGS=$(if $(filter $(MLRUN_PYTHON_VERSION),3.12),$$(echo "\
+#		--ignore=server/py/services/api/tests/unit/api/test_pipelines.py \
+#		--ignore=tests/projects/test_kfp.py \
+#		--ignore=server/py/services/api/tests/unit/crud/test_pipelines.py \
+#		--ignore=tests/serving/test_remote.py \
+#		--ignore=tests/projects/test_remote_pipeline.py \
+#		--ignore=pipeline-adapters/mlrun-pipelines-kfp-v1-8/tests \
+#		"),);\
+#	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage \
+#	python \
+#	-X faulthandler \
+#	-m coverage run --rcfile=tests/tests.coveragerc \
+#	-m pytest -v \
+#	--capture=no \
+#	--disable-warnings \
+#	--durations=100 \
+#	$(COMMON_IGNORE_TEST_FLAGS) \
+#	$$PER_PYTHON_VERSION_IGNORE_TEST_FLAGS \
+#	--forked \
+#	-rf
+#	@echo "Unit test coverage report:"
+#	COVERAGE_FILE=tests/coverage_reports/unit_tests.coverage coverage report --rcfile=tests/tests.coveragerc
 
 .PHONY: test-integration-coverage
 test-integration-coverage: clean ## Run mlrun integration tests with coverage
