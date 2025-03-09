@@ -327,7 +327,8 @@ jobs:
           python-version: 3.9
           cache: pip
       - name: Install dependencies
-        run: make dev-env
+        # To save time, install only pytest and coverage-related packages, without mlrun and its dependencies.
+        run: make install-dev-requirements
       # File name is not effected by the artifact name (=identifier only)
       - name: Download unit tests coverage report
         uses: actions/download-artifact@v4

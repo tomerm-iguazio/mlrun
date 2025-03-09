@@ -122,6 +122,18 @@ install-requirements: ## Install all requirements needed for development
 		-r dev-requirements.txt \
 		-r dockerfiles/mlrun-api/requirements.txt
 
+.PHONY: install-dev-requirements
+install-dev-requirements: ## Install only dev-requirements that relevant for pytest and coverage,
+ 	## when mlrun is not needed.
+	# relevant for pip package installer only
+	@if [ "$(MLRUN_PYTHON_PACKAGE_INSTALLER)" = "pip" ]; then \
+		$(MLRUN_PYTHON_VENV_PIP_INSTALL) --upgrade $(MLRUN_PIP_NO_CACHE_FLAG) pip~=$(MLRUN_PIP_VERSION); \
+	fi
+
+	$(MLRUN_PYTHON_VENV_PIP_INSTALL) \
+		$(MLRUN_PIP_NO_CACHE_FLAG) \
+		-r dev-requirements.txt \
+
 .PHONY: install-docs-requirements
 install-docs-requirements: ## Install all requirements needed for compiling mlrun docs
 	$(MLRUN_PYTHON_VENV_PIP_INSTALL) --upgrade $(MLRUN_PIP_NO_CACHE_FLAG) pip~=$(MLRUN_PIP_VERSION)
