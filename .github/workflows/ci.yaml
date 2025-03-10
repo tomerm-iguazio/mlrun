@@ -12,49 +12,49 @@
 ## See the License for the specific language governing permissions and
 ## limitations under the License.
 #
-#name: CI
-#
-#on:
-#  pull_request:
-#    branches:
-#    - development
-#    - '[0-9]+.[0-9]+.x'
-#    - 'feature/**'
-#  workflow_dispatch:
-#
-#  # Run CI also on push to backport release branches - we sometimes push code there by cherry-picking, meaning it
-#  # doesn't go through CI (no PR)
-#  # For master all code is coming from development where it's coming from PRs (meaning it's passing CI) but there's the
-#  # rare scenario where the combination of merged PRs won't pass CI
-#  push:
-#    branches:
-#    - '[0-9]+.[0-9]+.x'
-#
-#concurrency:
-#  group:
-#    ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
-#  cancel-in-progress: true
-#
-#jobs:
-##  lint:
-##    name: Lint code (Python ${{ matrix.python-version }})
-##    runs-on: ubuntu-latest
-##    strategy:
-##      matrix:
-##        python-version: ["3.9", "3.12"]
-##    steps:
-##    - uses: actions/checkout@v4
-##    - name: Set up python ${{ matrix.python-version }}
-##      uses: actions/setup-python@v5
-##      with:
-##        python-version: ${{ matrix.python-version }}
-##        cache: pip
-##    - name: Install dependencies
-##      run: |
-##        python -m pip install --upgrade pip~=25.0
-##        pip install -r dev-requirements.txt
-##    - name: Lint
-##      run: make lint
+name: CI
+
+on:
+  pull_request:
+    branches:
+    - development
+    - '[0-9]+.[0-9]+.x'
+    - 'feature/**'
+  workflow_dispatch:
+
+  # Run CI also on push to backport release branches - we sometimes push code there by cherry-picking, meaning it
+  # doesn't go through CI (no PR)
+  # For master all code is coming from development where it's coming from PRs (meaning it's passing CI) but there's the
+  # rare scenario where the combination of merged PRs won't pass CI
+  push:
+    branches:
+    - '[0-9]+.[0-9]+.x'
+
+concurrency:
+  group:
+    ${{ github.workflow }}-${{ github.ref_name }}-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint code (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: pip
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip~=25.0
+        pip install -r dev-requirements.txt
+    - name: Lint
+      run: make lint
 ##
 ##    # perform copyright check here, to avoid spinning up another runner needlessly
 ##    - uses: denoland/setup-deno@v2
