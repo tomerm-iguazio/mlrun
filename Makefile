@@ -539,7 +539,7 @@ test-dockerized: build-test ## Run mlrun tests in docker container
 		--network='host' \
 		-e MLRUN_PYTHON_VERSION=$(MLRUN_PYTHON_VERSION) \
 		-v /tmp:/tmp \
-		-v /tmp/coverage_reports/unit_tests:/mlrun/tests/coverage_reports \
+		-v /tmp/coverage_reports/system_tests:/mlrun/tests/coverage_reports \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test COVERAGE=$(COVERAGE)
 
@@ -650,18 +650,33 @@ test-system-dockerized: build-test-system ## Run mlrun system tests in docker co
 		--env MLRUN_VERSION=$(MLRUN_VERSION) \
 		-t \
 		--rm \
-		$(MLRUN_SYSTEM_TEST_IMAGE_NAME)
+		-v /tmp/coverage_reports/migration_tests:/mlrun/tests/coverage_reports \
+		$(MLRUN_SYSTEM_TEST_IMAGE_NAME) make test-system COVERAGE=$(COVERAGE)
 
 .PHONY: test-system
 test-system: ## Run mlrun system tests
+	if [ "$(COVERAGE)" = "true" ]; then \
+		rm -f tests/coverage_reports/integration_tests.coverage; \
+		export COVERAGE_FILE=tests/coverage_reports/system_tests.coverage; \
+		COVERAGE_ADDITION="-m coverage run --rcfile=tests/tests.coveragerc"; \
+	else \
+		COVERAGE_ADDITION=""; \
+	fi; \
 	MLRUN_SYSTEM_TESTS_CLEAN_RESOURCES=$(MLRUN_SYSTEM_TESTS_CLEAN_RESOURCES) \
 	MLRUN_SYSTEM_TESTS_GITHUB_RUN_URL=$(MLRUN_SYSTEM_TESTS_GITHUB_RUN_URL) \
-	python -m pytest -v \
+	python  \
+		$$COVERAGE_ADDITION \
+		-m pytest -v \
 		--capture=no \
 		--disable-warnings \
 		--durations=100 \
 		-rf \
-		$(MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX)
+		-v tests/feature-store/test_common.py::test_parse_feature_string_with_alias # TODO delete
+		# $(MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX) #TODO return
+	if [ "$(COVERAGE)" = "true" ]; then \
+		echo "Integration test coverage report:"; \
+		COVERAGE_FILE=tests/coverage_reports/system_tests.coverage coverage report --rcfile=tests/tests.coveragerc; \
+	fi;
 
 .PHONY: test-system-open-source
 test-system-open-source: update-version-file ## Run mlrun system tests with opensource configuration
