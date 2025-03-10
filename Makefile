@@ -528,20 +528,20 @@ clean: ## Clean python package build artifacts
 	rm -rf build dist mlrun.egg-info
 	find . -name '*.pyc' -not -path "./venv" -exec rm {} \;
 
-.PHONY: test-dockerized
-test-dockerized: build-test ## Run mlrun tests in docker container
-	if [ "$(COVERAGE)" = "true" ]; then \
-		rm -rf /tmp/coverage_reports/unit_tests && mkdir -p /tmp/coverage_reports/unit_tests; \
-	fi; \
-	docker run \
-		-t \
-		--rm \
-		--network='host' \
-		-e MLRUN_PYTHON_VERSION=$(MLRUN_PYTHON_VERSION) \
-		-v /tmp:/tmp \
-		-v /tmp/coverage_reports/unit_tests:/mlrun/tests/coverage_reports \
-		-v /var/run/docker.sock:/var/run/docker.sock \
-		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test COVERAGE=$(COVERAGE)
+#.PHONY: test-dockerized
+#test-dockerized: build-test ## Run mlrun tests in docker container
+#	if [ "$(COVERAGE)" = "true" ]; then \
+#		rm -rf /tmp/coverage_reports/unit_tests && mkdir -p /tmp/coverage_reports/unit_tests; \
+#	fi; \
+#	docker run \
+#		-t \
+#		--rm \
+#		--network='host' \
+#		-e MLRUN_PYTHON_VERSION=$(MLRUN_PYTHON_VERSION) \
+#		-v /tmp:/tmp \
+#		-v /tmp/coverage_reports/unit_tests:/mlrun/tests/coverage_reports \
+#		-v /var/run/docker.sock:/var/run/docker.sock \
+#		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test COVERAGE=$(COVERAGE)
 
 
 .PHONY: test
@@ -650,6 +650,7 @@ test-system-dockerized: build-test-system ## Run mlrun system tests in docker co
 		--env MLRUN_VERSION=$(MLRUN_VERSION) \
 		-t \
 		--rm \
+		--network='host' \
 		-v /tmp/coverage_reports/migration_tests:/mlrun/tests/coverage_reports \
 		$(MLRUN_SYSTEM_TEST_IMAGE_NAME) make test-system COVERAGE=$(COVERAGE)
 

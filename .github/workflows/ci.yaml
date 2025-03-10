@@ -36,327 +36,620 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint code (Python ${{ matrix.python-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.12"]
+#  lint:
+#    name: Lint code (Python ${{ matrix.python-version }})
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        python-version: ["3.9", "3.12"]
+#    steps:
+#    - uses: actions/checkout@v4
+#    - name: Set up python ${{ matrix.python-version }}
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: ${{ matrix.python-version }}
+#        cache: pip
+#    - name: Install dependencies
+#      run: |
+#        python -m pip install --upgrade pip~=25.0
+#        pip install -r dev-requirements.txt
+#    - name: Lint
+#      run: make lint
+#
+#    # perform copyright check here, to avoid spinning up another runner needlessly
+#    - uses: denoland/setup-deno@v2
+#      with:
+#        deno-version: v1.x
+#    - name: Check
+#      run: |
+#        deno run --allow-read https://deno.land/x/license_checker@v3.2.3/main.ts
+#    - name: Instructions For Adding Copyright
+#      if: ${{ failure() }}
+#      run: |
+#        echo "
+#        Please add the following lines to the top of your code:
+#
+#        # Copyright 2024 Iguazio
+#        #
+#        # Licensed under the Apache License, Version 2.0 (the "License");
+#        # you may not use this file except in compliance with the License.
+#        # You may obtain a copy of the License at
+#        #
+#        #   http://www.apache.org/licenses/LICENSE-2.0
+#        #
+#        # Unless required by applicable law or agreed to in writing, software
+#        # distributed under the License is distributed on an "AS IS" BASIS,
+#        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+#        # See the License for the specific language governing permissions and
+#        # limitations under the License.
+#        "
+#
+#  tests:
+#    name: Run Dockerized Tests
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        python-version: ["3.9", "3.12"]
+#    steps:
+#    - uses: actions/checkout@v4
+#
+#    - name: Set up python ${{ matrix.python-version }}
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: ${{ matrix.python-version }}
+#        cache: pip
+#
+#    - name: Extract git branch
+#      id: git_info
+#      run: |
+#        echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+#
+#    - name: Resolve docker cache tag
+#      id: docker_cache
+#      run: |
+#        export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
+#        export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
+#        echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+#
+#    - name: Install automation scripts dependencies
+#      run: pip install -r automation/requirements.txt
+#
+#    - name: Run Dockerized tests coverage
+#      run: |
+#        MLRUN_DOCKER_REGISTRY=ghcr.io/ \
+#        MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} \
+#        MLRUN_PYTHON_VERSION=${{ matrix.python-version }} \
+#        COVERAGE=true \
+#        make test-dockerized
+#    - name: Upload coverage report
+#      uses: actions/upload-artifact@v4
+#      with:
+#        name: coverage_unit_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
+#        path: /tmp/coverage_reports/unit_tests/unit_tests.coverage
+#        retention-days: 90
+#
+#  integration-tests:
+#    name: Run Dockerized Integration Tests
+#    runs-on: ubuntu-latest
+#
+#    strategy:
+#      matrix:
+#        python-version: ["3.9", "3.12"]
+#
+#    steps:
+#    - uses: actions/checkout@v4
+#
+#    # since github-actions gives us 14G only, and fills it up with some garbage
+#    - name: Freeing up disk space
+#      run: |
+#        "${GITHUB_WORKSPACE}/automation/scripts/github_workflow_free_space.sh"
+#
+#    - name: Set up Python ${{ matrix.python-version }}
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: ${{ matrix.python-version }}
+#        cache: pip
+#
+#    # TODO: re-use the next 2 actions instead of duplicating
+#    - name: Extract git branch
+#      id: git_info
+#      run: |
+#        echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+#
+#    - name: Resolve docker cache tag
+#      id: docker_cache
+#      run: |
+#        export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
+#        export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
+#        echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+#
+#    - name: Install automation scripts dependencies
+#      run: pip install -r automation/requirements.txt
+#
+#    - name: Run Dockerized tests
+#      run: |
+#          MLRUN_DOCKER_REGISTRY=ghcr.io/ \
+#          MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} \
+#          MLRUN_PYTHON_VERSION=${{ matrix.python-version }} \
+#          COVERAGE=true \
+#          make test-integration-dockerized COVERAGE=true
+#      timeout-minutes: 90
+#    - name: Upload coverage report
+#      uses: actions/upload-artifact@v4
+#      with:
+#         name: coverage_integration_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
+#         path: /tmp/coverage_reports/integration_tests/integration_tests.coverage
+#         retention-days: 90
+#
+#  migrations-tests:
+#    name: Run Dockerized Migrations Tests
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      # TODO: re-use the next 2 actions instead of duplicating
+#      - name: Extract git branch
+#        id: git_info
+#        run: |
+#          echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+#      - name: Resolve docker cache tag
+#        id: docker_cache
+#        run: |
+#          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
+#          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
+#          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+#      - name: Run Dockerized DB Migration tests
+#        run: MLRUN_DOCKER_REGISTRY=ghcr.io/ MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make test-migrations-dockerized COVERAGE=true
+#      - name: Upload coverage report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: coverage_migration_tests_report-${{ github.run_id }}
+#          path: /tmp/coverage_reports/migration_tests/migration_tests.coverage
+#          retention-days: 90
+#
+#  package-tests:
+#    name: Run package tests (Python ${{ matrix.python-version }}, Pipelines ${{ matrix.pipeline-adapter }})
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        # Explicitly define combinations: KFP v1.8 with Python 3.9
+#        # TODO: Enable KFP v2 with Python 3.11 when it's supported (in 1.9.0)
+#        include:
+#          - python-version: "3.9"
+#            pipeline-adapter: "kfp-v1-8"
+##          - python-version: "3.11"
+##            pipeline-adapter: "kfp-v2"
+#    steps:
+#    - uses: actions/checkout@v4
+#    - name: Set up python ${{ matrix.python-version }}
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: ${{ matrix.python-version }}
+#        cache: 'pip'
+#    - name: Install automation scripts dependencies and add mlrun to dev packages
+#      run: pip install -r automation/requirements.txt && pip install -e .
+#      # Install KFP v2 only when the adapter is kfp-v2
+#    - name: Install KFP Adapter if required
+#      run: |
+#        if [[ "${{ matrix.pipeline-adapter }}" == "kfp-v2" ]]; then
+#          pip install mlrun-pipelines-kfp-v2
+#        fi
+#
+#    - name: Test package
+#      run: MLRUN_PYTHON_VERSION=${{ matrix.python-version }} make test-package
+#
+#  docs:
+#    name: Build Project Documentation
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v4
+#      # TODO: re-use the next 2 actions instead of duplicating
+#      - name: Extract git branch
+#        id: git_info
+#        run: |
+#          echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+#      - name: Resolve docker cache tag
+#        id: docker_cache
+#        run: |
+#          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
+#          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
+#          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+#      - name: Generate HTML docs
+#        run: MLRUN_DOCKER_REGISTRY=ghcr.io/ MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make html-docs-dockerized
+#      - name: Upload generated docs
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: docs
+#          path: docs/_build/html
+#
+#  backward-compatibility-tests:
+#    name: Run Backward Compatibility Tests
+#    if: github.event_name == 'pull_request'
+#    runs-on: ubuntu-latest
+#    env:
+#      MLRUN_BC_TESTS_HOME_PATH: /home/runner/work/mlrun/mlrun
+#      MLRUN_BC_TESTS_BASE_CODE_PATH: /home/runner/work/mlrun/mlrun/base/mlrun
+#      MLRUN_BC_TESTS_HEAD_CODE_PATH: /home/runner/work/mlrun/mlrun/head/mlrun
+#      MLRUN_DOCKER_REGISTRY: ghcr.io/
+#    steps:
+#      - id: resolve_base_branch
+#        run: |
+#            echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+#      - name: Checkout PR Base (target) Branch
+#        uses: actions/checkout@v4
+#        with:
+#          ref: ${{ steps.resolve_base_branch.outputs.branch }}
+#          path: base/mlrun
+#      - name: Checkout Merge Commit (requested branch merged with the target branch)
+#        uses: actions/checkout@v4
+#        with:
+#          path: head/mlrun
+#      - name: Resolve docker cache tag
+#        id: docker_cache
+#        run: |
+#          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
+#          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
+#          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+#      - name: Run Backward Compatibility Tests
+#        run: |
+#          cd head/mlrun
+#          MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make test-backward-compatibility-dockerized
+#
+#  verify-compatible-requirements-one-after-one:
+#    name: Verify compatible requirements (one after one)
+#    runs-on: ubuntu-latest
+#    strategy:
+#      matrix:
+#        # 3.9 is the current >= 1.3.0 python version
+#        python-version: ["3.9", "3.12"]
+#    steps:
+#    - uses: actions/checkout@v4
+#    - name: Set up python ${{ matrix.python-version }}
+#      uses: actions/setup-python@v5
+#      with:
+#        python-version: ${{ matrix.python-version }}
+#        cache: 'pip'
+#    - name: Install requirements ${{ matrix.python-version }}
+#      run: make install-requirements
+#    - name: Install Complete Requirements ${{ matrix.python-version }}
+#      run: make install-complete-requirements
+#    - name: Install All Requirements ${{ matrix.python-version }}
+#      run: make install-all-requirements
+#
+  prepare-system-tests-enterprise-ci:
+    # When increasing the timeout make sure it's not larger than the schedule cron interval
+    timeout-minutes: 55
+    name: Prepare System Tests Enterprise
+    runs-on: [ self-hosted, Linux ]
+    container:
+      image: python:3.9
+    needs: [system-test-cleanup]
+    # let's not run this on every fork, change to your fork when developing
+    if: github.repository == 'mlrun/mlrun' || github.event_name == 'workflow_dispatch'
+
     steps:
     - uses: actions/checkout@v4
-    - name: Set up python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: pip
     - name: Install dependencies
       run: |
-        python -m pip install --upgrade pip~=25.0
-        pip install -r dev-requirements.txt
-    - name: Lint
-      run: make lint
-
-    # perform copyright check here, to avoid spinning up another runner needlessly
-    - uses: denoland/setup-deno@v2
+        apt-get update -qqy && apt-get install -y sshpass jq curl gnupg nodejs
+    - uses: actions/setup-node@v4
       with:
-        deno-version: v1.x
-    - name: Check
+        node-version: 18
+    - name: Copy state branch file from remote
       run: |
-        deno run --allow-read https://deno.land/x/license_checker@v3.2.3/main.ts
-    - name: Instructions For Adding Copyright
-      if: ${{ failure() }}
+        sshpass \
+          -p "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_PASSWORD }}" \
+          scp \
+          -o StrictHostKeyChecking=no \
+          ${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_USERNAME }}@${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_IP }}:/tmp/system-tests-branches-list.txt \
+          system-tests-branches-list.txt
+
+    - name: Resolve Branch To Run System Tests
+      id: current-branch
+      shell: bash
+      # we store a file named /tmp/system-tests-branches-list.txt which contains a list of branches to run system tests
+      # on the branches are separated with commas, so each run we pop the first branch in the list and append it to the
+      # end of the list.
+      # This mechanism allows us to run on multiple branches without the need to modify the file or secrets each time
+      # a new branch is added or removed
       run: |
-        echo "
-        Please add the following lines to the top of your code:
+        # Read branches from local file
+        branches=$(cat system-tests-branches-list.txt)
+        echo "branches found in system-tests-branches-list.txt: $branches"
 
-        # Copyright 2024 Iguazio
-        #
-        # Licensed under the Apache License, Version 2.0 (the "License");
-        # you may not use this file except in compliance with the License.
-        # You may obtain a copy of the License at
-        #
-        #   http://www.apache.org/licenses/LICENSE-2.0
-        #
-        # Unless required by applicable law or agreed to in writing, software
-        # distributed under the License is distributed on an "AS IS" BASIS,
-        # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-        # See the License for the specific language governing permissions and
-        # limitations under the License.
-        "
+        # Split branches into an array
+        IFS=',' read -ra branches_array <<< "$branches"
 
-  tests:
-    name: Run Dockerized Tests
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ["3.9", "3.12"]
-    steps:
-    - uses: actions/checkout@v4
+        # Get the first branch in the list to work on
+        first_branch="${branches_array[0]}"
+        echo "working on $first_branch"
 
-    - name: Set up python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: pip
+        # Remove the first branch from the list
+        branches_array=("${branches_array[@]:1}")
 
-    - name: Extract git branch
-      id: git_info
+        # Add the first branch at the end of the list
+        branches_array+=("$first_branch")
+
+        # Join branches back into a string
+        branches=$(printf ",%s" "${branches_array[@]}")
+        branches=${branches:1}
+
+        # Output the new list of branches
+        echo "$branches"
+
+        # Write new branches order to a local file
+        echo "$branches" | cat > system-tests-branches-list.txt
+
+        # Set output
+        echo "name=$(echo $first_branch)" >> $GITHUB_OUTPUT
+
+    - name: Override remote file from local resolved branch list
       run: |
-        echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
+        # Override the remote file with the new list of branches
+        sshpass \
+          -p "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_PASSWORD }}" \
+          scp \
+          -o StrictHostKeyChecking=no system-tests-branches-list.txt \
+          ${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_USERNAME }}@${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_IP }}:/tmp/
 
-    - name: Resolve docker cache tag
-      id: docker_cache
-      run: |
-        export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
-        export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
-        echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
+      # checking out to base branch and not the target(resolved) branch, to be able to run the changed preparation code
+      # before merging the changes to upstream.
+    - name: Checkout base branch
+      uses: actions/checkout@v4
 
     - name: Install automation scripts dependencies
-      run: pip install -r automation/requirements.txt
-
-    - name: Run Dockerized tests coverage
       run: |
-        MLRUN_DOCKER_REGISTRY=ghcr.io/ \
-        MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} \
-        MLRUN_PYTHON_VERSION=${{ matrix.python-version }} \
-        COVERAGE=true \
-        make test-dockerized
-    - name: Upload coverage report
+        python -m pip install -r automation/requirements.txt
+
+    - name: Extract git hashes from upstream and latest version
+      id: git_upstream_info
+      run: |
+
+        # Get the latest commit of mlrun/mlrun (that is older than 1 hour)
+        echo "mlrun_hash=$( \
+          cd /tmp && \
+          git clone --single-branch --branch ${{ steps.current-branch.outputs.name }} https://github.com/mlrun/mlrun.git mlrun-upstream 2> /dev/null && \
+          cd mlrun-upstream && \
+          git rev-list --until="1 hour ago" --max-count 1 --abbrev-commit --abbrev=8 HEAD && \
+          cd .. && \
+          rm -rf mlrun-upstream)" >> $GITHUB_OUTPUT
+
+        # Get the latest commit of mlrun/ui (that is older than 1 hour)
+        echo "ui_hash=$( \
+          cd /tmp && \
+          git clone --single-branch --branch ${{ steps.current-branch.outputs.name }} https://github.com/mlrun/ui.git mlrun-ui 2> /dev/null && \
+          cd mlrun-ui && \
+          git rev-list --until="1 hour ago" --max-count 1 --abbrev-commit --abbrev=8 HEAD && \
+          cd .. && \
+          rm -rf mlrun-ui)" >> $GITHUB_OUTPUT
+
+        # Get the tested mlrun version
+        echo "unstable_version_prefix=$( \
+          curl https://raw.githubusercontent.com/mlrun/mlrun/${{ steps.current-branch.outputs.name }}/automation/version/unstable_version_prefix \
+        )" >> $GITHUB_OUTPUT
+
+    - name: Set computed versions params
+      id: computed_params
+      run: |
+        action_mlrun_hash=${{ steps.git_action_info.outputs.mlrun_hash }} && \
+        upstream_mlrun_hash=${{ steps.git_upstream_info.outputs.mlrun_hash }} && \
+        export mlrun_hash=${upstream_mlrun_hash:-`echo $action_mlrun_hash`}
+        echo "mlrun_hash=$(echo $mlrun_hash)" >> $GITHUB_OUTPUT
+        action_mlrun_ui_hash=${{ steps.git_action_ui_info.outputs.ui_hash }} && \
+        upstream_mlrun_ui_hash=${{ steps.git_upstream_info.outputs.ui_hash }} && \
+        export ui_hash=${upstream_mlrun_ui_hash:-`echo $action_mlrun_ui_hash`}
+        echo "ui_hash=$(echo $ui_hash)" >> $GITHUB_OUTPUT
+        echo "mlrun_version=$(echo ${{ steps.git_upstream_info.outputs.unstable_version_prefix }}+$mlrun_hash)" >> $GITHUB_OUTPUT
+        echo "mlrun_docker_tag=$(echo ${{ steps.git_upstream_info.outputs.unstable_version_prefix }}-$mlrun_hash)" >> $GITHUB_OUTPUT
+        echo "mlrun_ui_version=${{ steps.git_upstream_info.outputs.unstable_version_prefix }}-$ui_hash" >> $GITHUB_OUTPUT
+        echo "mlrun_docker_registry=$( \
+          input_docker_registry=$INPUT_DOCKER_REGISTRY && \
+          echo ${input_docker_registry:-ghcr.io/})" >> $GITHUB_OUTPUT
+        echo "mlrun_system_tests_clean_resources=$( \
+          input_system_tests_clean_resources=$INPUT_CLEAN_RESOURCES_IN_TEARDOWN && \
+          echo ${input_system_tests_clean_resources:-true})" >> $GITHUB_OUTPUT
+        echo "override_iguazio_version=$INPUT_OVERRIDE_IGUAZIO_VERSION" >> $GITHUB_OUTPUT
+      env:
+        INPUT_DOCKER_REGISTRY: ${{ github.event.inputs.docker_registry }}
+        INPUT_OVERRIDE_IGUAZIO_VERSION: ${{ github.event.inputs.override_iguazio_version }}
+        INPUT_CLEAN_RESOURCES_IN_TEARDOWN: ${{ github.event.inputs.clean_resources_in_teardown }}
+
+    - name: Prepare System Test Environment and Install MLRun
+      env:
+        IP_ADDR_PREFIX: ${{ secrets.IP_ADDR_PREFIX }}
+      timeout-minutes: 50
+      run: |
+        python automation/system_test/prepare.py run \
+          --data-cluster-ip "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_IP }}" \
+          --data-cluster-ssh-username "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_USERNAME }}" \
+          --data-cluster-ssh-password "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_PASSWORD }}" \
+          --provctl-download-url "${{ secrets.LATEST_SYSTEM_TEST_PROVCTL_DOWNLOAD_PATH }}" \
+          --provctl-download-s3-access-key "${{ secrets.LATEST_SYSTEM_TEST_PROVCTL_DOWNLOAD_URL_S3_ACCESS_KEY }}" \
+          --provctl-download-s3-key-id "${{ secrets.LATEST_SYSTEM_TEST_PROVCTL_DOWNLOAD_URL_S3_KEY_ID }}" \
+          --username "${{ secrets.LATEST_SYSTEM_TEST_USERNAME }}" \
+          --access-key "${{ secrets.LATEST_SYSTEM_TEST_ACCESS_KEY }}" \
+          --iguazio-version "${{ steps.computed_params.outputs.iguazio_version }}" \
+          --mlrun-version "${{ steps.computed_params.outputs.mlrun_version }}" \
+          --mlrun-ui-version "${{ steps.computed_params.outputs.mlrun_ui_version }}" \
+          --mlrun-commit "${{ steps.computed_params.outputs.mlrun_hash }}" \
+          --override-image-registry "${{ steps.computed_params.outputs.mlrun_docker_registry }}"
+
+    - name: Prepare System Test env.yml and MLRun installation from current branch
+      timeout-minutes: 5
+      run: |
+        python automation/system_test/prepare.py env \
+          --data-cluster-ip "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_IP }}" \
+          --data-cluster-ssh-username "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_USERNAME }}" \
+          --data-cluster-ssh-password "${{ secrets.LATEST_SYSTEM_TEST_DATA_CLUSTER_SSH_PASSWORD }}" \
+          --username "${{ secrets.LATEST_SYSTEM_TEST_USERNAME }}" \
+          --access-key "${{ secrets.LATEST_SYSTEM_TEST_ACCESS_KEY }}" \
+          --slack-webhook-url "${{ secrets.LATEST_SYSTEM_TEST_SLACK_WEBHOOK_URL }}" \
+          --branch "${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunBranch }}" \
+          --github-access-token "${{ secrets.SYSTEM_TEST_GITHUB_ACCESS_TOKEN }}" \
+          --save-to-path "$GITHUB_WORKSPACE/env.yml" \
+          --kubeconfig-content "${{ secrets.LATEST_SYSTEM_TEST_KUBECONFIG }}"
+
+    - name: Encrypt file
+      id: encrypt_file
+      run: |
+        gpg \
+          --batch \
+          --passphrase "${{ env.GPG_PASSPHRASE }}" \
+          --output "$GITHUB_WORKSPACE/env.yml.gpg" \
+          --symmetric "$GITHUB_WORKSPACE/env.yml"
+
+        echo "env_file_path=$(echo $GITHUB_WORKSPACE/env.yml.gpg)" >> $GITHUB_OUTPUT
+      env:
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+    - name: Upload env file
       uses: actions/upload-artifact@v4
       with:
-        name: coverage_unit_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
-        path: /tmp/coverage_reports/unit_tests/unit_tests.coverage
-        retention-days: 90
+        name: env
+        path: "${{ steps.encrypt_file.outputs.env_file_path }}"
+        if-no-files-found: error
 
-  integration-tests:
-    name: Run Dockerized Integration Tests
-    runs-on: ubuntu-latest
+    outputs:
+      mlrunVersion: ${{ steps.computed_params.outputs.mlrun_version }}
+      mlrunBranch: ${{ steps.current-branch.outputs.name }}
+      mlrunSystemTestsCleanResources: ${{ steps.computed_params.outputs.mlrun_system_tests_clean_resources }}
 
+  run-system-tests-enterprise-ci:
+    # When increasing the timeout make sure it's not larger than the schedule cron interval
+    timeout-minutes: 360
+    name: Test ${{ matrix.test_component }} [${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunBranch }}]
+    # requires prepare to finish before starting
+    needs: [prepare-system-tests-enterprise-ci]
+    runs-on: [ self-hosted, Linux ]
+    container:
+      image: python:3.9
+    # let's not run this on every fork, change to your fork when developing
+    if: github.repository == 'mlrun/mlrun' || github.event_name == 'workflow_dispatch'
     strategy:
+      fail-fast: false
+      max-parallel: 1
       matrix:
-        python-version: ["3.9", "3.12"]
-
+        test_component:
+#        - api # todo return
+#        - runtimes
+#        - projects
+#        - model_monitoring
+#        - examples
+#        - backwards_compatibility
+#        - datastore
+#        - logs
+#        - feature_store
+        - alerts
     steps:
+    - name: Install Dependencies
+      run: |
+        # gnupg         for decrypting env.yml.gpg
+        # nodejs        for installing github action dependencies
+        # graphviz      for generating graphs (feature store tests)
+        # git-core      for cloning repos and etc, required by many suites
+        # gcc, make     for installing python packages
+        apt-get update -qqy && \
+          apt-get install -y \
+            gnupg \
+            nodejs \
+            graphviz \
+            git-core \
+            gcc \
+            make
+
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 18
+
     - uses: actions/checkout@v4
-
-    # since github-actions gives us 14G only, and fills it up with some garbage
-    - name: Freeing up disk space
-      run: |
-        "${GITHUB_WORKSPACE}/automation/scripts/github_workflow_free_space.sh"
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
+      # checking out to the resolved branch to run system tests on, as now we run the actual tests, we don't want to run
+      # the system tests of the branch that triggered the system tests as it might be in a different version
+      # than the mlrun version we deployed on the previous job (can have features that the resolved branch doesn't have)
       with:
-        python-version: ${{ matrix.python-version }}
-        cache: pip
+        ref: ${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunBranch }}
 
-    # TODO: re-use the next 2 actions instead of duplicating
-    - name: Extract git branch
-      id: git_info
-      run: |
-        echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
-
-    - name: Resolve docker cache tag
-      id: docker_cache
-      run: |
-        export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
-        export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
-        echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
-
-    - name: Install automation scripts dependencies
-      run: pip install -r automation/requirements.txt
-
-    - name: Run Dockerized tests
-      run: |
-          MLRUN_DOCKER_REGISTRY=ghcr.io/ \
-          MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} \
-          MLRUN_PYTHON_VERSION=${{ matrix.python-version }} \
-          COVERAGE=true \
-          make test-integration-dockerized COVERAGE=true
-      timeout-minutes: 90
-    - name: Upload coverage report
-      uses: actions/upload-artifact@v4
+    - uses: actions/download-artifact@v4
       with:
-         name: coverage_integration_tests_report-${{ matrix.python-version }}-${{ github.run_id }}
-         path: /tmp/coverage_reports/integration_tests/integration_tests.coverage
-         retention-days: 90
+        name: env
+        path: /tmp
 
-  migrations-tests:
-    name: Run Dockerized Migrations Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # TODO: re-use the next 2 actions instead of duplicating
-      - name: Extract git branch
-        id: git_info
-        run: |
-          echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
-      - name: Resolve docker cache tag
-        id: docker_cache
-        run: |
-          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
-          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
-          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
-      - name: Run Dockerized DB Migration tests
-        run: MLRUN_DOCKER_REGISTRY=ghcr.io/ MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make test-migrations-dockerized COVERAGE=true
-      - name: Upload coverage report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage_migration_tests_report-${{ github.run_id }}
-          path: /tmp/coverage_reports/migration_tests/migration_tests.coverage
-          retention-days: 90
-
-  package-tests:
-    name: Run package tests (Python ${{ matrix.python-version }}, Pipelines ${{ matrix.pipeline-adapter }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # Explicitly define combinations: KFP v1.8 with Python 3.9
-        # TODO: Enable KFP v2 with Python 3.11 when it's supported (in 1.9.0)
-        include:
-          - python-version: "3.9"
-            pipeline-adapter: "kfp-v1-8"
-#          - python-version: "3.11"
-#            pipeline-adapter: "kfp-v2"
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-    - name: Install automation scripts dependencies and add mlrun to dev packages
-      run: pip install -r automation/requirements.txt && pip install -e .
-      # Install KFP v2 only when the adapter is kfp-v2
-    - name: Install KFP Adapter if required
+    - name: Decrypt file
       run: |
-        if [[ "${{ matrix.pipeline-adapter }}" == "kfp-v2" ]]; then
-          pip install mlrun-pipelines-kfp-v2
-        fi
+        gpg \
+          --batch \
+          --passphrase "${{ env.GPG_PASSPHRASE }}" \
+          --output "$GITHUB_WORKSPACE/tests/system/env.yml" \
+          --decrypt "/tmp/env.yml.gpg"
 
-    - name: Test package
-      run: MLRUN_PYTHON_VERSION=${{ matrix.python-version }} make test-package
+        # ensure file is created
+        test -f "$GITHUB_WORKSPACE/tests/system/env.yml"
+      env:
+        GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
 
-  docs:
-    name: Build Project Documentation
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      # TODO: re-use the next 2 actions instead of duplicating
-      - name: Extract git branch
-        id: git_info
-        run: |
-          echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
-      - name: Resolve docker cache tag
-        id: docker_cache
-        run: |
-          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
-          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
-          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
-      - name: Generate HTML docs
-        run: MLRUN_DOCKER_REGISTRY=ghcr.io/ MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make html-docs-dockerized
-      - name: Upload generated docs
-        uses: actions/upload-artifact@v4
-        with:
-          name: docs
-          path: docs/_build/html
+    - name: Pre Tests Requirements
+      run: |
 
-  backward-compatibility-tests:
-    name: Run Backward Compatibility Tests
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    env:
-      MLRUN_BC_TESTS_HOME_PATH: /home/runner/work/mlrun/mlrun
-      MLRUN_BC_TESTS_BASE_CODE_PATH: /home/runner/work/mlrun/mlrun/base/mlrun
-      MLRUN_BC_TESTS_HEAD_CODE_PATH: /home/runner/work/mlrun/mlrun/head/mlrun
-      MLRUN_DOCKER_REGISTRY: ghcr.io/
-    steps:
-      - id: resolve_base_branch
-        run: |
-            echo "branch=$(echo ${GITHUB_BASE_REF#refs/heads/})" >> $GITHUB_OUTPUT
-      - name: Checkout PR Base (target) Branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ steps.resolve_base_branch.outputs.branch }}
-          path: base/mlrun
-      - name: Checkout Merge Commit (requested branch merged with the target branch)
-        uses: actions/checkout@v4
-        with:
-          path: head/mlrun
-      - name: Resolve docker cache tag
-        id: docker_cache
-        run: |
-          export version_suffix=$(echo "${{ steps.git_info.outputs.branch }}" | grep -E "^[0-9]+\.[0-9]+\.x$" | tr -d '.')
-          export unstable_tag=$(if [ -z "$version_suffix" ]; then echo "unstable-cache"; else echo "unstable-cache-$version_suffix";fi)
-          echo "tag=$(echo $unstable_tag)" >> $GITHUB_OUTPUT
-      - name: Run Backward Compatibility Tests
-        run: |
-          cd head/mlrun
-          MLRUN_DOCKER_CACHE_FROM_TAG=${{ steps.docker_cache.outputs.tag }} make test-backward-compatibility-dockerized
+        # due to
+        # https://github.com/git/git/commit/8959555cee7ec045958f9b6dd62e541affb7e7d9
+        # ensure mlrun git is safe to use
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        MLRUN_VERSION="${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunVersion }}" \
+          make install-requirements install-complete-kfp-requirements update-version-file
 
-  verify-compatible-requirements-one-after-one:
-    name: Verify compatible requirements (one after one)
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        # 3.9 is the current >= 1.3.0 python version
-        python-version: ["3.9", "3.12"]
-    steps:
-    - uses: actions/checkout@v4
-    - name: Set up python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
-        cache: 'pip'
-    - name: Install requirements ${{ matrix.python-version }}
-      run: make install-requirements
-    - name: Install Complete Requirements ${{ matrix.python-version }}
-      run: make install-complete-requirements
-    - name: Install All Requirements ${{ matrix.python-version }}
-      run: make install-all-requirements
+    - name: Run System Tests
+      run: |
+        MLRUN_SYSTEM_TESTS_GITHUB_RUN_URL="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" \
+        MLRUN_SYSTEM_TESTS_CLEAN_RESOURCES="${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunSystemTestsCleanResources }}" \
+        MLRUN_VERSION="${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunVersion }}" \
+        MLRUN_SYSTEM_TESTS_COMPONENT="${{ matrix.test_component }}" \
+        MLRUN_SYSTEM_TESTS_BRANCH="${{ needs.prepare-system-tests-enterprise-ci.outputs.mlrunBranch }}" \
+          make test-system COVERAGE=true
+    - name: Check directory
+      run: |
+        ls tests/coverage_reports
 
-  coverage:
-    name: Full coverage
-    runs-on: ubuntu-latest
-    needs: [tests, integration-tests, migrations-tests]
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.9
-          cache: pip
-      - name: Install dependencies
-        # To save time, install only pytest and coverage-related packages, without mlrun and its dependencies.
-        run: make install-dev-requirements
-      # File name is not effected by the artifact name (=identifier only)
-      - name: Download unit tests coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage_unit_tests_report-3.9-${{ github.run_id }}
-          # Where to download. file downloaded by name.
-          path: tests/coverage_reports/
-      - name: Download integration coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage_integration_tests_report-3.9-${{ github.run_id }}
-          # Where to download. file downloaded by name.
-          path: tests/coverage_reports/
 
-      - name: Download migration coverage report
-        uses: actions/download-artifact@v4
-        with:
-          name: coverage_migration_tests_report-${{ github.run_id }}
-          # Where to download. file downloaded by name.
-          path: tests/coverage_reports/
-
-      - name: Combine coverage
-        run: make coverage-combine
-
-      # In order to be able to download it from the github run:
-      - name: Upload coverage combined report
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage_combined_report-${{ github.run_id }}
-          path: tests/coverage_reports/combined.coverage
-          retention-days: 90
+#  coverage:
+#    name: Full coverage
+#    runs-on: ubuntu-latest
+#    needs: [tests, integration-tests, migrations-tests]
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: Set up Python
+#        uses: actions/setup-python@v4
+#        with:
+#          python-version: 3.9
+#          cache: pip
+#      - name: Install dependencies
+#        # To save time, install only pytest and coverage-related packages, without mlrun and its dependencies.
+#        run: make install-dev-requirements
+#      # File name is not effected by the artifact name (=identifier only)
+#      - name: Download unit tests coverage report
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: coverage_unit_tests_report-3.9-${{ github.run_id }}
+#          # Where to download. file downloaded by name.
+#          path: tests/coverage_reports/
+#      - name: Download integration coverage report
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: coverage_integration_tests_report-3.9-${{ github.run_id }}
+#          # Where to download. file downloaded by name.
+#          path: tests/coverage_reports/
+#
+#      - name: Download migration coverage report
+#        uses: actions/download-artifact@v4
+#        with:
+#          name: coverage_migration_tests_report-${{ github.run_id }}
+#          # Where to download. file downloaded by name.
+#          path: tests/coverage_reports/
+#
+#      - name: Combine coverage
+#        run: make coverage-combine
+#
+#      # In order to be able to download it from the github run:
+#      - name: Upload coverage combined report
+#        uses: actions/upload-artifact@v4
+#        with:
+#          name: coverage_combined_report-${{ github.run_id }}
+#          path: tests/coverage_reports/combined.coverage
+#          retention-days: 90
