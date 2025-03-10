@@ -539,7 +539,7 @@ test-dockerized: build-test ## Run mlrun tests in docker container
 		--network='host' \
 		-e MLRUN_PYTHON_VERSION=$(MLRUN_PYTHON_VERSION) \
 		-v /tmp:/tmp \
-		-v /tmp/coverage_reports/system_tests:/mlrun/tests/coverage_reports \
+		-v /tmp/coverage_reports/unit_tests:/mlrun/tests/coverage_reports \
 		-v /var/run/docker.sock:/var/run/docker.sock \
 		$(MLRUN_TEST_IMAGE_NAME_TAGGED) make test COVERAGE=$(COVERAGE)
 
