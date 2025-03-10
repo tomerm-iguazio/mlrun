@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-name: System Tests Enterprise
+name: System Tests Enterprise - test coverage
 
 on:
   push:
     branches:
-      - '.+-system-tests'
+    - coverage-system-tests
 
   schedule:
 
