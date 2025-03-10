@@ -15,9 +15,9 @@
 name: System Tests Enterprise
 
 on:
-  push:
+  pull_request:
     branches:
-      - '.+-system-tests'
+    - development
 
   schedule:
 
