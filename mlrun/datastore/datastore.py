@@ -20,8 +20,13 @@ import mlrun
 import mlrun.errors
 from mlrun.artifacts.llm_prompt import LLMPromptArtifact
 from mlrun.artifacts.model import ModelArtifact
+from mlrun.datastore.base import BaseRemoteClient
 from mlrun.datastore.datastore_profile import datastore_profile_read
-from mlrun.datastore.model_providers import ModelProvider, schema_to_model_provider
+from mlrun.datastore.model_providers import (
+    ModelProvider,
+    OpenAIProvider,
+    schema_to_model_provider,
+)
 from mlrun.datastore.remote_client import (
     parse_url,
 )
@@ -39,7 +44,7 @@ from .v3io import V3ioStore
 in_memory_store = InMemoryStore()
 
 
-def schema_to_store(schema) -> DataStore.__subclasses__():
+def schema_to_store(schema, raise_error=True) -> BaseRemoteClient.__subclasses__():
     # import store classes inside to enable making their dependencies optional (package extras)
 
     if not schema or schema in get_local_file_schema():
@@ -90,8 +95,12 @@ def schema_to_store(schema) -> DataStore.__subclasses__():
         from .alibaba_oss import OSSStore
 
         return OSSStore
-    else:
+    elif schema == "openai":
+        return OpenAIProvider
+    elif raise_error:
         raise ValueError(f"unsupported store scheme ({schema})")
+    else:
+        return None
 
 
 def uri_to_ipython(link):
@@ -195,9 +204,14 @@ class StoreManager:
             artifact_url=artifact_url,
         )
 
-    def get_or_create_store(
-        self, url, secrets: Optional[dict] = None, project_name=""
-    ) -> (DataStore, str, str):
+    def get_or_create_remote_client(
+        self,
+        url,
+        secrets: Optional[dict] = None,
+        project_name="",
+        raise_missing_class_error=False,
+        **kwargs,
+    ):
         schema, endpoint, parsed_url = parse_url(url)
         subpath = parsed_url.path
         store_key = f"{schema}://{endpoint}" if endpoint else f"{schema}://"
@@ -231,12 +245,24 @@ class StoreManager:
         # support u/p embedding in url (as done in redis) by setting netloc as the "endpoint" parameter
         # when running on server we don't cache the datastore, because there are multiple users and we don't want to
         # cache the credentials, so for each new request we create a new store
-        store = schema_to_store(schema)(
-            self, schema, store_key, parsed_url.netloc, secrets=secrets
-        )
-        if not secrets and not mlrun.config.is_running_as_api():
-            self._stores[store_key] = store
+        store_class = schema_to_store(schema, raise_error=raise_missing_class_error)
+        store = None
+        if store_class:
+            store = store_class(
+                self, schema, store_key, parsed_url.netloc, secrets=secrets, **kwargs
+            )
+            if not secrets and not mlrun.config.is_running_as_api():
+                self._stores[store_key] = store
+        else:
+            warnings.warn("scheme not found. Returning None")
         return store, subpath, url
+
+    def get_or_create_store(
+        self, url, secrets: Optional[dict] = None, project_name=""
+    ) -> (DataStore, str, str):
+        return self.get_or_create_remote_client(
+            url=url, secrets=secrets, project_name=project_name
+        )
 
     @staticmethod
     def _resolve_datastore_profile(
