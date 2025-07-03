@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
 import os
 import unittest.mock
 from typing import cast
@@ -31,6 +32,7 @@ from mlrun.datastore.datastore_profile import (
 from mlrun.datastore.model_provider.model_provider import ModelProvider
 from mlrun.datastore.model_provider.openai_provider import OpenAIProvider
 from mlrun.serving import ModelRunnerStep
+import time
 
 here = os.path.dirname(__file__)
 config = {}
@@ -39,6 +41,11 @@ if os.path.exists(config_file_path):
     with open(config_file_path) as yaml_file:
         config = yaml.safe_load(yaml_file).get("env", {})
 
+async def timed(coro):
+    start = time.perf_counter()
+    result = await coro
+    duration = time.perf_counter() - start
+    return result, duration
 
 class MyOpenAILLM(mlrun.serving.states.Model):
     execution_mechanism = "naive"
@@ -54,6 +61,29 @@ class MyOpenAILLM(mlrun.serving.states.Model):
             )
         return body
 
+    async def predict_async(self, body):
+        if isinstance(
+            self.invocation_artifact, mlrun.artifacts.LLMPromptArtifact
+        ) and isinstance(self.model_provider, ModelProvider):
+            prompt_parameters: list = body["input"]
+            prompts = [
+                self.enrich_prompt(single_prompt_parameters)
+                for single_prompt_parameters in prompt_parameters
+            ]
+
+            tasks = [
+                timed(self.model_provider.async_invoke(
+                    prompt, **(self.invocation_artifact.spec.model_configuration or {})
+                ))
+                for prompt in prompts
+            ]
+            results_with_times = await asyncio.gather(*tasks)
+            results = [r for r, _ in results_with_times]
+            invoke_times = [t for _, t in results_with_times]
+            body["results"] = results
+            body["invoke_times"] = invoke_times
+        return body
+
     def enrich_prompt(self, body) -> str:
         # TODO: Update this once ML-8172 is completed
         if isinstance(self.invocation_artifact, mlrun.artifacts.LLMPromptArtifact):
@@ -61,7 +91,7 @@ class MyOpenAILLM(mlrun.serving.states.Model):
             needed_params = ["question", "depth_level", "persona", "tone"]
             sub_dict = {k: body[k] for k in needed_params if k in body}
             return prompt_template.format(**sub_dict)
-        return body["prompt"]
+        return ""
 
 
 def create_mocked_get_store_artifact(uri_to_artifact: dict):
@@ -187,7 +217,48 @@ class TestOpenAIProvider(TestBasicOpenAIProvider):
 
 
 class TestOpenAIModel(TestBasicOpenAIProvider):
-    def test_model_runner_with_openai(self, use_datastore_profile):
+    @pytest.fixture
+    def prompt_data(self):
+        return {
+            "input": [
+                {
+                    "question": "What is the capital of France, and give a brief historical overview.",
+                    "depth_level": "detailed",
+                    "persona": "teacher",
+                    "tone": "casual",
+                },
+                {
+                    "question": "What is 2 + 2? Answer shortly and then explain with details.",
+                    "depth_level": "basic",
+                    "persona": "math teacher",
+                    "tone": "simple",
+                },
+                {
+                    "question": "Who wrote Hamlet? Answer shortly and then explain with details.",
+                    "depth_level": "basic",
+                    "persona": "literature professor",
+                    "tone": "formal",
+                },
+                {
+                    "question": "What color is the sky on a clear day? Answer shortly and then explain with details.",
+                    "depth_level": "basic",
+                    "persona": "child",
+                    "tone": "fun",
+                },
+                {
+                    "question": "What planet do we live on? Answer shortly and then explain with details.",
+                    "depth_level": "basic",
+                    "persona": "astronaut",
+                    "tone": "educational",
+                },
+            ],
+        }
+
+    @pytest.fixture
+    def prompt_expected_results(self):
+        return ["paris", "4","shakespeare", "blue", "earth"]
+
+    def test_model_runner_with_openai(self, use_datastore_profile, prompt_data):
         if not use_datastore_profile:
             pytest.skip("test_model_runner_with_openai supports datastore profile only")
         project = mlrun.new_project("test-openai-model", save=False)
@@ -235,15 +306,75 @@ class TestOpenAIModel(TestBasicOpenAIProvider):
         ):
             server = function.to_mock_server()
         try:
-            body = {
-                "question": "What is the capital of France, and give a brief historical overview.",
-                "depth_level": "detailed",
-                "persona": "teacher",
-                "tone": "casual",
-            }
-            result = server.test(body=body)["result"]
+            result = server.test(body=prompt_data["input"][0])["result"]
             assert "paris" in result.lower()
             encoding = tiktoken.encoding_for_model(self.basic_llm_model)
             assert len(encoding.encode(result)) == 100
+        finally:
+            server.wait_for_completion()
+
+    def test_model_runner_with_openai_async(
+        self, use_datastore_profile, prompt_data, prompt_expected_results
+    ):
+        if not use_datastore_profile:
+            pytest.skip(
+                "test_model_runner_with_openai_async supports datastore profile only"
+            )
+        project = mlrun.new_project("test-async-openai-model", save=False)
+        model_url = self.url_prefix + self.basic_llm_model
+        model_artifact = project.log_model(
+            "my_model",
+            model_url=model_url,
+            default_config={"max_tokens": 100},
+        )
+        prompt_template = (
+            "{question}. Explain {depth_level} as a {persona} in {tone} style."
+        )
+        llm_prompt_artifact = project.log_llm_prompt(
+            "my_llm_prompt",
+            prompt_string=prompt_template,
+            model_artifact=model_artifact.uri,
+        )
+        function = mlrun.new_function("tests", kind="serving")
+
+        graph = function.set_topology("flow", engine="async")
+        model_runner_step = ModelRunnerStep(name="my_model_runner")
+        model_runner_step.add_model(
+            model_class="MyOpenAILLM",
+            endpoint_name="my_endpoint",
+            execution_mechanism="asyncio",
+            model_artifact=llm_prompt_artifact,
+        )
+        graph.to(model_runner_step).respond()
+        # # Mock needed since no artifact is saved in this test, so retrieval by URI isn't possible.
+        # # Mocked function used to verify artifact URI is passed correctly.
+        #
+        mocked_get_store_artifact = create_mocked_get_store_artifact(
+            {
+                model_artifact.uri: model_artifact,
+                llm_prompt_artifact.uri: llm_prompt_artifact,
+            }
+        )
+        with (
+            unittest.mock.patch(
+                "mlrun.artifacts.llm_prompt.mlrun.datastore.store_manager.get_store_artifact",
+                side_effect=lambda *args, **kwargs: mocked_get_store_artifact(
+                    *args, **kwargs
+                ),
+            ),
+        ):
+            server = function.to_mock_server()
+        try:
+            start = time.perf_counter()
+            results_with_times = server.test(body=prompt_data)
+            total_duration = time.perf_counter() - start
+
+            results = results_with_times["results"]
+            invoke_times = results_with_times["invoke_times"]
+            encoding = tiktoken.encoding_for_model(self.basic_llm_model)
+            for i in range(len(prompt_expected_results)):
+                assert prompt_expected_results[i] in results[i].lower()
+                assert len(encoding.encode(results[i])) == 100
+            assert total_duration < sum(invoke_times)
         finally:
             server.wait_for_completion()
