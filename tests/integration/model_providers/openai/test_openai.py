@@ -14,6 +14,7 @@
 
 import asyncio
 import os
+import time
 import unittest.mock
 from typing import cast
 
@@ -32,7 +33,6 @@ from mlrun.datastore.datastore_profile import (
 from mlrun.datastore.model_provider.model_provider import ModelProvider
 from mlrun.datastore.model_provider.openai_provider import OpenAIProvider
 from mlrun.serving import ModelRunnerStep
-import time
 
 here = os.path.dirname(__file__)
 config = {}
@@ -41,11 +41,13 @@ if os.path.exists(config_file_path):
     with open(config_file_path) as yaml_file:
         config = yaml.safe_load(yaml_file).get("env", {})
 
+
 async def timed(coro):
     start = time.perf_counter()
     result = await coro
     duration = time.perf_counter() - start
     return result, duration
+
 
 class MyOpenAILLM(mlrun.serving.states.Model):
     def predict(self, body):
@@ -70,9 +72,12 @@ class MyOpenAILLM(mlrun.serving.states.Model):
             ]
 
             tasks = [
-                timed(self.model_provider.async_invoke(
-                    prompt, **(self.invocation_artifact.spec.model_configuration or {})
-                ))
+                timed(
+                    self.model_provider.async_invoke(
+                        prompt,
+                        **(self.invocation_artifact.spec.model_configuration or {}),
+                    )
+                )
                 for prompt in prompts
             ]
             results_with_times = await asyncio.gather(*tasks)
@@ -254,7 +259,7 @@ class TestOpenAIModel(TestBasicOpenAIProvider):
 
     @pytest.fixture
     def prompt_expected_results(self):
-        return ["paris", "4","shakespeare", "blue", "earth"]
+        return ["paris", "4", "shakespeare", "blue", "earth"]
 
     def test_model_runner_with_openai(self, use_datastore_profile, prompt_data):
         if not use_datastore_profile:
