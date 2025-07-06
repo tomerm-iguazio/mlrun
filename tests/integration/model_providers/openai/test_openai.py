@@ -21,6 +21,8 @@ from typing import cast
 import pytest
 import tiktoken
 import yaml
+from openai import OpenAI
+from openai.types import CreateEmbeddingResponse
 
 import mlrun
 import mlrun.artifacts
@@ -128,7 +130,7 @@ class TestBasicOpenAIProvider:
 
     @classmethod
     def setup_class(cls):
-        cls.basic_llm_model = "gpt-4o"
+        cls.basic_llm_model = "gpt-4o-mini"
 
     @classmethod
     def reset_env(cls):
@@ -216,7 +218,38 @@ class TestOpenAIProvider(TestBasicOpenAIProvider):
         self.check_basic_invoke(
             model_url=model_url, secrets=self.env_secrets, model_name=configurable_model
         )
-        # TODO add async and customized invoke tests.
+
+    def test_customized_invoke(self):
+        model_name = "text-embedding-3-small"
+        model_url = self.url_prefix + model_name
+        model_provider = mlrun.get_model_provider(url=model_url)
+        prompt = "OpenAI is amazing"
+        client: OpenAI = model_provider.client
+        embeddings = model_provider.customized_invoke(
+            operation=client.embeddings.create, input=prompt
+        )
+        encoding = tiktoken.encoding_for_model(model_name)
+        token_count = len(encoding.encode(prompt))
+        assert embeddings.data[0].embedding is not None
+        assert len(embeddings.data[0].embedding) > 0
+        assert embeddings.usage.total_tokens == token_count
+        assert isinstance(embeddings, CreateEmbeddingResponse)
+
+    @pytest.mark.asyncio
+    async def test_async_invoke(self):
+        model_url = self.url_prefix + self.basic_llm_model
+        prompt = "What is the capital of France? Provide a detailed and thorough history of the city"
+        model_provider = mlrun.get_model_provider(
+            url=model_url, default_invoke_kwargs={"max_tokens": 200}
+        )
+        model_provider = cast(OpenAIProvider, model_provider)
+        assert model_provider.model == self.basic_llm_model
+        result = await model_provider.async_invoke(prompt=prompt)
+        assert "paris" in result.lower()
+
+        encoding = tiktoken.encoding_for_model(self.basic_llm_model)
+        token_count = len(encoding.encode(result))
+        assert token_count == 200
 
 
 class TestOpenAIModel(TestBasicOpenAIProvider):
