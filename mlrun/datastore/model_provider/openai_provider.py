@@ -136,7 +136,7 @@ class OpenAIProvider(ModelProvider):
         )
         return response.choices[0].message.content
 
-    async def async_invoke(self, prompt: str, **invoke_kwargs) -> Awaitable[str]:
+    async def async_invoke(self, prompt: str, **invoke_kwargs) -> str:
         messages, invoke_kwargs = self._get_messages_parameter(
             prompt=prompt, **invoke_kwargs
         )
