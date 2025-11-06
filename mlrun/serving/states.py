@@ -116,10 +116,10 @@ _default_fields_to_strip_from_step = [
 
 
 def new_remote_endpoint(
-    url: str,
-    creation_strategy: schemas.ModelEndpointCreationStrategy,
-    endpoint_type: schemas.EndpointType,
-    **class_args,
+        url: str,
+        creation_strategy: schemas.ModelEndpointCreationStrategy,
+        endpoint_type: schemas.EndpointType,
+        **class_args,
 ):
     class_args = deepcopy(class_args)
     class_args["url"] = url
@@ -138,10 +138,10 @@ class BaseStep(ModelObj):
     _default_fields_to_strip = _default_fields_to_strip_from_step
 
     def __init__(
-        self,
-        name: Optional[str] = None,
-        after: Optional[list] = None,
-        shape: Optional[str] = None,
+            self,
+            name: Optional[str] = None,
+            after: Optional[list] = None,
+            shape: Optional[str] = None,
     ):
         self.name = name
         self._parent = None
@@ -194,16 +194,16 @@ class BaseStep(ModelObj):
         return self
 
     def error_handler(
-        self,
-        name: Optional[str] = None,
-        class_name=None,
-        handler=None,
-        before=None,
-        function=None,
-        full_event: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        **class_args,
+            self,
+            name: Optional[str] = None,
+            class_name=None,
+            handler=None,
+            before=None,
+            function=None,
+            full_event: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            **class_args,
     ):
         """set error handler on a step or the entire graph (to be executed on failure/raise)
 
@@ -336,19 +336,19 @@ class BaseStep(ModelObj):
         return next_level
 
     def to(
-        self,
-        class_name: Union[str, StepToDict] = None,
-        name: Optional[str] = None,
-        handler: Optional[str] = None,
-        graph_shape: Optional[str] = None,
-        function: Optional[str] = None,
-        full_event: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        model_endpoint_creation_strategy: Optional[
-            schemas.ModelEndpointCreationStrategy
-        ] = None,
-        **class_args,
+            self,
+            class_name: Union[str, StepToDict] = None,
+            name: Optional[str] = None,
+            handler: Optional[str] = None,
+            graph_shape: Optional[str] = None,
+            function: Optional[str] = None,
+            full_event: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            model_endpoint_creation_strategy: Optional[
+                schemas.ModelEndpointCreationStrategy
+            ] = None,
+            **class_args,
     ):
         """add a step right after this step and return the new step
 
@@ -423,9 +423,9 @@ class BaseStep(ModelObj):
         return step
 
     def set_flow(
-        self,
-        steps: list[Union[str, StepToDict, dict[str, Any]]],
-        force: bool = False,
+            self,
+            steps: list[Union[str, StepToDict, dict[str, Any]]],
+            force: bool = False,
     ):
         """
         Set list of steps as downstream from this step, in the order specified. This will overwrite any existing
@@ -466,10 +466,10 @@ class BaseStep(ModelObj):
                the model endpoint:
         """
         if (
-            isinstance(step, TaskStep)
-            and not isinstance(step, ModelRunnerStep)
-            and model_endpoint_creation_strategy
-            != schemas.ModelEndpointCreationStrategy.SKIP
+                isinstance(step, TaskStep)
+                and not isinstance(step, ModelRunnerStep)
+                and model_endpoint_creation_strategy
+                != schemas.ModelEndpointCreationStrategy.SKIP
         ):
             root = self._extract_root_step()
             if not isinstance(root, RootFlowStep):
@@ -498,10 +498,10 @@ class BaseStep(ModelObj):
         return root
 
     def verify_model_runner_step(
-        self,
-        step: "ModelRunnerStep",
-        step_model_endpoints_names: Optional[list[str]] = None,
-        verify_shared_models: bool = True,
+            self,
+            step: "ModelRunnerStep",
+            step_model_endpoints_names: Optional[list[str]] = None,
+            verify_shared_models: bool = True,
     ):
         """
         Verify ModelRunnerStep, can be part of Flow graph and models can not repeat in graph.
@@ -517,7 +517,7 @@ class BaseStep(ModelObj):
         root = self._extract_root_step()
 
         if not isinstance(root, RootFlowStep) or (
-            isinstance(root, RootFlowStep) and root.engine != "async"
+                isinstance(root, RootFlowStep) and root.engine != "async"
         ):
             raise GraphError(
                 "ModelRunnerStep can be added to 'Flow' topology graph only"
@@ -543,10 +543,10 @@ class BaseStep(ModelObj):
         root.update_model_endpoints_names(step_model_endpoints_names)
 
     def _verify_shared_models(
-        self,
-        root: "RootFlowStep",
-        step: "ModelRunnerStep",
-        step_model_endpoints_names: list[str],
+            self,
+            root: "RootFlowStep",
+            step: "ModelRunnerStep",
+            step_model_endpoints_names: list[str],
     ) -> None:
         proxy_endpoints = [
             name
@@ -554,7 +554,7 @@ class BaseStep(ModelObj):
             if step.class_args.get(
                 schemas.ModelRunnerStepData.MODEL_TO_EXECUTION_MECHANISM, {}
             ).get(name)
-            == ParallelExecutionMechanisms.shared_executor
+               == ParallelExecutionMechanisms.shared_executor
         ]
         shared_models = []
 
@@ -617,12 +617,12 @@ class BaseStep(ModelObj):
 
     @staticmethod
     def _edit_proxy_model_data(
-        step: "ModelRunnerStep",
-        name: str,
-        actual_shared_name: str,
-        shared_model_params: dict,
-        shared_model_class: Any,
-        artifact: Union[ModelArtifact, LLMPromptArtifact, str],
+            step: "ModelRunnerStep",
+            name: str,
+            actual_shared_name: str,
+            shared_model_params: dict,
+            shared_model_class: Any,
+            artifact: Union[ModelArtifact, LLMPromptArtifact, str],
     ):
         monitoring_data = step.class_args.setdefault(
             schemas.ModelRunnerStepData.MONITORING_DATA, {}
@@ -670,21 +670,21 @@ class TaskStep(BaseStep):
     _default_class = ""
 
     def __init__(
-        self,
-        class_name: Optional[Union[str, type]] = None,
-        class_args: Optional[dict] = None,
-        handler: Optional[str] = None,
-        name: Optional[str] = None,
-        after: Optional[list] = None,
-        full_event: Optional[bool] = None,
-        function: Optional[str] = None,
-        responder: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        model_endpoint_creation_strategy: Optional[
-            schemas.ModelEndpointCreationStrategy
-        ] = schemas.ModelEndpointCreationStrategy.SKIP,
-        endpoint_type: Optional[schemas.EndpointType] = schemas.EndpointType.NODE_EP,
+            self,
+            class_name: Optional[Union[str, type]] = None,
+            class_args: Optional[dict] = None,
+            handler: Optional[str] = None,
+            name: Optional[str] = None,
+            after: Optional[list] = None,
+            full_event: Optional[bool] = None,
+            function: Optional[str] = None,
+            responder: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            model_endpoint_creation_strategy: Optional[
+                schemas.ModelEndpointCreationStrategy
+            ] = schemas.ModelEndpointCreationStrategy.SKIP,
+            endpoint_type: Optional[schemas.EndpointType] = schemas.EndpointType.NODE_EP,
     ):
         super().__init__(name, after)
         self.class_name = class_name
@@ -807,7 +807,7 @@ class TaskStep(BaseStep):
         if not self.function and not current_function:
             return True
         if (
-            self.function and self.function == "*"
+                self.function and self.function == "*"
         ) or self.function == current_function:
             return True
         return False
@@ -874,10 +874,10 @@ class TaskStep(BaseStep):
         return event
 
     def to_dict(
-        self,
-        fields: Optional[list] = None,
-        exclude: Optional[list] = None,
-        strip: bool = False,
+            self,
+            fields: Optional[list] = None,
+            exclude: Optional[list] = None,
+            strip: bool = False,
     ) -> dict:
         self.endpoint_type = (
             self.endpoint_type.value
@@ -902,17 +902,17 @@ class MonitoringApplicationStep(TaskStep):
     _default_class = ""
 
     def __init__(
-        self,
-        class_name: Optional[Union[str, type]] = None,
-        class_args: Optional[dict] = None,
-        handler: Optional[str] = None,
-        name: Optional[str] = None,
-        after: Optional[list] = None,
-        full_event: Optional[bool] = None,
-        function: Optional[str] = None,
-        responder: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
+            self,
+            class_name: Optional[Union[str, type]] = None,
+            class_args: Optional[dict] = None,
+            handler: Optional[str] = None,
+            name: Optional[str] = None,
+            after: Optional[list] = None,
+            full_event: Optional[bool] = None,
+            function: Optional[str] = None,
+            responder: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
     ):
         super().__init__(
             class_name=class_name,
@@ -936,17 +936,17 @@ class ErrorStep(TaskStep):
     _default_class = ""
 
     def __init__(
-        self,
-        class_name: Optional[Union[str, type]] = None,
-        class_args: Optional[dict] = None,
-        handler: Optional[str] = None,
-        name: Optional[str] = None,
-        after: Optional[list] = None,
-        full_event: Optional[bool] = None,
-        function: Optional[str] = None,
-        responder: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
+            self,
+            class_name: Optional[Union[str, type]] = None,
+            class_args: Optional[dict] = None,
+            handler: Optional[str] = None,
+            name: Optional[str] = None,
+            after: Optional[list] = None,
+            full_event: Optional[bool] = None,
+            function: Optional[str] = None,
+            responder: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
     ):
         super().__init__(
             class_name=class_name,
@@ -973,15 +973,15 @@ class RouterStep(TaskStep):
     _default_class = "mlrun.serving.ModelRouter"
 
     def __init__(
-        self,
-        class_name: Optional[Union[str, type]] = None,
-        class_args: Optional[dict] = None,
-        handler: Optional[str] = None,
-        routes: Optional[list] = None,
-        name: Optional[str] = None,
-        function: Optional[str] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
+            self,
+            class_name: Optional[Union[str, type]] = None,
+            class_args: Optional[dict] = None,
+            handler: Optional[str] = None,
+            routes: Optional[list] = None,
+            name: Optional[str] = None,
+            function: Optional[str] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
     ):
         super().__init__(
             class_name,
@@ -1017,14 +1017,14 @@ class RouterStep(TaskStep):
         self._routes = ObjectDict.from_dict(classes_map, routes, "task")
 
     def add_route(
-        self,
-        key,
-        route=None,
-        class_name=None,
-        handler=None,
-        function=None,
-        creation_strategy: schemas.ModelEndpointCreationStrategy = schemas.ModelEndpointCreationStrategy.INPLACE,
-        **class_args,
+            self,
+            key,
+            route=None,
+            class_name=None,
+            handler=None,
+            function=None,
+            creation_strategy: schemas.ModelEndpointCreationStrategy = schemas.ModelEndpointCreationStrategy.INPLACE,
+            **class_args,
     ):
         """add child route step or class to the router, if key exists it will be updated
 
@@ -1142,20 +1142,20 @@ class Model(storey.ParallelExecutionRunnable, ModelObj):
     kind = "model"
 
     def __init__(
-        self,
-        name: str,
-        raise_exception: bool = True,
-        artifact_uri: Optional[str] = None,
-        shared_proxy_mapping: Optional[dict] = None,
-        **kwargs,
+            self,
+            name: str,
+            raise_exception: bool = True,
+            artifact_uri: Optional[str] = None,
+            shared_proxy_mapping: Optional[dict] = None,
+            **kwargs,
     ):
         super().__init__(name=name, raise_exception=raise_exception, **kwargs)
         if artifact_uri is not None and not isinstance(artifact_uri, str):
             raise MLRunInvalidArgumentError("'artifact_uri' argument must be a string")
         self.artifact_uri = artifact_uri
         self.shared_proxy_mapping: dict[
-            str : Union[str, ModelArtifact, LLMPromptArtifact]
-        ] = shared_proxy_mapping
+                                   str: Union[str, ModelArtifact, LLMPromptArtifact]
+                                   ] = shared_proxy_mapping
         self.invocation_artifact: Optional[LLMPromptArtifact] = None
         self.model_artifact: Optional[ModelArtifact] = None
         self.model_provider: Optional[ModelProvider] = None
@@ -1205,7 +1205,7 @@ class Model(storey.ParallelExecutionRunnable, ModelObj):
             self._artifact_were_loaded = True
 
     def _get_artifact_object(
-        self, proxy_uri: Optional[str] = None
+            self, proxy_uri: Optional[str] = None
     ) -> Union[ModelArtifact, LLMPromptArtifact, None]:
         uri = proxy_uri or self.artifact_uri
         if uri:
@@ -1234,7 +1234,7 @@ class Model(storey.ParallelExecutionRunnable, ModelObj):
         return self.predict(body)
 
     async def run_async(
-        self, body: Any, path: str, origin_name: Optional[str] = None
+            self, body: Any, path: str, origin_name: Optional[str] = None
     ) -> Any:
         return await self.predict_async(body)
 
@@ -1323,11 +1323,11 @@ class LLModel(Model):
     _dict_fields = Model._dict_fields + ["result_path", "input_path"]
 
     def __init__(
-        self,
-        name: str,
-        input_path: Optional[Union[str, list[str]]] = None,
-        result_path: Optional[Union[str, list[str]]] = None,
-        **kwargs,
+            self,
+            name: str,
+            input_path: Optional[Union[str, list[str]]] = None,
+            result_path: Optional[Union[str, list[str]]] = None,
+            **kwargs,
     ):
         super().__init__(name, **kwargs)
         self._input_path = split_path(input_path)
@@ -1340,17 +1340,17 @@ class LLModel(Model):
         )
 
     def predict(
-        self,
-        body: Any,
-        messages: Optional[list[dict]] = None,
-        invocation_config: Optional[dict] = None,
-        **kwargs,
+            self,
+            body: Any,
+            messages: Optional[list[dict]] = None,
+            invocation_config: Optional[dict] = None,
+            **kwargs,
     ) -> Any:
         llm_prompt_artifact = kwargs.get("llm_prompt_artifact")
         if isinstance(
-            llm_prompt_artifact, mlrun.artifacts.LLMPromptArtifact
+                llm_prompt_artifact, mlrun.artifacts.LLMPromptArtifact
         ) and isinstance(self.model_provider, ModelProvider):
-            logger.debug(
+            logger.info(
                 "Invoking model provider",
                 model_name=self.name,
                 messages=messages,
@@ -1364,7 +1364,7 @@ class LLModel(Model):
             set_data_by_path(
                 path=self._result_path, data=body, value=response_with_stats
             )
-            logger.debug(
+            logger.info(
                 "LLModel prediction completed",
                 model_name=self.name,
                 answer=response_with_stats.get("answer"),
@@ -1380,17 +1380,17 @@ class LLModel(Model):
         return body
 
     async def predict_async(
-        self,
-        body: Any,
-        messages: Optional[list[dict]] = None,
-        invocation_config: Optional[dict] = None,
-        **kwargs,
+            self,
+            body: Any,
+            messages: Optional[list[dict]] = None,
+            invocation_config: Optional[dict] = None,
+            **kwargs,
     ) -> Any:
         llm_prompt_artifact = kwargs.get("llm_prompt_artifact")
         if isinstance(
-            llm_prompt_artifact, mlrun.artifacts.LLMPromptArtifact
+                llm_prompt_artifact, mlrun.artifacts.LLMPromptArtifact
         ) and isinstance(self.model_provider, ModelProvider):
-            logger.debug(
+            logger.info(
                 "Async invoking model provider",
                 model_name=self.name,
                 messages=messages,
@@ -1430,6 +1430,10 @@ class LLModel(Model):
             model_endpoint_name=origin_name,
             messages_len=len(messages) if messages else 0,
         )
+        logger.info("llm_prompt_artifact",
+                    llm_prompt_artifact=llm_prompt_artifact.to_dict() if llm_prompt_artifact else None)
+        logger.info("model_artifact", model_artifact=self.model_artifact.to_dict() if self.model_artifact else None)
+        logger.info(f"model_provider: model:{self.model_provider.model}")
         return self.predict(
             body,
             messages=messages,
@@ -1438,7 +1442,7 @@ class LLModel(Model):
         )
 
     async def run_async(
-        self, body: Any, path: str, origin_name: Optional[str] = None
+            self, body: Any, path: str, origin_name: Optional[str] = None
     ) -> Any:
         llm_prompt_artifact = self._get_invocation_artifact(origin_name)
         messages, invocation_config = self.enrich_prompt(
@@ -1458,10 +1462,10 @@ class LLModel(Model):
         )
 
     def enrich_prompt(
-        self,
-        body: dict,
-        origin_name: str,
-        llm_prompt_artifact: Optional[LLMPromptArtifact] = None,
+            self,
+            body: dict,
+            origin_name: str,
+            llm_prompt_artifact: Optional[LLMPromptArtifact] = None,
     ) -> Union[tuple[list[dict], dict], tuple[None, None]]:
         logger.info(
             "Enriching prompt",
@@ -1469,7 +1473,7 @@ class LLModel(Model):
             model_endpoint_name=origin_name,
         )
         if not llm_prompt_artifact or not (
-            llm_prompt_artifact and isinstance(llm_prompt_artifact, LLMPromptArtifact)
+                llm_prompt_artifact and isinstance(llm_prompt_artifact, LLMPromptArtifact)
         ):
             logger.warning(
                 "LLModel must be provided with LLMPromptArtifact",
@@ -1520,7 +1524,7 @@ class LLModel(Model):
         return prompt_template, invocation_config
 
     def _get_invocation_artifact(
-        self, origin_name: Optional[str] = None
+            self, origin_name: Optional[str] = None
     ) -> Union[LLMPromptArtifact, None]:
         """
         Get the LLMPromptArtifact object for this model.
@@ -1556,7 +1560,7 @@ class ModelSelector(ModelObj):
         cls._dict_fields.remove("self")
 
     def select(
-        self, event, available_models: list[Model]
+            self, event, available_models: list[Model]
     ) -> Union[list[str], list[Model]]:
         """
         Given an event, returns a list of model names or a list of model objects to run on the event.
@@ -1577,7 +1581,7 @@ class ModelRunner(storey.ParallelExecution):
     """
 
     def __init__(
-        self, *args, context, model_selector: Optional[ModelSelector] = None, **kwargs
+            self, *args, context, model_selector: Optional[ModelSelector] = None, **kwargs
     ):
         super().__init__(*args, **kwargs)
         self.model_selector = model_selector or ModelSelector()
@@ -1674,13 +1678,13 @@ class ModelRunnerStep(MonitoredStep):
     ]
 
     def __init__(
-        self,
-        *args,
-        name: Optional[str] = None,
-        model_selector: Optional[Union[str, ModelSelector]] = None,
-        model_selector_parameters: Optional[dict] = None,
-        raise_exception: bool = True,
-        **kwargs,
+            self,
+            *args,
+            name: Optional[str] = None,
+            model_selector: Optional[Union[str, ModelSelector]] = None,
+            model_selector_parameters: Optional[dict] = None,
+            raise_exception: bool = True,
+            **kwargs,
     ):
         self.max_processes = None
         self.max_threads = None
@@ -1716,15 +1720,15 @@ class ModelRunnerStep(MonitoredStep):
         self._shared_proxy_mapping = {}
 
     def add_shared_model_proxy(
-        self,
-        endpoint_name: str,
-        model_artifact: Union[str, ModelArtifact, LLMPromptArtifact],
-        shared_model_name: Optional[str] = None,
-        labels: Optional[Union[list[str], dict[str, str]]] = None,
-        model_endpoint_creation_strategy: Optional[
-            schemas.ModelEndpointCreationStrategy
-        ] = schemas.ModelEndpointCreationStrategy.INPLACE,
-        override: bool = False,
+            self,
+            endpoint_name: str,
+            model_artifact: Union[str, ModelArtifact, LLMPromptArtifact],
+            shared_model_name: Optional[str] = None,
+            labels: Optional[Union[list[str], dict[str, str]]] = None,
+            model_endpoint_creation_strategy: Optional[
+                schemas.ModelEndpointCreationStrategy
+            ] = schemas.ModelEndpointCreationStrategy.INPLACE,
+            override: bool = False,
     ) -> None:
         """
         Add a proxy model to the ModelRunnerStep, which is a proxy for a model that is already defined as shared model
@@ -1770,7 +1774,7 @@ class ModelRunnerStep(MonitoredStep):
                 root.get_shared_model_by_artifact_uri(model_artifact_uri)
             )
             if not actual_shared_model_name or (
-                shared_model_name and actual_shared_model_name != shared_model_name
+                    shared_model_name and actual_shared_model_name != shared_model_name
             ):
                 raise GraphError(
                     f"ModelRunnerStep can only add proxy models that were added to the root flow step, "
@@ -1780,9 +1784,9 @@ class ModelRunnerStep(MonitoredStep):
                 shared_model_name = actual_shared_model_name
                 model_params["shared_runnable_name"] = shared_model_name
             if not root.shared_models or (
-                root.shared_models
-                and shared_model_name
-                and shared_model_name not in root.shared_models.keys()
+                    root.shared_models
+                    and shared_model_name
+                    and shared_model_name not in root.shared_models.keys()
             ):
                 raise GraphError(
                     f"ModelRunnerStep can only add proxy models that were added to the root flow step, "
@@ -1832,21 +1836,21 @@ class ModelRunnerStep(MonitoredStep):
         )
 
     def add_model(
-        self,
-        endpoint_name: str,
-        model_class: Union[str, Model],
-        execution_mechanism: Union[str, ParallelExecutionMechanisms],
-        model_artifact: Optional[Union[str, ModelArtifact, LLMPromptArtifact]] = None,
-        labels: Optional[Union[list[str], dict[str, str]]] = None,
-        model_endpoint_creation_strategy: Optional[
-            schemas.ModelEndpointCreationStrategy
-        ] = schemas.ModelEndpointCreationStrategy.INPLACE,
-        inputs: Optional[list[str]] = None,
-        outputs: Optional[list[str]] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        override: bool = False,
-        **model_parameters,
+            self,
+            endpoint_name: str,
+            model_class: Union[str, Model],
+            execution_mechanism: Union[str, ParallelExecutionMechanisms],
+            model_artifact: Optional[Union[str, ModelArtifact, LLMPromptArtifact]] = None,
+            labels: Optional[Union[list[str], dict[str, str]]] = None,
+            model_endpoint_creation_strategy: Optional[
+                schemas.ModelEndpointCreationStrategy
+            ] = schemas.ModelEndpointCreationStrategy.INPLACE,
+            inputs: Optional[list[str]] = None,
+            outputs: Optional[list[str]] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            override: bool = False,
+            **model_parameters,
     ) -> None:
         """
         Add a Model to this ModelRunner.
@@ -1926,8 +1930,8 @@ class ModelRunnerStep(MonitoredStep):
                 "Cannot provide a model object as argument to `model_class` and also provide `model_parameters`."
             )
         if type(model_class) is LLModel or (
-            isinstance(model_class, str)
-            and model_class.split(".")[-1] == LLModel.__name__
+                isinstance(model_class, str)
+                and model_class.split(".")[-1] == LLModel.__name__
         ):
             if outputs:
                 warnings.warn(
@@ -1939,8 +1943,8 @@ class ModelRunnerStep(MonitoredStep):
         )
 
         if isinstance(
-            model_artifact,
-            str,
+                model_artifact,
+                str,
         ):
             try:
                 model_artifact, _ = mlrun.store_manager.get_store_artifact(
@@ -1963,7 +1967,7 @@ class ModelRunnerStep(MonitoredStep):
             "artifact_uri", model_artifact
         )
         if model_parameters.get("name", endpoint_name) != endpoint_name or (
-            isinstance(model_class, Model) and model_class.name != endpoint_name
+                isinstance(model_class, Model) and model_class.name != endpoint_name
         ):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Inconsistent name for model added to ModelRunnerStep."
@@ -2015,9 +2019,9 @@ class ModelRunnerStep(MonitoredStep):
 
     @staticmethod
     def _get_model_endpoint_schema(
-        name: str,
-        project: str,
-        uid: str,
+            name: str,
+            project: str,
+            uid: str,
     ) -> tuple[list[str], list[str]]:
         output_schema = None
         input_schema = None
@@ -2033,8 +2037,8 @@ class ModelRunnerStep(MonitoredStep):
             output_schema = model_endpoint.spec.label_names
             input_schema = model_endpoint.spec.feature_names
         except (
-            mlrun.errors.MLRunNotFoundError,
-            mlrun.errors.MLRunInvalidArgumentError,
+                mlrun.errors.MLRunNotFoundError,
+                mlrun.errors.MLRunInvalidArgumentError,
         ) as ex:
             logger.warning(
                 f"Model endpoint not found, using default output schema for model {name}",
@@ -2079,12 +2083,12 @@ class ModelRunnerStep(MonitoredStep):
                 self.class_args[
                     mlrun.common.schemas.ModelRunnerStepData.MONITORING_DATA
                 ][model][schemas.MonitoringData.OUTPUTS] = (
-                    output_schema or mep_output_schema
+                        output_schema or mep_output_schema
                 )
                 self.class_args[
                     mlrun.common.schemas.ModelRunnerStepData.MONITORING_DATA
                 ][model][schemas.MonitoringData.INPUTS] = (
-                    input_schema or mep_input_schema
+                        input_schema or mep_input_schema
                 )
             return monitoring_data
         else:
@@ -2093,10 +2097,10 @@ class ModelRunnerStep(MonitoredStep):
             )
 
     def configure_pool_resource(
-        self,
-        max_processes: Optional[int] = None,
-        max_threads: Optional[int] = None,
-        pool_factor: Optional[int] = None,
+            self,
+            max_processes: Optional[int] = None,
+            max_threads: Optional[int] = None,
+            pool_factor: Optional[int] = None,
     ) -> None:
         """
         Configure the resource limits for the shared models in the graph.
@@ -2201,14 +2205,14 @@ class QueueStep(BaseStep, StepToDict):
     ]
 
     def __init__(
-        self,
-        name: Optional[str] = None,
-        path: Optional[str] = None,
-        after: Optional[list] = None,
-        shards: Optional[int] = None,
-        retention_in_hours: Optional[int] = None,
-        trigger_args: Optional[dict] = None,
-        **options,
+            self,
+            name: Optional[str] = None,
+            path: Optional[str] = None,
+            after: Optional[list] = None,
+            shards: Optional[int] = None,
+            retention_in_hours: Optional[int] = None,
+            trigger_args: Optional[dict] = None,
+            **options,
     ):
         super().__init__(name, after)
         self.path = path
@@ -2237,19 +2241,19 @@ class QueueStep(BaseStep, StepToDict):
         return self._async_object
 
     def to(
-        self,
-        class_name: Union[str, StepToDict] = None,
-        name: Optional[str] = None,
-        handler: Optional[str] = None,
-        graph_shape: Optional[str] = None,
-        function: Optional[str] = None,
-        full_event: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        model_endpoint_creation_strategy: Optional[
-            schemas.ModelEndpointCreationStrategy
-        ] = None,
-        **class_args,
+            self,
+            class_name: Union[str, StepToDict] = None,
+            name: Optional[str] = None,
+            handler: Optional[str] = None,
+            graph_shape: Optional[str] = None,
+            function: Optional[str] = None,
+            full_event: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            model_endpoint_creation_strategy: Optional[
+                schemas.ModelEndpointCreationStrategy
+            ] = None,
+            **class_args,
     ):
         if not function:
             name = get_name(name, class_name)
@@ -2295,12 +2299,12 @@ class FlowStep(BaseStep):
     ]
 
     def __init__(
-        self,
-        name=None,
-        steps=None,
-        after: Optional[list] = None,
-        engine=None,
-        final_step=None,
+            self,
+            name=None,
+            steps=None,
+            after: Optional[list] = None,
+            engine=None,
+            final_step=None,
     ):
         super().__init__(name, after)
         self._steps = None
@@ -2333,21 +2337,21 @@ class FlowStep(BaseStep):
         self._steps = ObjectDict.from_dict(classes_map, steps, "task")
 
     def add_step(
-        self,
-        class_name=None,
-        name=None,
-        handler=None,
-        after=None,
-        before=None,
-        graph_shape=None,
-        function=None,
-        full_event: Optional[bool] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        model_endpoint_creation_strategy: Optional[
-            schemas.ModelEndpointCreationStrategy
-        ] = None,
-        **class_args,
+            self,
+            class_name=None,
+            name=None,
+            handler=None,
+            after=None,
+            before=None,
+            graph_shape=None,
+            function=None,
+            full_event: Optional[bool] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            model_endpoint_creation_strategy: Optional[
+                schemas.ModelEndpointCreationStrategy
+            ] = None,
+            **class_args,
     ):
         """add task, queue or router step/class to the flow
 
@@ -2518,9 +2522,9 @@ class FlowStep(BaseStep):
         responders = []
         for step in self._steps.values():
             if (
-                hasattr(step, "responder")
-                and step.responder
-                and step.kind != "error_step"
+                    hasattr(step, "responder")
+                    and step.responder
+                    and step.kind != "error_step"
             ):
                 responders.append(step.name)
             if step.on_error and step.on_error in start_steps:
@@ -2532,7 +2536,7 @@ class FlowStep(BaseStep):
             start_steps.remove(self.on_error)
 
         if (
-            len(responders) > 1
+                len(responders) > 1
         ):  # should not have multiple steps which respond to request
             raise GraphError(
                 f'there are more than one responder steps in the graph ({",".join(responders)})'
@@ -2550,9 +2554,9 @@ class FlowStep(BaseStep):
         def get_first_function_step(step, current_function):
             # find the first step which belongs to the function
             if (
-                hasattr(step, "function")
-                and step.function
-                and step.function == current_function
+                    hasattr(step, "function")
+                    and step.function
+                    and step.function == current_function
             ):
                 return step
             for item in step.next or []:
@@ -2674,9 +2678,9 @@ class FlowStep(BaseStep):
         functions = []
         for step in self.get_children():
             if (
-                hasattr(step, "function")
-                and step.function
-                and step.function not in functions
+                    hasattr(step, "function")
+                    and step.function
+                    and step.function not in functions
             ):
                 functions.append(step.function)
         return functions
@@ -2733,9 +2737,9 @@ class FlowStep(BaseStep):
             if hasattr(event, "terminated") and event.terminated:
                 return event
             if (
-                hasattr(event, "error")
-                and isinstance(event.error, dict)
-                and next_obj.name in event.error
+                    hasattr(event, "error")
+                    and isinstance(event.error, dict)
+                    and next_obj.name in event.error
             ):
                 next_obj = self._steps[next_obj.on_error]
             next = next_obj.next
@@ -2790,13 +2794,13 @@ class FlowStep(BaseStep):
         run after deployment
         """
         if not step.before and not any(
-            [step.name in other_step.after for other_step in self._steps.values()]
+                [step.name in other_step.after for other_step in self._steps.values()]
         ):
             if any(
-                [
-                    getattr(step_in_graph, "responder", False)
-                    for step_in_graph in self._steps.values()
-                ]
+                    [
+                        getattr(step_in_graph, "responder", False)
+                        for step_in_graph in self._steps.values()
+                    ]
             ):
                 step.responder = True
             return
@@ -2809,9 +2813,9 @@ class FlowStep(BaseStep):
             self[step_name].after_step(name)
 
     def set_flow(
-        self,
-        steps: list[Union[str, StepToDict, dict[str, Any]]],
-        force: bool = False,
+            self,
+            steps: list[Union[str, StepToDict, dict[str, Any]]],
+            force: bool = False,
     ):
         if not force and self.steps:
             raise mlrun.errors.MLRunInvalidArgumentError(
@@ -2853,12 +2857,12 @@ class RootFlowStep(FlowStep):
     ]
 
     def __init__(
-        self,
-        name=None,
-        steps=None,
-        after: Optional[list] = None,
-        engine=None,
-        final_step=None,
+            self,
+            name=None,
+            steps=None,
+            after: Optional[list] = None,
+            engine=None,
+            final_step=None,
     ):
         super().__init__(
             name,
@@ -2877,17 +2881,17 @@ class RootFlowStep(FlowStep):
         self._pool_factor = None
 
     def add_shared_model(
-        self,
-        name: str,
-        model_class: Union[str, Model],
-        execution_mechanism: Union[str, ParallelExecutionMechanisms],
-        model_artifact: Union[str, ModelArtifact],
-        inputs: Optional[list[str]] = None,
-        outputs: Optional[list[str]] = None,
-        input_path: Optional[str] = None,
-        result_path: Optional[str] = None,
-        override: bool = False,
-        **model_parameters,
+            self,
+            name: str,
+            model_class: Union[str, Model],
+            execution_mechanism: Union[str, ParallelExecutionMechanisms],
+            model_artifact: Union[str, ModelArtifact],
+            inputs: Optional[list[str]] = None,
+            outputs: Optional[list[str]] = None,
+            input_path: Optional[str] = None,
+            result_path: Optional[str] = None,
+            override: bool = False,
+            **model_parameters,
     ) -> None:
         """
         Add a shared model to the graph, this model will be available to all the ModelRunners in the graph
@@ -2948,8 +2952,8 @@ class RootFlowStep(FlowStep):
                 "Cannot provide a model object as argument to `model_class` and also provide `model_parameters`."
             )
         if type(model_class) is LLModel or (
-            isinstance(model_class, str)
-            and model_class.split(".")[-1] == LLModel.__name__
+                isinstance(model_class, str)
+                and model_class.split(".")[-1] == LLModel.__name__
         ):
             if outputs:
                 warnings.warn(
@@ -2977,7 +2981,7 @@ class RootFlowStep(FlowStep):
         )
 
         if model_parameters.get("name", name) != name or (
-            isinstance(model_class, Model) and model_class.name != name
+                isinstance(model_class, Model) and model_class.name != name
         ):
             raise mlrun.errors.MLRunInvalidArgumentError(
                 "Inconsistent name for the added model."
@@ -3006,7 +3010,7 @@ class RootFlowStep(FlowStep):
         self.shared_models_mechanism[name] = execution_mechanism
 
     def get_shared_model_by_artifact_uri(
-        self, artifact_uri: str
+            self, artifact_uri: str
     ) -> Union[tuple[str, str, dict], tuple[None, None, None]]:
         """
         Get a shared model by its artifact URI.
@@ -3019,10 +3023,10 @@ class RootFlowStep(FlowStep):
         return None, None, None
 
     def configure_shared_pool_resource(
-        self,
-        max_processes: Optional[int] = None,
-        max_threads: Optional[int] = None,
-        pool_factor: Optional[int] = None,
+            self,
+            max_processes: Optional[int] = None,
+            max_threads: Optional[int] = None,
+            pool_factor: Optional[int] = None,
     ) -> None:
         """
         Configure the resource limits for the shared models in the graph.
@@ -3113,7 +3117,7 @@ class RootFlowStep(FlowStep):
 
     @shared_models_mechanism.setter
     def shared_models_mechanism(
-        self, shared_models_mechanism: dict[str, ParallelExecutionMechanisms]
+            self, shared_models_mechanism: dict[str, ParallelExecutionMechanisms]
     ):
         self._shared_models_mechanism = shared_models_mechanism
 
@@ -3219,10 +3223,10 @@ def _add_graphviz_model_runner(graph, step, source=None, is_monitored=False):
 
 
 def _add_graphviz_flow(
-    graph,
-    step,
-    source=None,
-    targets=None,
+        graph,
+        step,
+        source=None,
+        targets=None,
 ):
     start_steps, default_final_step, responders = step.check_and_process_graph(
         allow_empty=True
@@ -3274,13 +3278,13 @@ def _add_edges(items, step, graph, child, after=True):
 
 
 def _generate_graphviz(
-    step,
-    renderer,
-    filename=None,
-    format=None,
-    source=None,
-    targets=None,
-    **kw,
+        step,
+        renderer,
+        filename=None,
+        format=None,
+        source=None,
+        targets=None,
+        **kw,
 ):
     try:
         from graphviz import Digraph
@@ -3331,19 +3335,19 @@ def get_name(name, class_name):
 
 
 def params_to_step(
-    class_name,
-    name,
-    handler=None,
-    graph_shape=None,
-    function=None,
-    full_event=None,
-    input_path: Optional[str] = None,
-    result_path: Optional[str] = None,
-    class_args=None,
-    model_endpoint_creation_strategy: Optional[
-        schemas.ModelEndpointCreationStrategy
-    ] = None,
-    endpoint_type: Optional[schemas.EndpointType] = None,
+        class_name,
+        name,
+        handler=None,
+        graph_shape=None,
+        function=None,
+        full_event=None,
+        input_path: Optional[str] = None,
+        result_path: Optional[str] = None,
+        class_args=None,
+        model_endpoint_creation_strategy: Optional[
+            schemas.ModelEndpointCreationStrategy
+        ] = None,
+        endpoint_type: Optional[schemas.EndpointType] = None,
 ):
     """return step object from provided params or classes/objects"""
 
@@ -3372,9 +3376,9 @@ def params_to_step(
         struct = deepcopy(class_name.to_dict())
         kind = struct.get("kind", StepKinds.task)
         name = (
-            name
-            or struct.get("name", struct.get("class_name"))
-            or class_name.to_dict(["name"]).get("name")
+                name
+                or struct.get("name", struct.get("class_name"))
+                or class_name.to_dict(["name"]).get("name")
         )
         cls = classes_map.get(kind, RootFlowStep)
         step = cls.from_dict(struct)
@@ -3455,8 +3459,8 @@ def _init_async_objects(context, steps):
                     if stream_path and stream_path.startswith("ds://"):
                         datastore_profile = datastore_profile_read(stream_path)
                         if isinstance(
-                            datastore_profile,
-                            (DatastoreProfileKafkaTarget, DatastoreProfileKafkaStream),
+                                datastore_profile,
+                                (DatastoreProfileKafkaTarget, DatastoreProfileKafkaStream),
                         ):
                             step._async_object = KafkaStoreyTarget(
                                 path=stream_path,
@@ -3515,10 +3519,10 @@ def _init_async_objects(context, steps):
                     pass_context=step._inject_context,
                 )
             if (
-                respond_supported
-                and not step.next
-                and hasattr(step, "responder")
-                and step.responder
+                    respond_supported
+                    and not step.next
+                    and hasattr(step, "responder")
+                    and step.responder
             ):
                 # if responder step (return result), add Complete()
                 step.async_object.to(storey.Complete(full_event=True))
@@ -3526,7 +3530,7 @@ def _init_async_objects(context, steps):
 
     source_args = context.get_param("source_args", {})
     explicit_ack = (
-        is_explicit_ack_supported(context) and mlrun.mlconf.is_explicit_ack_enabled()
+            is_explicit_ack_supported(context) and mlrun.mlconf.is_explicit_ack_enabled()
     )
 
     if context.is_mock:
