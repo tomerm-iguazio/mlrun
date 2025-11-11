@@ -250,12 +250,12 @@ class BatchedModel(Model):
         self.multi = multi
 
     def predict(self, body):
-        result = [x * self.multi for x in body["n"]]
-        return result
+        body["n"] = [x * self.multi for x in body["n"]]
+        return body
 
     async def predict_async(self, body):
-        result = [x * self.multi for x in body["n"]]
-        return result
+        body["n"] = [x * self.multi for x in body["n"]]
+        return body
 
     def do(self, event):
         return self.predict(event)
@@ -1323,19 +1323,15 @@ def test_mrs_batch():
         model_class="BatchedModel",
         execution_mechanism="naive",
         endpoint_name="my_model_1",
-        inc=1,
+        multi=1,
     )
     model_runner_step.add_model(
         model_class="BatchedModel",
         execution_mechanism="naive",
         endpoint_name="my_model_2",
-        inc=2,
+        multi=2,
     )
-    graph.to(
-        name="echo",
-        class_name="Echo",
-        model_endpoint_creation_strategy=schemas.ModelEndpointCreationStrategy.SKIP,
-    ).to(model_runner_step).respond()
+    graph.to(model_runner_step).respond()
     assert set(graph.model_endpoints_names) == {
         "my_model_1",
         "my_model_2",
@@ -1343,6 +1339,6 @@ def test_mrs_batch():
     server = function.to_mock_server()
     try:
         resp = server.test(body={"n": [1, 2, 3]})
-        assert resp == {"my_model_1": {"n": 2}, "my_model_2": {"n": 3}}
+        assert resp == {"my_model_1": {"n": [1, 2, 3]}, "my_model_2": {"n": [2, 4, 6]}}
     finally:
         server.wait_for_completion()
