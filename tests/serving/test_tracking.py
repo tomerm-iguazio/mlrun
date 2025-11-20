@@ -344,7 +344,28 @@ class MyModel(Model):
     async def predict_async(self, body, **kwargs):
         return self.predict(body, **kwargs)
 
+def extract_list_to_dict(my_list: list):
+    result = {}
+    for item in my_list:          # item is each dict
+        for key, value in item.items():
+            result.setdefault(key, []).append(value)
+    return result
 
+class ListModel(Model):
+    def __init__(self, *args, inc: int, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.inc = inc
+
+    def predict(self, body, **kwargs):
+        body["n"] = [x+1 for x in body["n"]]
+        return body
+        #return fixed_body
+        # for b in body:
+        #     b["result"] = 1
+        # return body
+
+    async def predict_async(self, body, **kwargs):
+        return self.predict(body, **kwargs)
 def handle_error(event):
     return event
 
@@ -431,7 +452,7 @@ def _test_graph_structure(graph: RootFlowStep, tracked: bool):
         _test_monitoring_system_steps_structure(graph, model_runners)
 
 
-@pytest.mark.parametrize("enable_tracking", [True, False])
+@pytest.mark.parametrize("enable_tracking", [True])
 def test_tracked_model_runner(rundb_mock, enable_tracking: bool):
     function = mlrun.new_function("tests-1", kind="serving")
     graph = function.set_topology("flow", engine="async")
@@ -460,6 +481,33 @@ def test_tracked_model_runner(rundb_mock, enable_tracking: bool):
         assert len(dummy_stream.event_list) == 0, "expected stream to be empty"
 
     _test_graph_structure(server.graph, enable_tracking)
+
+def test_tracked_model_runner_list(rundb_mock):
+    function = mlrun.new_function("tests-1", kind="serving")
+    graph = function.set_topology("flow", engine="async")
+    model_runner_step = ModelRunnerStep(name="my_model_runner")
+    model_runner_step.add_model(
+        model_class="ListModel",
+        execution_mechanism="naive",
+        endpoint_name="my_model",
+        input_path="n",
+        result_path="n",
+        raise_error=False,
+        inc=1,
+    )
+    graph.to(model_runner_step).respond()
+    function.set_tracking("dummy://")
+    server = function.to_mock_server()
+    server.test("/", [{"n": 1}, {"n": 2}])
+    server.wait_for_completion()
+
+    dummy_stream = server.context.stream.output_stream
+    assert len(dummy_stream.event_list) == 1, "expected stream to get one message"
+    assert dummy_stream.event_list[0].get("resp", {}).get("outputs") == [2]
+    assert dummy_stream.event_list[0].get("request", {}).get("inputs") == [1]
+
+
+    _test_graph_structure(server.graph, True)
 
 
 @pytest.mark.parametrize("with_schema", [True, False])

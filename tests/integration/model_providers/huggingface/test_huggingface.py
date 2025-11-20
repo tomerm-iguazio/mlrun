@@ -272,7 +272,7 @@ class TestHuggingFaceAIModel(TestBasicHuggingFaceProvider):
         "execution_mechanism",
         ["naive", "process_pool", "dedicated_process", "thread_pool"],
     )
-    def test_hf_model_runner(self, execution_mechanism):
+    def test_hf_model_runner(self, rundb_mock, execution_mechanism):
         project = mlrun.new_project("test-hf-model", save=False)
         model_url = self.url_prefix + self.basic_llm_model
         model_artifact, llm_prompt_artifact, function = setup_remote_model_test(
@@ -281,6 +281,7 @@ class TestHuggingFaceAIModel(TestBasicHuggingFaceProvider):
             default_config={"max_new_tokens": 100},
             execution_mechanism=execution_mechanism,
         )
+        function.set_tracking("dummy://")
         # # Mock needed since no artifact is saved in this test, so retrieval by URI isn't possible.
         # # Mocked function used to verify artifact URI is passed correctly.
         #
@@ -318,8 +319,18 @@ class TestHuggingFaceAIModel(TestBasicHuggingFaceProvider):
                 stats["total_tokens"]
                 == stats["completion_tokens"] + stats["prompt_tokens"]
             )
+
         finally:
             server.wait_for_completion()
+            output_stream = server.context.stream.output_stream
+            assert len(output_stream.event_list) == 1
+            assert sorted(
+                output_stream.event_list[0]["resp"]["output_schema"]
+            ) == sorted([UsageResponseKeys.USAGE, UsageResponseKeys.ANSWER])
+            assert len(output_stream.event_list[0]["resp"]["outputs"][0]) == 2
+            assert all(
+                output for output in output_stream.event_list[0]["resp"]["outputs"][0]
+            )
 
     @pytest.mark.parametrize(
         "execution_mechanism",

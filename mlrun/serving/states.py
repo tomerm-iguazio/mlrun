@@ -2171,6 +2171,7 @@ class ModelRunnerErrorRaiser(storey.MapClass):
         self._models_names = models_names
 
     def do(self, event):
+        # TODO if the body contains list of events, can raise by iterate the list of the events and search for error...
         if self._raise_exception:
             errors = {}
             should_raise = False

@@ -2455,6 +2455,9 @@ def split_path(path: str) -> typing.Union[str, list[str], None]:
 
 
 def get_data_from_path(path: typing.Union[str, list[str], None], data: dict) -> Any:
+    from storey.flow import extract_list_to_dict
+    if isinstance(data, list):
+        data = extract_list_to_dict(data)
     if isinstance(path, str):
         output_data = data.get(path)
     elif isinstance(path, list):

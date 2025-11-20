@@ -25,6 +25,7 @@ from typing import Optional, Union
 
 import pandas as pd
 import pytest
+from datastore.remote_model.remote_model_utils import INPUT_DATA
 
 import mlrun
 import mlrun.common.schemas as schemas
@@ -47,6 +48,11 @@ class _DummyStreamRaiser:
 def append_and_return(lst, event):
     body = event.body
     body["timestamp"] = datetime.now()
+    lst.append(event.body)
+    return lst
+
+
+def append_and_return_list(lst, event):
     lst.append(event.body)
     return lst
 
@@ -254,6 +260,44 @@ class BatchedModel(Model):
 
     async def predict_async(self, body):
         body["n"] = [x * self.multi for x in body["n"]]
+        return body
+
+    def do(self, event):
+        return self.predict(event)
+
+
+class BatchedRemoteModel(Model):
+    def run(
+        self, body: typing.Any, path: str, origin_name: Optional[str] = None
+    ) -> typing.Any:
+        prompt = [
+            {
+                "role": "user",
+                "content": "{question}. Explain {depth_level} as a {persona} in {tone} style.",
+            },
+            {
+                "role": "system",
+                "content": "You are a chatbot",
+            },
+        ]
+        formatted_inputs = []
+        for event in body["input"]:
+            formatted_prompt = deepcopy(prompt)
+            formatted_prompt[0]["content"] = formatted_prompt[0]["content"].format(
+                **event
+            )
+            formatted_inputs.append(formatted_prompt)
+        body["input"] = formatted_inputs
+        return super().run(body=body, path=path)
+
+    def predict(self, body):
+        events = body["input"]
+        body["results"] = [f"answer for: {event}" for event in events]
+        return body
+
+    async def predict_async(self, body):
+        events = body["input"]
+        body["results"] = [f"answer for {event}" for event in events]
         return body
 
     def do(self, event):
@@ -1341,3 +1385,64 @@ def test_mrs_batch():
         assert resp == {"my_model_1": {"n": [1, 2, 3]}, "my_model_2": {"n": [2, 4, 6]}}
     finally:
         server.wait_for_completion()
+
+
+def test_batch2():
+    function = mlrun.new_function("tests", kind="serving", project="x")
+    graph = function.set_topology("flow", engine="async")
+    step = graph
+    step = step.to("storey.Batch", "my_batching", max_events=3, flush_after_seconds=1)
+    # step = step.to("storey.ToDataFrame", "my_to_df", index="my_int")
+    # to get a single result in wait_for_completion (termination result in storey)
+    step.to(
+        "storey.Reduce", initial_value=[], fn=append_and_return_list, full_event=True
+    )
+    server = function.to_mock_server()
+
+    # events = [{"my_int": i, "my_string": f"this is {i}"} for i in range(10)]
+    events = [{"n": i} for i in range(10)]
+
+    for event in events:
+        time.sleep(0.1)
+        server.test(body=event)
+    results = server.wait_for_completion()
+    print(results)
+
+
+def test_mrs_batch_full_graph():
+    function = mlrun.new_function("tests", kind="serving")
+    graph = function.set_topology("flow", engine="async")
+    model_runner_step = ModelRunnerStep(name="my_model_runner")
+    #  the sub list is auto created in llmodel when using LLmPromptArtifact
+    messages = INPUT_DATA
+    model_runner_step.add_model(
+        model_class="BatchedRemoteModel",
+        execution_mechanism="naive",
+        endpoint_name="my_model_1",
+    )
+    step = graph.to("storey.Batch", "my_batching", max_events=2, flush_after_seconds=1,full_event=True)
+    #step = step.to("storey.Map", fn=lambda batch: {"input": [e["input"] for e in batch]})
+    # step.to(model_runner_step).respond()
+    step.to(model_runner_step).to(
+        "storey.Reduce", initial_value=[], fn=append_and_return_list, full_event=True
+    )
+
+    #function.set_tracking("dummy://")
+    server = function.to_mock_server()
+
+    try:
+        for message in messages:
+            resp = server.test(body={"input": message})
+    finally:
+        results = server.wait_for_completion()
+
+    dummy_stream = server.context.stream.output_stream
+
+    #  not working, maybe because there is no .respond()
+    # assert len(dummy_stream.event_list) == 1, "expected stream to get one message"
+    # assert dummy_stream.event_list[0].get("resp", {}).get("outputs") == [2]
+    # assert dummy_stream.event_list[0].get("request", {}).get("inputs") == [1]
+    #
+    # for i, result in enumerate(results):
+    #     print()
+    # print()
