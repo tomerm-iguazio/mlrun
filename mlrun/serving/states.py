@@ -766,13 +766,15 @@ class TaskStep(BaseStep):
 
     def get_full_class_args(self, namespace, class_object, **extra_kwargs):
         class_args = {}
+        print(f"self.class_args.items: {self.class_args.items}")
         for key, arg in self.class_args.items():
             if key.startswith(callable_prefix):
+                print(f"key.startswith(callable_prefix): {arg} namespace: {namespace}")
                 class_args[key[1:]] = get_function(arg, namespace)
+                print(f"class_args[key[1:]]: {class_args[key[1:]]}")
             else:
                 class_args[key] = arg
         class_args.update(extra_kwargs)
-
         if not isinstance(self, MonitoringApplicationStep):
             # add common args (name, context, ..) only if target class can accept them
             argspec = getfullargspec(class_object)
@@ -782,6 +784,7 @@ class TaskStep(BaseStep):
                     class_args[key] = getattr(self, key)
             if argspec.varkw or "graph_step" in argspec.args:
                 class_args["graph_step"] = self
+        print(f"class_args: {class_args}")
         return class_args
 
     def get_step_class_object(self, namespace):
