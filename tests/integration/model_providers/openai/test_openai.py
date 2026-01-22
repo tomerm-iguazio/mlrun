@@ -41,6 +41,7 @@ from tests.datastore.remote_model.remote_model_utils import (
     EXPECTED_RESULTS,
     INPUT_DATA,
     assert_async_invocations,
+    create_mocked_get_store_artifact,
     formatted_messages,
     setup_remote_model_test,
 )
@@ -51,16 +52,6 @@ config_file_path = os.path.join(here, "test-openai.yml")
 if os.path.exists(config_file_path):
     with open(config_file_path) as yaml_file:
         config = yaml.safe_load(yaml_file).get("env", {})
-
-
-def create_mocked_get_store_artifact(uri_to_artifact: dict):
-    def mocked_get_store_artifact(uri, **kwargs):
-        artifact = uri_to_artifact.get(uri)
-        if not artifact:
-            raise mlrun.errors.MLRunInvalidArgumentError("Artifact uri not found")
-        return artifact, None
-
-    return mocked_get_store_artifact
 
 
 def openai_configured():
@@ -461,5 +452,68 @@ class TestOpenAIModel(TestBasicOpenAIProvider):
             assert len(results_with_times["data"][0]["embedding"]) == 256
             assert results_with_times["usage"]["total_tokens"] == token_count
 
+        finally:
+            server.wait_for_completion()
+
+    @pytest.mark.parametrize(
+        "execution_mechanism",
+        ["process_pool", "dedicated_process", "naive", "asyncio", "thread_pool"],
+    )
+    def test_model_runner_batch_with_openai(self, execution_mechanism):
+        """Test batch processing of multiple events with OpenAI model"""
+        project = mlrun.new_project("test-openai-model-batch", save=False)
+        model_url = self.url_prefix + self.basic_llm_model
+        model_artifact, llm_prompt_artifact, function = setup_remote_model_test(
+            project,
+            model_url,
+            execution_mechanism=execution_mechanism,
+            default_config={"max_tokens": 100},
+        )
+        mocked_get_store_artifact = create_mocked_get_store_artifact(
+            {
+                model_artifact.uri: model_artifact,
+                llm_prompt_artifact.uri: llm_prompt_artifact,
+            }
+        )
+        with (
+            unittest.mock.patch(
+                "mlrun.artifacts.llm_prompt.mlrun.datastore.store_manager.get_store_artifact",
+                side_effect=lambda *args, **kwargs: mocked_get_store_artifact(
+                    *args, **kwargs
+                ),
+            ),
+        ):
+            server = function.to_mock_server()
+        try:
+            # Send all 5 INPUT_DATA events as batch
+            # need to be a list, so in batch step, we will be able to split the events back to the original ones
+            response = server.test(body=INPUT_DATA)
+
+            # Assert we got list of 5 responses
+            assert isinstance(response, list)
+            assert len(response) == 5
+
+            encoding = tiktoken.encoding_for_model(self.basic_llm_model)
+
+            # Verify each response
+            for i, full_result in enumerate(response):
+                result = full_result["output"]
+                assert len(result) == 2  # answer + usage
+                answer = result[UsageResponseKeys.ANSWER]
+
+                # Check expected result is in answer
+                assert EXPECTED_RESULTS[i] in answer.lower()
+
+                # Verify token count
+                assert len(encoding.encode(answer)) == 100
+
+                # Verify usage stats
+                stats = result[UsageResponseKeys.USAGE]
+                assert 95 <= stats["completion_tokens"] <= 105
+                assert stats["prompt_tokens"] > 0
+                assert (
+                    stats["total_tokens"]
+                    == stats["completion_tokens"] + stats["prompt_tokens"]
+                )
         finally:
             server.wait_for_completion()

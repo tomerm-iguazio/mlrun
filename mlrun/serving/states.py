@@ -1422,6 +1422,24 @@ class LLModel(Model):
             result_path=result_path,
         )
 
+    @staticmethod
+    def _get_answer_and_usage(response_with_stats) -> tuple[Any, Any]:
+        answer = (
+            response_with_stats.get("answer")
+            if isinstance(response_with_stats, dict)
+            else [
+                single_response.get("answer") for single_response in response_with_stats
+            ]
+        )
+        usage = (
+            response_with_stats.get("usage")
+            if isinstance(response_with_stats, dict)
+            else [
+                single_response.get("usage") for single_response in response_with_stats
+            ]
+        )
+        return answer, usage
+
     def predict(
         self,
         body: Any,
@@ -1447,11 +1465,12 @@ class LLModel(Model):
             set_data_by_path(
                 path=self._result_path, data=body, value=response_with_stats
             )
+            answer, usage = self._get_answer_and_usage(response_with_stats)
             logger.debug(
                 "LLModel prediction completed",
                 model_name=self.name,
-                answer=response_with_stats.get("answer"),
-                usage=response_with_stats.get("usage"),
+                answer=answer,
+                usage=usage,
             )
         else:
             logger.warning(
@@ -1487,11 +1506,12 @@ class LLModel(Model):
             set_data_by_path(
                 path=self._result_path, data=body, value=response_with_stats
             )
+            answer, usage = self._get_answer_and_usage(response_with_stats)
             logger.debug(
                 "LLModel async prediction completed",
                 model_name=self.name,
-                answer=response_with_stats.get("answer"),
-                usage=response_with_stats.get("usage"),
+                answer=answer,
+                usage=usage,
             )
         else:
             logger.warning(
@@ -1583,7 +1603,33 @@ class LLModel(Model):
             prompt_legend = llm_prompt_artifact.spec.prompt_legend
             prompt_template = deepcopy(llm_prompt_artifact.read_prompt())
             invocation_config = llm_prompt_artifact.spec.invocation_config
+
         input_data = copy(get_data_from_path(self._input_path, body))
+
+        # Handle batch input (list of dicts)
+        if isinstance(input_data, list):
+            enriched_messages_list = []
+            for event in input_data:
+                enriched_messages = self._enrich_single_event(
+                    event, prompt_template, prompt_legend
+                )
+                enriched_messages_list.append(enriched_messages)
+            return enriched_messages_list, invocation_config
+
+        # Handle single input (dict)
+        enriched_messages = self._enrich_single_event(
+            input_data, prompt_template, prompt_legend
+        )
+        return enriched_messages, invocation_config
+
+    def _enrich_single_event(
+        self,
+        input_data: dict,
+        prompt_template: list,
+        prompt_legend: dict,
+    ) -> list:
+        enriched_template = []
+
         if isinstance(input_data, dict) and prompt_template:
             kwargs = (
                 {
@@ -1596,7 +1642,8 @@ class LLModel(Model):
             )
             input_data.update(kwargs)
             default_place_holders = PlaceholderDefaultDict(lambda: None, input_data)
-            for message in prompt_template:
+            enriched_template = deepcopy(prompt_template)
+            for message in enriched_template:
                 try:
                     message["content"] = message["content"].format(**input_data)
                 except KeyError as e:
@@ -1611,14 +1658,15 @@ class LLModel(Model):
         elif isinstance(input_data, dict) and not prompt_template:
             # If there is no prompt template, we assume the input data is already in the correct format.
             logger.debug("Attempting to retrieve messages from the request body.")
-            prompt_template = input_data.get("messages", [])
+            enriched_template = input_data.get("messages", [])
         else:
             logger.warning(
                 "Expected input data to be a dict, prompt template stays unformatted",
                 model_name=self.name,
                 input_data_type=type(input_data).__name__,
             )
-        return prompt_template, invocation_config
+
+        return enriched_template
 
     def _get_invocation_artifact(
         self, origin_name: Optional[str] = None
@@ -2894,7 +2942,6 @@ class FlowStep(BaseStep):
             raise GraphError(
                 "sync engine can only have one starting step (without .after)"
             )
-
         default_final_step = None
         if self.final_step:
             if self.final_step not in self.steps:
@@ -2903,8 +2950,9 @@ class FlowStep(BaseStep):
                 )
             default_final_step = self.final_step
 
-        elif len(self._start_steps) == 1:
-            # find the final step in case if a simple sequence of steps
+        elif len(self._start_steps) == 1 and not self.allow_cyclic:
+            # find the final step in case of a simple sequence of steps
+            # default_final_step is used only for feature sets therefore it won't be set when cycles are allowed
             next_obj = self._start_steps[0]
             while next_obj:
                 next = next_obj.next
@@ -3990,7 +4038,9 @@ def _init_async_objects(context, steps, root):
                 )
             if (
                 respond_supported
-                and not step.next
+                and (
+                    not step.next or root.allow_cyclic
+                )  # last step can be part of a cycle
                 and hasattr(step, "responder")
                 and step.responder
             ):
