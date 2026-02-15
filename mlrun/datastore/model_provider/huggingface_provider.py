@@ -11,7 +11,9 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import os
 import threading
+import warnings
 from typing import TYPE_CHECKING, Any, Optional, Union
 
 import mlrun
@@ -113,8 +115,20 @@ class HuggingFaceProvider(ModelProvider):
             ImportError: If huggingface_hub package is not installed.
         """
         try:
-            from huggingface_hub import snapshot_download
             import time
+
+            from huggingface_hub import snapshot_download
+
+            hf_transfer = self._get_secret_or_env("HF_HUB_ENABLE_HF_TRANSFER")
+            if (
+                os.environ.get("HF_HUB_ENABLE_HF_TRANSFER")
+                and os.environ["HF_HUB_ENABLE_HF_TRANSFER"] != hf_transfer
+            ):
+                warnings.warn(
+                    f"overriding HF_HUB_ENABLE_HF_TRANSFER to {hf_transfer} for HuggingFaceProvider."
+                    f" This may affect other HuggingFace operations in the same environment."
+                )
+            os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = hf_transfer
             now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
             print(f"start downloading model {now}")
             # Download the model and tokenizer files directly to the cache.

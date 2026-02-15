@@ -79,6 +79,7 @@ class TestHuggingFaceModelRunner(TestMLRunSystem):
                 "torch==2.8.0+cpu",
                 "transformers==4.56.2",
                 "pillow~=11.3",
+                "hf_transfer~=0.1",
             ],
             default_config={"max_new_tokens": 50},
             execution_mechanism=execution_mechanism,
@@ -95,8 +96,8 @@ class TestHuggingFaceModelRunner(TestMLRunSystem):
             1  # to avoid allocating extended resources to multiple pods
         )
         # Set workers=None to avoid using the default value of 8 workers
-        function.with_http(gateway_timeout=600, worker_timeout=500, workers=None)
-        function.spec.readiness_timeout = 600
+        function.with_http(gateway_timeout=900, worker_timeout=800, workers=None)
+        function.spec.readiness_timeout = 900
 
         function.deploy()
 
@@ -150,6 +151,7 @@ class TestHuggingFaceModelRunner(TestMLRunSystem):
                 "torch==2.8.0+cpu",
                 "transformers==4.56.2",
                 "pillow~=11.3",
+                "hf_transfer~=0.1",
             ],
             default_config={"max_new_tokens": 50},
             execution_mechanism=execution_mechanism,
@@ -227,6 +229,7 @@ class TestHuggingFaceModelRunner(TestMLRunSystem):
                 "torch==2.8.0+cpu",
                 "transformers==4.56.2",
                 "pillow~=11.3",
+                "hf_transfer~=0.1",
             ],
             default_config={"top_k": 2},
             execution_mechanism=execution_mechanism,
@@ -298,6 +301,7 @@ class TestHuggingFaceModelRunner(TestMLRunSystem):
                 "torch==2.8.0+cpu",
                 "transformers==4.56.2",
                 "pillow~=11.3",
+                "hf_transfer~=0.1",
             ],
             image=self.image,
         )

@@ -625,6 +625,7 @@ class HuggingFaceProfile(DatastoreProfile):
     device: typing.Optional[typing.Union[int, str]] = None
     device_map: typing.Union[str, dict[str, typing.Union[int, str]], None] = None
     trust_remote_code: bool = None
+    use_hf_transfer: bool = True
     model_kwargs: typing.Optional[dict[str, typing.Any]] = None
 
     def secrets(self) -> dict:
@@ -634,6 +635,7 @@ class HuggingFaceProfile(DatastoreProfile):
             "HF_DEVICE": self.device,
             "HF_DEVICE_MAP": self.device_map,
             "HF_TRUST_REMOTE_CODE": self.trust_remote_code,
+            "HF_HUB_ENABLE_HF_TRANSFER": "1" if self.use_hf_transfer is True else "0",
             "HF_MODEL_KWARGS": self.model_kwargs,
         }
         return {k: v for k, v in keys.items() if v}
