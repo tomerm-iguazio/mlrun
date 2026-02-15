@@ -114,13 +114,17 @@ class HuggingFaceProvider(ModelProvider):
         """
         try:
             from huggingface_hub import snapshot_download
-
+            import time
+            now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            print(f"start downloading model {now}")
             # Download the model and tokenizer files directly to the cache.
             snapshot_download(
                 repo_id=self.model,
                 local_dir_use_symlinks=False,
                 token=self._get_secret_or_env("HF_TOKEN") or None,
             )
+            now = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
+            print(f"finished downloading model {now}")
         except ImportError as exc:
             raise ImportError("huggingface_hub package is not installed") from exc
 
