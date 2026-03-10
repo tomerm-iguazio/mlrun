@@ -2463,7 +2463,7 @@ class TestFeatureStore(TestMLRunSystem):
 
         fset.ingest(df1, targets=targets)
 
-        fset.ingest(df2, targets=targets)
+        fset.ingest(df2, targets=targets, overwrite=True)
 
         with fvec.get_online_feature_service() as svc:
             resp = svc.get(entity_rows=[{"name": "PQR"}])
@@ -2498,6 +2498,39 @@ class TestFeatureStore(TestMLRunSystem):
         fset.ingest(df1, targets=targets)
         with pytest.raises(mlrun.errors.MLRunInvalidArgumentError):
             fset.ingest(df2, targets=targets, overwrite=False)
+
+    @TestMLRunSystem.skip_test_if_env_not_configured
+    @pytest.mark.enterprise
+    def test_overwrite_nosql_target(self):
+        """Ingest two batches into a NoSqlTarget with overwrite=True and verify
+        that only the second batch is present in the online store."""
+        df1 = pd.DataFrame({"name": ["ABC", "DEF", "GHI"], "value": [1, 2, 3]})
+        df2 = pd.DataFrame({"name": ["JKL", "MNO", "PQR"], "value": [4, 5, 6]})
+
+        fset = fstore.FeatureSet(
+            name="overwrite-nosql", entities=[fstore.Entity("name")]
+        )
+        targets = [NoSqlTarget()]
+
+        fset.ingest(df1, targets=targets, overwrite=True)
+
+        features = ["overwrite-nosql.*"]
+        fvec = fstore.FeatureVector("overwrite-nosql-vec", features=features)
+
+        with fvec.get_online_feature_service() as svc:
+            resp = svc.get(entity_rows=[{"name": "ABC"}])
+            assert resp[0]["value"] == 1
+
+        fset.ingest(df2, targets=targets, overwrite=True)
+
+        with fvec.get_online_feature_service() as svc:
+            # old rows should be gone
+            resp = svc.get(entity_rows=[{"name": "ABC"}])
+            assert resp[0] is None
+
+            # new rows should be present
+            resp = svc.get(entity_rows=[{"name": "PQR"}])
+            assert resp[0]["value"] == 6
 
     @TestMLRunSystem.skip_test_if_env_not_configured
     @pytest.mark.enterprise
