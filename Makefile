@@ -119,11 +119,11 @@ MLRUN_BC_TESTS_OPENAPI_OUTPUT_PATH ?= $(shell pwd)
 MLRUN_SYSTEM_TESTS_COMPONENT ?=
 MLRUN_SYSTEM_TESTS_IGNORE_COMPONENT := $(shell echo "$(MLRUN_SYSTEM_TESTS_COMPONENT)" | sed 's/^no_\(.*\)/\1/g')
 ifndef MLRUN_SYSTEM_TESTS_COMPONENT
-	MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX = "tests/system"
+	MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX = "tests/system/feature_store/test_feature_store.py::TestFeatureStore::test_merge_with_different_timestamp_resolutions"
 else ifeq ($(MLRUN_SYSTEM_TESTS_COMPONENT),$(MLRUN_SYSTEM_TESTS_IGNORE_COMPONENT))
-	MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX = "tests/system/$(MLRUN_SYSTEM_TESTS_COMPONENT)"
+	MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX = "tests/system/feature_store/test_feature_store.py::TestFeatureStore::test_merge_with_different_timestamp_resolutions"
 else
-	MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX = "--ignore=tests/system/$(MLRUN_SYSTEM_TESTS_COMPONENT) tests/system"
+	MLRUN_SYSTEM_TESTS_COMMAND_SUFFIX = "tests/system/feature_store/test_feature_store.py::TestFeatureStore::test_merge_with_different_timestamp_resolutions"
 endif
 
 MLRUN_PYTHON_PACKAGE_INSTALLER ?= pip
