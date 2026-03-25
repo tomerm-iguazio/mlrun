@@ -12,10 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import asyncio
+import logging
+
 import mlrun
 import mlrun.artifacts
 from mlrun.config import config
 from mlrun.utils.helpers import parse_artifact_uri
+
+logger = logging.getLogger(__name__)
 
 from ..common.helpers import parse_versioned_object_uri
 from ..platforms.iguazio import parse_path
@@ -137,6 +142,26 @@ class ResourceCache:
             return resource
 
         return _get_store_resource
+
+    async def close(self):
+        """Close all cached Table objects to release TCP/aiohttp connections to V3IO."""
+        for uri, table in list(self._tabels.items()):
+            if hasattr(table, "close"):
+                try:
+                    await table.close()
+                except Exception as e:
+                    logger.warning(f"Failed to close table '{uri}': {e}")
+        self._tabels.clear()
+
+    def __del__(self):
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self.close())
+            else:
+                loop.run_until_complete(self.close())
+        except Exception:
+            pass
 
 
 def get_store_resource(
