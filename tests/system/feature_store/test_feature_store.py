@@ -1453,7 +1453,7 @@ class TestFeatureStore(TestMLRunSystem):
         after= self.fd_count()
         print("-----------------------")
         # print(f"[FD Leak Check] Test: {test_name}, FDs before: {before}, after: {after}")
-        with open("tests/coverage_reports/leak.txt", "a") as f:
+        with open("/Users/Gal_Topper-BNKK/work/mlrun/leak.txt", "a") as f:
             f.write(
                 f"[FD Leak Check] Test: {test_name}, FDs before: {before}, after: {after}\n"
             )
