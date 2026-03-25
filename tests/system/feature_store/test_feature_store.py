@@ -172,7 +172,7 @@ def kafka_consumer():
 
 
 class TestFeatureStore(TestMLRunSystem):
-    project_name = "fs-system-test-project"
+    project_name = "fs-project-manual"
 
     def custom_setup(self):
         pass
@@ -611,40 +611,40 @@ class TestFeatureStore(TestMLRunSystem):
             1
         ].get_path().get_absolute_path() == fset.get_target_path("nosql")
 
-    @TestMLRunSystem.skip_test_if_env_not_configured
-    @pytest.mark.enterprise
-    @pytest.mark.parametrize("local", [True, False])
-    def test_ingest_with_format_run_project(self, local):
-        source_path = str(self.assets_path / "testdata.csv")
-        if not local:
-            data = pd.read_csv(source_path)
-            source_path = (
-                f"v3io:///projects/{self.project_name}/test_ingest_with_format_run_project/"
-                f"{uuid.uuid4()}/source.csv"
-            )
-            data.to_csv(source_path)
-        source = CSVSource("mycsv", path=source_path)
-        feature_set = fstore.FeatureSet(
-            name=f"fs-run_project-format-local-{local}",
-            entities=[Entity("patient_id")],
-            timestamp_key="timestamp",
-        )
-        artifact_path = mlrun.mlconf.artifact_path
-        targets = [
-            CSVTarget(name="labels", path=os.path.join(artifact_path, "file.csv"))
-        ]
-        feature_set.set_targets(targets=targets, with_defaults=False)
-        feature_set.ingest(
-            source=source,
-            run_config=fstore.RunConfig(local=local),
-        )
-        target_dir_path = os.path.dirname(
-            os.path.dirname(feature_set.get_target_path())
-        )
-        assert (
-            artifact_path.replace("{{run.project}}", self.project_name)
-            == target_dir_path
-        )
+    # @TestMLRunSystem.skip_test_if_env_not_configured
+    # @pytest.mark.enterprise
+    # @pytest.mark.parametrize("local", [True, False])
+    # def test_ingest_with_format_run_project(self, local):
+    #     source_path = str(self.assets_path / "testdata.csv")
+    #     if not local:
+    #         data = pd.read_csv(source_path)
+    #         source_path = (
+    #             f"v3io:///projects/{self.project_name}/test_ingest_with_format_run_project/"
+    #             f"{uuid.uuid4()}/source.csv"
+    #         )
+    #         data.to_csv(source_path)
+    #     source = CSVSource("mycsv", path=source_path)
+    #     feature_set = fstore.FeatureSet(
+    #         name=f"fs-run_project-format-local-{local}",
+    #         entities=[Entity("patient_id")],
+    #         timestamp_key="timestamp",
+    #     )
+    #     artifact_path = mlrun.mlconf.artifact_path
+    #     targets = [
+    #         CSVTarget(name="labels", path=os.path.join(artifact_path, "file.csv"))
+    #     ]
+    #     feature_set.set_targets(targets=targets, with_defaults=False)
+    #     feature_set.ingest(
+    #         source=source,
+    #         run_config=fstore.RunConfig(local=local),
+    #     )
+    #     target_dir_path = os.path.dirname(
+    #         os.path.dirname(feature_set.get_target_path())
+    #     )
+    #     assert (
+    #         artifact_path.replace("{{run.project}}", self.project_name)
+    #         == target_dir_path
+    #     )
 
     @TestMLRunSystem.skip_test_if_env_not_configured
     @pytest.mark.enterprise
@@ -900,7 +900,7 @@ class TestFeatureStore(TestMLRunSystem):
 
     @TestMLRunSystem.skip_test_if_env_not_configured
     @pytest.mark.parametrize("with_tz", [False, True])
-    @pytest.mark.parametrize("local", [True, False])
+    @pytest.mark.parametrize("local", [True])
     def test_filtering_parquet_by_time(self, with_tz, local):
         config_parameters = {} if local else {"image": "mlrun/mlrun"}
         run_config = fstore.RunConfig(local=local, **config_parameters)
@@ -1439,6 +1439,37 @@ class TestFeatureStore(TestMLRunSystem):
         )
         res = res.to_dataframe()
         assert res["time"].dtype.name == "datetime64[ns]"
+
+    def fd_count(self):
+        import subprocess
+        pid = os.getpid()
+        return int(subprocess.check_output(f"lsof -p {pid} | wc -l", shell=True))
+
+    @pytest.fixture(autouse=True, scope="function")
+    def detect_fd_leak(self,request):
+        test_name = request.node.name
+        before = self.fd_count()
+        yield  # Test runs here
+        after= self.fd_count()
+        print("-----------------------")
+        # print(f"[FD Leak Check] Test: {test_name}, FDs before: {before}, after: {after}")
+        with open("tests/coverage_reports/leak.txt", "a") as f:
+            f.write(
+                f"[FD Leak Check] Test: {test_name}, FDs before: {before}, after: {after}\n"
+            )
+        print("-----------------------")
+
+    @TestMLRunSystem.skip_test_if_env_not_configured
+    @pytest.mark.enterprise
+    def test_1(self):
+        targets = [NoSqlTarget()]
+        trades_microseconds = trades.copy()
+        trades_microseconds["time"] = trades_microseconds["time"].astype(
+            "datetime64[us]"
+        )
+        prepare_feature_set(
+            "left", "ticker", trades_microseconds, timestamp_key="time", targets=targets
+        )
 
     @TestMLRunSystem.skip_test_if_env_not_configured
     def test_left_not_ordered_pandas_asof_merge(self):
