@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import asyncio
 import logging
 
 import mlrun
@@ -152,16 +151,6 @@ class ResourceCache:
                 except Exception as e:
                     logger.warning(f"Failed to close table '{uri}': {e}")
         self._tabels.clear()
-
-    def __del__(self):
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(self.close())
-            else:
-                loop.run_until_complete(self.close())
-        except Exception:
-            pass
 
 
 def get_store_resource(

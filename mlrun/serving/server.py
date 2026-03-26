@@ -354,7 +354,21 @@ class GraphServer(ModelObj):
 
     def wait_for_completion(self):
         """wait for async operation to complete"""
-        return self.graph.wait_for_completion()
+        result = self.graph.wait_for_completion()
+        if asyncio.iscoroutine(result):
+
+            async def _wait_and_close():
+                try:
+                    return await result
+                finally:
+                    if self.resource_cache:
+                        await self.resource_cache.close()
+
+            return _wait_and_close()
+        else:
+            if self.resource_cache:
+                asyncio.run(self.resource_cache.close())
+            return result
 
 
 def add_error_raiser_step(
