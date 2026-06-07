@@ -205,6 +205,74 @@ class TestResultHandlerMissingFields:
         ):
             handler.apply(HTTPMethod.POST, "/predict", {"other": "value"})
 
+    @pytest.mark.xfail(
+        reason="ML-12706: when a serving function returns a non-2xx Response "
+        "(e.g. proxied upstream 404), the result handler currently trips the "
+        "mandatory-field check on the error envelope and the response gets "
+        "rewritten to 400. The fix must skip output mapping for non-2xx "
+        "responses so the original status + body pass through. Remove this "
+        "xfail when the fix lands.",
+        strict=True,
+    )
+    def test_upstream_404_response_passes_through_unchanged(self) -> None:
+        """E2E: serving function returns ``Response(status_code=404, body=error_envelope)``.
+
+        Mapping declares the OpenAI Responses success-shape mandatory fields
+        (``id``, ``object``, ``created_at``) which are NOT present in the
+        error body. Today the result handler raises → MLRun rewrites to 400.
+        After the fix, the original 404 + error body must reach the caller.
+        """
+        from mlrun.serving.server import Response as ServingResponse
+
+        bm = BodyMappings()
+        bm.add_mapping("$.id", destination_path="id", mandatory=True)
+        bm.add_mapping("$.object", destination_path="object", mandatory=True)
+        bm.add_mapping("$.created_at", destination_path="created_at", mandatory=True)
+
+        error_body = {
+            "error": {
+                "message": "Response with id 'resp_1234567890' not found.",
+                "type": "invalid_request_error",
+                "param": None,
+                "code": None,
+            }
+        }
+
+        fn = cast(
+            ServingRuntime,
+            mlrun.new_function("test-upstream-404", kind="serving"),
+        )
+        config = APIHandlerConfig()
+        config.add_endpoint_handler(
+            "/responses/{response_id}",
+            HTTPMethod.GET,
+            APIHandlerAction.ALLOW,
+            output_body_mappings=bm,
+        )
+        fn.set_api_handler_config(config)
+        graph = fn.set_topology("flow", engine="sync")
+        graph.to(
+            name="upstream_404_emitter",
+            handler=lambda body, **kwargs: ServingResponse(
+                body=error_body,
+                content_type="application/json",
+                status_code=404,
+            ),
+        ).respond()
+
+        server = fn.to_mock_server()
+        try:
+            resp = server.test(
+                "/responses/resp_1234567890", method="GET", silent=True
+            )
+            assert hasattr(resp, "status_code"), (
+                f"expected Response, got {type(resp).__name__}: {resp!r}"
+            )
+            assert resp.status_code == 404
+            assert resp.body == error_body
+        finally:
+            server.wait_for_completion()
+
     def test_full_structure_always_returned(self) -> None:
         """All declared destinations appear in the output, even if some are None."""
         handler = _make_handler(
